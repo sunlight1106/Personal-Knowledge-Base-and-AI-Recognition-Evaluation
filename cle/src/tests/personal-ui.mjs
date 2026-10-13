@@ -195,7 +195,7 @@ try {
 
   themeStore.useAccount(1001); themeStore.setPreference('dark'); themeStore.setAccent('blue'); themeStore.setDensity('compact')
   themeStore.useAccount(1002)
-  assert(themeStore.state.preference==='system' && themeStore.state.accent==='rose' && themeStore.state.density==='comfortable', 'Appearance preferences do not bleed into another account')
+  assert(themeStore.state.preference==='system' && themeStore.state.accent==='sage' && themeStore.state.density==='comfortable', 'Appearance preferences do not bleed into another account')
   themeStore.useAccount(1001)
   assert(themeStore.state.preference==='dark' && themeStore.state.accent==='blue' && themeStore.state.density==='compact', 'Appearance preferences survive returning to the same account')
   tokenStorage.set('synthetic-session-token'); authStore.state.user={id:1001}; await authStore.logout()

@@ -6,5 +6,5 @@
   </svg>
 </template>
 <style scoped>
-.brand-mark{display:block;width:36px;height:36px;flex-shrink:0;color:var(--brand-solid,#294c40)}
+.brand-mark{--brand-mark-ink:var(--on-dark);display:block;width:36px;height:36px;flex-shrink:0;color:var(--green)}
 </style>
