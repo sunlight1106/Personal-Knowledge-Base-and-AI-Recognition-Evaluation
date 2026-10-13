@@ -6,6 +6,7 @@ import './styles/main.css'
 import './styles/portal.css'
 import './styles/research.css'
 import './styles/workspace.css'
+import './styles/workspace-pages.css'
 import './styles/motion.css'
 
 themeStore.init()

@@ -81,7 +81,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
     <NoteReviewList />
     <div class="learning-layout">
       <aside class="learning-sidebar">
-        <p class="page-kicker">学习库列表</p>
+        <p class="page-kicker learning-sidebar-title"><AppIcon name="book" :size="15" /> 我的学习库</p>
         <RouterLink :to="{ name: 'notes' }" :class="{ selected: !library }"><span>全部笔记</span><small>{{ notes.length }}</small></RouterLink>
         <RouterLink v-for="name in libraries" :key="name" :to="{ name: 'notes', query: { library: name } }" :class="{ selected: library === name }"><span>{{ name }}</span><small>{{ libraryCount(name) }}</small></RouterLink>
         <p class="learning-aside-hint">新建笔记时可输入新的学习库名称。保存后会自动加入此列表。</p>

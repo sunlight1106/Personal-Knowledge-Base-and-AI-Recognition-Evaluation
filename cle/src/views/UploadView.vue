@@ -116,11 +116,10 @@ async function run() {
 
 <template>
   <div class="lab-docs workspace-reader">
-    <DocRow id="experiment" title="识别实验" intro>
-      <p>用个人模型识别图片，或运行本地演示。</p>
-      <p class="experiment-caption">个人 AI 使用你自己的配置；下方双路实验提供 DEMO 合成结果。</p>
-      <template #detail><nav class="experiment-index" aria-label="实验步骤"><a href="#personal-vision">个人图片识别</a><a href="#sample">DEMO 样本</a><a href="#configuration">02 选择模型</a><a href="#run">03 运行实验</a></nav></template>
-    </DocRow>
+    <section id="experiment" class="page-intro page-intro--split experiment-page-intro">
+      <div><p class="page-kicker">RECOGNITION / EXPERIMENTS</p><h2>识别实验</h2><p>用个人模型理解图片，或从本地演示开始一次对照实验。</p></div>
+      <nav class="experiment-index" aria-label="实验步骤"><a v-if="authStore.has('personal-ai:use')" href="#personal-vision">个人图片识别</a><a href="#sample">DEMO 样本</a><a href="#configuration">选择模型</a><a href="#run">运行实验</a></nav>
+    </section>
         <section v-if="authStore.has('personal-ai:use')" id="personal-vision" class="reader-personal"><PersonalRecognitionPanel /></section>
     <DocRow id="sample" title="DEMO · 输入样本">
       <p>选择一张图片，或一段视频。你也可以把文件直接拖入右侧。</p>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import { wordSpeaker,stopWordSpeech } from '@/lib/pronunciation'
 const automaticSpeaker = wordSpeaker(), autoPronounce = ref(true), audioError = ref('')
 
@@ -251,7 +252,8 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
           <button class="button" :class="mode === 'MISTAKES' ? 'button--dark' : 'button--light'" :disabled="!!busy || !selected" @click="start('MISTAKES')">错词巩固 <span>{{ selectedBook?.mistakes || 0 }}</span></button>
           <p class="vocab-small">切换模式会替换未答题目；已完成的答题实时保存在你的账号中。</p>
         </aside>
-        <article ref="studyCard" class="panel vocab-study-card" tabindex="-1" :aria-labelledby="question ? 'vocab-question-title' : 'vocab-welcome-title'" :aria-busy="!!busy" aria-live="polite" aria-atomic="false">
+        <article ref="studyCard" class="panel vocab-study-card" :class="{ 'is-studying': !!question }" tabindex="-1" :aria-labelledby="question ? 'vocab-question-title' : 'vocab-welcome-title'" :aria-busy="!!busy" aria-live="polite" aria-atomic="false">
+          <AmbientWaves v-if="!question" class="vocab-welcome-waves" />
           <VocabularyRecallCard v-if="question && question.practiceKind && question.practiceKind !== 'CHOICE'" :question="question" :answer="answer" :busy="!!busy" @submit="submitRecall" @skip="skipQuestion" @next="next" /><button v-if="answer?.lesson && question?.practiceKind && question.practiceKind !== 'CHOICE' && authStore.has('personal-ai:use')" class="button button--light" @click="assistantLesson = answer.lesson">AI 学习助手</button>
           <template v-if="question && (!question.practiceKind || question.practiceKind === 'CHOICE')">
             <WordPronunciation :text="question.term" /><header class="vocab-card-top"><span>{{ modeNames[mode] }}</span><button v-if="!answer" class="button button--light" :disabled="!!busy" @click="skipQuestion">Skip · 我已熟悉</button><span>本轮 {{ sessionCount }} 题 · 答对 {{ sessionCorrect }}</span></header>

@@ -7,6 +7,7 @@ import SafetyBanner from './SafetyBanner.vue'
 import AppIcon from './AppIcon.vue'
 import BrandMark from './BrandMark.vue'
 import MotionToggle from './MotionToggle.vue'
+import AmbientWaves from './AmbientWaves.vue'
 import { authStore } from '@/stores/auth'
 import { themeStore } from '@/stores/theme'
 import { mainItems, adminItems, supportItems, canVisit, type NavItem } from '@/lib/navigation'
@@ -86,6 +87,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
         </details>
       </div>
     </header>
-    <main id="workspace-content" v-section-links class="app-content" :class="{'app-content--reader':route.path === '/app/upload'}" tabindex="-1"><SafetyBanner v-if="authStore.state.user" :key="'safety-'+authStore.state.user.id" /><RouterView v-if="authStore.state.user" :key="authStore.state.user.id" /></main>
+    <main id="workspace-content" v-section-links class="app-content" :class="{'app-content--reader':route.path === '/app/upload'}" tabindex="-1">
+      <AmbientWaves v-if="route.path !== '/app/home'" class="workspace-page-waves" />
+      <SafetyBanner v-if="authStore.state.user" :key="'safety-'+authStore.state.user.id" />
+      <RouterView v-if="authStore.state.user" :key="authStore.state.user.id" />
+    </main>
   </div>
 </template>

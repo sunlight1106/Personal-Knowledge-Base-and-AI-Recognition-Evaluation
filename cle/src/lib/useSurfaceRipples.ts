@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router'
 import { motionEnabled, motionState } from './motion'
 
 // Only surfaces, never fields, editor text, or arbitrary document links.
-const surfaces = '.button,.home-primary,.home-enter,.home-folio>a,.home-chapter-links a,.workspace-action-grid>a,.workspace-directory>summary,.directory-item>a,.vocab-tabs button,.learning-toolbar nav button'
+const surfaces = '.button,.home-primary,.home-enter,.home-folio>a,.home-chapter-links a,.workspace-action-grid>a,.workspace-directory>summary,.directory-item>a,.vocab-tabs button,.learning-toolbar nav button,.learning-sidebar>a,.learning-library-links>a,.shelf-actions button,.shelf-categories button,.settings-navigation button,.research-tabs>a,.experiment-tasks button,.mail-list>header button,.people-tabs button'
 
 export function useSurfaceRipples() {
   const route = useRoute()

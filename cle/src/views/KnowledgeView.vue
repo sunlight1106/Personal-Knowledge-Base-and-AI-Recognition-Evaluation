@@ -201,7 +201,7 @@ onMounted(load)
     </section>
 
     <nav class="learning-library-links" aria-label="学习库列表">
-      <RouterLink v-for="name in ['英语学习', '计算机学习', '数学学习', '生物化学与医学']" :key="name" :to="{ name: 'notes', query: { library: name } }"><span>{{ name }}</span><small>笔记列表 ↗</small></RouterLink>
+      <RouterLink v-for="(name, index) in ['英语学习', '计算机学习', '数学学习', '生物化学与医学']" :key="name" :to="{ name: 'notes', query: { library: name } }"><span class="library-link-top"><AppIcon name="book" :size="20" /><i aria-hidden="true">0{{ index + 1 }}</i></span><strong>{{ name }}</strong><small>打开学习笔记 <span aria-hidden="true">↗</span></small></RouterLink>
     </nav>
 
     <section class="kb-stats">

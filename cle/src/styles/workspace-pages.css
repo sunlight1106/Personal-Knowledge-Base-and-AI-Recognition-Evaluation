@@ -1,0 +1,198 @@
+/* Authenticated pages share the same paper, spacing and interaction language. */
+.portal-app { --surface-shadow:0 5px 24px #203a2805; --surface-hover:0 8px 28px #203a280b; }
+.portal-app .app-content { position:relative;isolation:isolate; }
+.portal-app .app-content>.workspace-page-waves { top:28px;left:43%;right:40px;height:170px;bottom:auto;opacity:.16; }
+.portal-app .page-intro { padding:3px 0 24px;border-bottom:1px solid var(--line);gap:30px; }
+.portal-app .page-intro h2 { font-size:32px;font-weight:450;letter-spacing:-.035em;margin:10px 0 12px; }
+.portal-app .page-intro p:last-child { max-width:700px;color:var(--muted);font-size:13px; }
+.portal-app .page-intro .page-kicker { display:flex;align-items:center;gap:12px; }
+.portal-app .page-intro .page-kicker::before { content:'';width:22px;height:1px;background:var(--green);flex:none; }
+.portal-app :is(.intro-actions,.vocab-toolbar) { flex-wrap:wrap;gap:9px; }
+.portal-app :is(.panel,.settings-card,.billing-card,.role-card,.download-card,.model-showcase-card) { background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--surface-shadow); }
+.portal-app .panel-header { padding:22px 24px; }
+.portal-app .panel-header h3 { font-size:18px;font-weight:550; }
+.portal-app .metric-grid { gap:14px;border:0; }
+.portal-app .metric-card { border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:22px; }
+.portal-app .metric-card:last-child { border-right:1px solid var(--line); }
+.portal-app .metric-value { font:36px/1.3 Georgia,serif;font-variant-numeric:tabular-nums; }
+.portal-app .data-table th { background:var(--code-paper);padding-block:14px; }
+.portal-app .data-table td { padding-block:16px; }
+.portal-app .filter-bar { gap:12px;padding:15px 20px;background:var(--paper);border:1px solid var(--line);border-radius:10px; }
+.portal-app .field-label { font-weight:500;color:var(--ink-soft); }
+.portal-app .field-input { font-weight:400; }
+.portal-app .status-badge { border-radius:5px; }
+.portal-app .empty-state { padding:45px 24px; }
+.portal-app .empty-state>strong { font-size:19px;font-weight:500; }
+.portal-app .empty-icon { width:48px;height:48px;border-radius:12px;background:var(--green-soft);color:var(--green); }
+.portal-app :is(.modal-card,dialog) { border-color:var(--line);border-radius:14px; }
+.portal-app .modal-backdrop { background:#15291f42;backdrop-filter:blur(5px); }
+
+/* A notebook shelf, followed by an uninterrupted writing surface. */
+.portal-app .learning-layout { gap:28px;grid-template-columns:220px minmax(0,1fr); }
+.portal-app .learning-sidebar { padding:20px 12px;box-shadow:var(--surface-shadow); }
+.learning-sidebar-title { display:flex;gap:10px;align-items:center; }
+.portal-app .learning-sidebar>a small { font:11px ui-monospace,monospace;min-width:22px;text-align:center; }
+.portal-app .learning-list { min-width:0;padding:22px 26px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:var(--surface-shadow); }
+.portal-app .learning-toolbar { flex-wrap:wrap;gap:14px; }
+.portal-app .learning-toolbar nav { gap:6px; }
+.portal-app .learning-toolbar nav button { padding:8px 12px;border-radius:6px;transition:background-color .18s,color .18s; }
+.portal-app .learning-toolbar nav button.selected { background:var(--green-soft);box-shadow:none; }
+.portal-app .learning-search { background:var(--canvas); }
+.portal-app .learning-notes-page .learning-list>.empty-state { border:0;background:transparent;min-height:300px;margin:0; }
+.portal-app .learning-note-row { padding-block:25px;border-color:var(--line-soft);border-radius:6px; }
+.portal-app .learning-note-row h3 { font-size:19px;font-weight:500;margin:12px 0 8px; }
+.portal-app .learning-note-row p { font-size:13px;max-width:700px; }
+.portal-app .learning-note-tags { gap:8px; }
+.portal-app .learning-note-tags button { padding:3px 8px;border-radius:4px;background:var(--code-paper);font-size:11px; }
+.portal-app .learning-note-end { font-size:11px;gap:12px;padding-top:6px; }
+.portal-app .learning-list-footer { border-top:1px solid var(--line-soft);font-size:11px;flex-wrap:wrap; }
+.portal-app .note-editor-meta { padding:26px;gap:18px; }
+.portal-app .note-title-input { border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:4px 0 18px;font-size:27px;font-weight:500; }
+.portal-app .note-editor-fields { gap:24px; }
+.portal-app .note-editor-layout { gap:22px; }
+.portal-app .note-pane-head { padding:16px 22px;background:var(--code-paper);min-height:56px; }
+.portal-app .note-editor-textarea { padding:26px;line-height:2; }
+.portal-app .note-preview-pane .markdown-body { padding:26px; }
+.portal-app .note-block-menu { border:0;border-bottom:1px solid var(--line);padding:9px 14px; }
+.portal-app .note-block-menu button { border-radius:5px;font-size:12px; }
+.portal-app .note-editor-head { max-width:620px;justify-content:flex-end; }
+.portal-app .note-editor-export { gap:10px; }
+.portal-app .markdown-body pre { border:1px solid var(--line-soft);border-radius:8px; }
+
+/* Study remains quiet while answering; the empty card carries the ambient water. */
+.portal-app .vocabulary-page .vocab-study-layout { grid-template-columns:280px minmax(0,1fr);gap:26px; }
+.portal-app .vocabulary-page .vocab-book-summary { padding:24px;border-radius:12px;background:var(--code-paper);border:1px solid var(--line);gap:14px; }
+.portal-app .vocabulary-page .vocab-book-summary h3 { font-size:21px;font-weight:500;line-height:1.6; }
+.portal-app .vocabulary-page .vocab-book-summary>p:not(.page-kicker) { font-size:12px;line-height:1.9; }
+.portal-app .vocabulary-page .vocab-book-summary .field-input { font-size:12px;padding:10px; }
+.portal-app .vocabulary-page .vocab-study-card { position:relative;isolation:isolate;min-height:390px;padding:28px 34px;overflow:hidden;border:1px solid var(--line);border-radius:12px;box-shadow:var(--surface-shadow); }
+.portal-app .vocabulary-page .vocab-study-card.is-studying { overflow:visible; }
+.portal-app .vocab-study-card>.vocab-welcome-waves { top:auto;height:160px;opacity:.2; }
+.portal-app .vocabulary-page .vocab-welcome { min-height:324px;max-width:460px;gap:17px;padding-bottom:15px; }
+.portal-app .vocabulary-page .vocab-welcome h3 { font-size:30px;font-weight:450;letter-spacing:-.025em; }
+.portal-app .vocabulary-page .vocab-welcome-icon { width:52px;height:52px;border-radius:13px;background:var(--green-soft);border:1px solid var(--line-soft); }
+.portal-app .vocabulary-page .vocab-tabs { gap:7px;padding-bottom:12px; }
+.portal-app .vocabulary-page .vocab-tabs button { border:1px solid transparent;border-radius:7px;padding:9px 18px;font-size:13px;transition:background-color .18s,color .18s; }
+.portal-app .vocabulary-page .vocab-tabs button.active { background:var(--paper);border-color:var(--line);color:var(--green);box-shadow:0 2px 5px #203a2804; }
+.portal-app .vocabulary-page .vocab-tabs button:hover:not(:disabled) { background:var(--green-soft); }
+.portal-app .vocabulary-page .vocab-metrics article { box-shadow:none;border:0;border-right:1px solid var(--line-soft);border-radius:0; }
+.portal-app .vocabulary-page .vocab-metrics article:last-child { border-right:0; }
+.portal-app .vocabulary-page .vocab-metrics strong { font-family:Georgia,serif;font-weight:400;font-variant-numeric:tabular-nums; }
+.portal-app .vocabulary-page .vocab-word h3 { font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:56px;letter-spacing:-.035em; }
+.portal-app .vocabulary-page .vocab-options button { border-radius:9px; }
+.portal-app .vocabulary-page .vocab-options button:not(.correct,.incorrect) { background:var(--canvas); }
+.portal-app .vocabulary-page .vocab-options button.correct { background:var(--green-soft); }
+.portal-app .vocabulary-page .shelf-book { position:relative;background:var(--paper);border-radius:11px;padding:26px;box-shadow:var(--surface-shadow);transition:border-color .2s,box-shadow .2s,translate .2s; }
+.portal-app .vocabulary-page .shelf-book.is-current { border-color:var(--green);box-shadow:inset 0 3px var(--green); }
+.portal-app .vocabulary-page .shelf-book h4 { font-size:22px;font-weight:500;margin-block:22px 14px; }
+.portal-app .vocabulary-page .shelf-book-top>span:first-child { font-size:10px;letter-spacing:.06em;padding:5px 9px;background:var(--code-paper);border-radius:5px;color:var(--green); }
+.portal-app .vocabulary-page .shelf-actions { border-top:1px solid var(--line-soft);padding-top:13px; }
+.portal-app .vocabulary-page .shelf-actions button { padding:7px 9px;border-radius:5px; }
+.portal-app .vocabulary-page .shelf-actions button:first-child { background:var(--green-soft);font-weight:500; }
+.portal-app .vocabulary-page .shelf-categories button { border-radius:6px; }
+.portal-app .vocabulary-page .vocab-word-list,.portal-app .vocabulary-page .vocab-stats { padding:28px; }
+
+/* Knowledge cards use the same library index and paper surfaces. */
+.portal-app .learning-library-links { border:0;gap:14px; }
+.portal-app .learning-library-links a { padding:22px 24px;background:var(--paper);border:1px solid var(--line);border-radius:10px;gap:14px;transition:border-color .2s,box-shadow .2s,translate .2s; }
+.library-link-top { display:flex;justify-content:space-between;align-items:center;color:var(--green); }
+.library-link-top i { font:italic 23px Georgia,serif;color:var(--muted); }
+.portal-app .learning-library-links strong { font-size:16px;font-weight:500; }
+.portal-app .learning-library-links small { display:flex;justify-content:space-between;font-size:11px; }
+.portal-app .knowledge-page .kb-stats { border:0;background:transparent; }
+.portal-app .knowledge-page .kb-stats>div { padding:6px 20px;min-height:0;display:flex;flex-direction:row;gap:16px;align-items:center;justify-content:space-between;border-color:var(--line); }
+.portal-app .knowledge-page .kb-stats strong { font:25px/1.4 Georgia,serif;color:var(--ink); }
+.portal-app .knowledge-page .kb-layout { background:var(--paper);border:1px solid var(--line);border-radius:12px; }
+.portal-app .knowledge-page .kb-sidebar { padding:22px 16px;background:var(--code-paper);flex-basis:246px; }
+.portal-app .knowledge-page .kb-search { border-radius:6px;background:var(--paper); }
+.portal-app .knowledge-page .kb-topic { border-radius:6px;padding-block:12px; }
+.portal-app .knowledge-page .kb-topic.active { background:var(--paper);box-shadow:0 2px 8px #203a2805; }
+.portal-app .knowledge-page .kb-entries { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start;padding:22px; }
+.portal-app .knowledge-page .kb-card { border:1px solid var(--line);border-radius:9px;background:var(--paper);padding:22px;transition:border-color .18s,box-shadow .18s; }
+.portal-app .knowledge-page .kb-card h3 { font-size:18px;line-height:1.7; }
+.portal-app .knowledge-page .kb-card-tags i { background:var(--code-paper);border-radius:4px;padding:3px 7px; }
+.portal-app .knowledge-page .kb-card.active { border-color:var(--green);background:var(--green-soft); }
+.portal-app .knowledge-page .kb-layout:has(.kb-reader) .kb-entries { grid-template-columns:1fr; }
+.portal-app .knowledge-page .kb-reader { border-left:1px solid var(--line);padding:26px; }
+.portal-app .knowledge-page .kb-reader>header { display:block; }
+.portal-app .knowledge-page .kb-reader>header h3 { font-size:22px;font-weight:500;line-height:1.6; }
+.portal-app .knowledge-page .kb-reader-actions { justify-content:flex-start;flex-wrap:wrap;margin-top:15px; }
+.portal-app .knowledge-page .kb-search .field-input { background:transparent;color:var(--ink); }
+.portal-app .knowledge-page .kb-entries>.empty-state { grid-column:1/-1; }
+
+/* Account, collaboration and management reuse the common surfaces. */
+.portal-app .personal-settings-layout { gap:28px;grid-template-columns:235px minmax(0,1fr); }
+.portal-app .settings-navigation { background:var(--paper);border:1px solid var(--line);border-radius:12px; }
+.portal-app .personal-settings .settings-card { padding:28px 32px; }
+.portal-app .settings-navigation nav button { transition:background-color .18s,color .18s; }
+.portal-app .settings-card>header { border-bottom:1px solid var(--line-soft);padding-bottom:22px; }
+.portal-app .settings-form { gap:22px; }
+.portal-app .mail-layout { border:1px solid var(--line);background:var(--paper);border-radius:12px; }
+.portal-app .mail-list { background:var(--code-paper); }
+.portal-app .mail-list>header { padding:20px; }
+.portal-app .mail-reader { padding:30px; }
+.portal-app .app-content :is(.group-sidebar,.group-main,.research-card) { background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--surface-shadow); }
+.portal-app .groups-page .group-layout { gap:22px;border:0;grid-template-columns:245px minmax(0,1fr); }
+.portal-app .groups-page .group-sidebar { padding:22px 16px; }
+.portal-app .groups-page .group-sidebar>button { border-radius:6px; }
+.portal-app .groups-page .group-main { padding:26px; }
+.portal-app .people-page .people-layout { border-radius:12px; }
+.portal-app .people-page .people-directory { background:var(--code-paper); }
+.portal-app .research-space { padding:0; }
+.portal-app .research-intro { border-bottom:1px solid var(--line);margin-bottom:18px;padding-bottom:24px; }
+.portal-app .research-tabs { gap:10px; }
+.portal-app .research-tabs a { padding:10px 14px;border-radius:6px 6px 0 0; }
+.portal-app .research-tabs a[aria-current] { background:var(--paper); }
+.portal-app .research-answer { background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:26px; }
+.portal-app .workspace-reader .lab-row { border:0;margin-bottom:18px;max-width:1320px;width:calc(100% - 80px); }
+.portal-app .workspace-reader .lab-prose { padding-left:0;padding-right:40px; }
+.portal-app .workspace-reader .lab-detail { border:1px solid var(--line);border-radius:10px;background:var(--paper);margin:0; }
+.portal-app .workspace-reader .lab-row-intro .lab-detail { background:transparent;border:0; }
+.portal-app .workspace-reader { background:transparent; }
+.portal-app .experiment-page-intro { max-width:1320px;width:calc(100% - 80px);margin:0 auto 20px;padding:46px 0 24px; }
+.portal-app .experiment-page-intro .experiment-index { gap:9px;max-width:480px;justify-content:flex-end; }
+.portal-app .experiment-page-intro .experiment-index a { padding:6px 10px;border-radius:5px;background:var(--paper);border:1px solid var(--line);font-size:12px;line-height:1.7;text-decoration:none; }
+.portal-app .workspace-reader .reader-personal { max-width:1320px;width:calc(100% - 80px);padding:24px 0;border-bottom:0; }
+.portal-app .workspace-reader .dropzone { border-radius:9px;background:var(--canvas); }
+.portal-app .model-showcase-card { padding:24px; }
+.portal-app .model-showcase-copy h3 { font-size:23px; }
+.portal-app .model-utility-card { background:var(--paper);border:1px solid var(--line);border-radius:12px; }
+.portal-app .model-utility-card :is(a,button) { background:transparent;color:var(--ink);border-color:var(--line); }
+.portal-app .model-utility-card :is(a,button):hover { background:var(--hover-paper); }
+.portal-app .model-showcase-foot { border-color:var(--line); }
+.portal-app .model-showcase-foot :is(code,span) { color:var(--muted); }
+.portal-app .model-showcase-foot a { color:var(--green); }
+.portal-app :is(.role-card,.download-card) { padding:24px; }
+.portal-app .admin-metrics { gap:14px;margin:0; }
+.portal-app .admin-metrics article { padding:22px 24px;border:1px solid var(--line);border-radius:10px;background:var(--paper); }
+.portal-app .admin-metrics strong { font:36px/1.4 Georgia,serif;font-variant-numeric:tabular-nums; }
+
+/* Finite entrance and hover feedback; typing and answer content never loop. */
+@keyframes workspace-settle { from { opacity:.65;translate:0 5px; } to { opacity:1;translate:0 0; } }
+@media(prefers-reduced-motion:no-preference) {
+  [data-motion=on] .app-content>:is(.page-stack,.research-space,.workspace-reader) { animation:workspace-settle .32s ease-out; }
+  [data-motion=on] .portal-app :is(.shelf-book,.learning-library-links a):hover { translate:0 -2px;box-shadow:var(--surface-hover);border-color:color-mix(in srgb,var(--green) 45%,var(--line)); }
+}
+[data-motion=off] .portal-app :is(.shelf-book,.learning-library-links a) { transition:none; }
+@media(prefers-reduced-motion:reduce) { .portal-app :is(.shelf-book,.learning-library-links a) { transition:none; } }
+@media(max-width:1100px) {
+  .portal-app .experiment-page-intro { width:calc(100% - 60px);margin-inline:30px; }
+  .portal-app .page-intro { flex-wrap:wrap; }
+  .portal-app .knowledge-page .kb-layout:has(.kb-reader) { flex-wrap:wrap; }
+  .portal-app .knowledge-page .kb-reader { flex-basis:100%;border-left:0;border-top:1px solid var(--line); }
+  .portal-app .learning-layout { grid-template-columns:190px minmax(0,1fr);gap:22px; }
+  .portal-app .personal-settings-layout { grid-template-columns:200px minmax(0,1fr);gap:22px; }
+}
+@media(max-width:760px) {
+  .portal-app .app-content>.workspace-page-waves { left:20%;right:15px;opacity:.1; }
+  .portal-app .page-intro h2 { font-size:27px; }
+  .portal-app .vocabulary-page .vocab-study-layout,.portal-app .personal-settings-layout,.portal-app .learning-layout { grid-template-columns:1fr; }
+  .portal-app .groups-page .group-layout { grid-template-columns:1fr; }
+  .portal-app .learning-sidebar { position:static; }
+  .portal-app .vocabulary-page .vocab-study-card { padding:24px; }
+  .portal-app .learning-list { padding:20px 18px 0; }
+  .portal-app .learning-library-links { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .portal-app .knowledge-page .kb-entries { grid-template-columns:1fr; }
+  .portal-app .workspace-reader .lab-prose { padding-left:25px; }
+  .portal-app .workspace-reader .lab-detail { margin:0 20px; }
+}
