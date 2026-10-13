@@ -10,4 +10,6 @@ public class WorkspacePreferenceEntity {
     @Column(nullable=false) public boolean muted;
     @Column(name="read_through") public Instant readThrough;
     @Column(name="read_message_id",nullable=false,length=36) public String readMessageId;
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name="announcement_read_revision",nullable=false) public long announcementReadRevision;
 }

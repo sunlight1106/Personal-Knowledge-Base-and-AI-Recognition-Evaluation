@@ -126,7 +126,12 @@ public class MessageService {
     @Transactional
     public ApiDtos.MessageView detail(String id) {
         UserEntity current = currentUserService.requireCurrent(); MessageEntity message = requireAccessible(id, current);
-        recipientRepository.findByMessageIdAndRecipientId(id, current.getId()).ifPresent(item -> { item.markRead(); recipientRepository.save(item); });
+        recipientRepository.findByMessageIdAndRecipientId(id, current.getId()).ifPresent(item -> {
+            if (item.getReadAt() == null) {
+                item.markRead(); recipientRepository.save(item);
+                if (live != null) live.changed(List.of(current.getId()));
+            }
+        });
         return toView(message, current);
     }
 

@@ -86,6 +86,7 @@ public class SocialService {
             case "unblock" -> link.block(me, false);
             default -> throw bad("不支持的联系人操作");
         }
+        live.changed(List.of(me, link.peer(me)));
     }
     @Transactional
     public void preferences(long id, SocialDtos.Preferences value) {
@@ -93,6 +94,7 @@ public class SocialService {
         ContactLinkEntity link = locked(id, me);
         if (!"ACCEPTED".equals(link.getStatus())) throw unavailable();
         link.preferences(me, value.remark(), value.pinned(), value.muted());
+        live.changed(List.of(me));
     }
     @Transactional
     public void read(long id, long through) {
@@ -100,7 +102,10 @@ public class SocialService {
         ContactLinkEntity link = locked(id, me);
         requireChat(link, me);
         if (!chats.existsByIdAndContactId(through, id)) throw bad("消息不属于当前会话");
-        link.markRead(me, through);
+        if (link.readThrough(me) < through) {
+            link.markRead(me, through);
+            live.changed(List.of(me));
+        }
     }
     @Transactional
     public void clearHistory(long id) {
@@ -108,6 +113,7 @@ public class SocialService {
         ContactLinkEntity link = locked(id, me);
         long through = chats.findFirstByContactIdOrderByIdDesc(id).map(ChatMessageEntity::getId).orElse(0L);
         link.clearHistory(me, through);
+        live.changed(List.of(me));
     }
     @Transactional(readOnly = true)
     public List<SocialDtos.ChatMessage> messages(long id, Long after, Long before) {

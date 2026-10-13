@@ -19,8 +19,9 @@ public class GroupConversationService {
     public record Announcement(@Size(max=2000) @NotNull String text,@Min(0) long revision) {}
     public record Pin(@Size(max=36) String messageId,@Min(0) long revision) {}
     public record Read(@NotBlank @Size(max=36) String messageId) {}
+    public record ReadAnnouncement(@Min(1) long revision) {}
     public record PinnedMessage(String id,String body,String senderName,Instant createdAt) {}
-    public record Features(long groupId,String announcement,long revision,boolean pinned,boolean muted,long unread,PinnedMessage pinnedMessage) {}
+    public record Features(long groupId,String announcement,long revision,boolean pinned,boolean muted,long unread,PinnedMessage pinnedMessage,long announcementRevision,boolean announcementUnread,String latestMessageId) {}
     public record Overview(List<ApiDtos.WorkspaceView> groups,List<Features> features) {}
     public record Person(long id,String identityCode,String username,String displayName) {}
     public record Directory(List<Person> items,boolean hasMore,int page) {}
@@ -31,13 +32,13 @@ public class GroupConversationService {
     public Features get(long id){return features(List.of(groups.detail(id))).get(0);}
     private List<Features> features(List<ApiDtos.WorkspaceView> visible){
         if(visible.isEmpty())return List.of();var user=current.requireCurrent();long owner=user.getId();boolean canRead=current.hasPermission(user,"message:read");Map<Long,Features> found=new HashMap<>();
-        for(int offset=0;offset<visible.size();offset+=500){var batch=visible.subList(offset,Math.min(visible.size(),offset+500));List<Object> args=new ArrayList<>(List.of(owner,owner,owner));args.addAll(batch.stream().map(ApiDtos.WorkspaceView::id).toList());
-            String sql="SELECT w.id,COALESCE(n.announcement,'') announcement,COALESCE(n.revision,0) revision,COALESCE(p.pinned,FALSE) pinned,COALESCE(p.muted,FALSE) muted,n.pinned_message_id,pm.body pinned_body,u.display_name pinned_sender,pm.created_at pinned_time,(SELECT COUNT(*) FROM internal_message m WHERE m.workspace_id=w.id AND wm.id IS NOT NULL AND m.sender_id<>? AND (m.created_at>CASE WHEN p.read_through>wm.created_at THEN p.read_through ELSE COALESCE(wm.created_at,CURRENT_TIMESTAMP) END OR (p.read_through>=wm.created_at AND m.created_at=p.read_through AND m.id>p.read_message_id))) unread FROM workspace w LEFT JOIN workspace_notice n ON n.workspace_id=w.id LEFT JOIN workspace_preference p ON p.workspace_id=w.id AND p.owner_id=? LEFT JOIN workspace_member wm ON wm.workspace_id=w.id AND wm.user_id=p.owner_id LEFT JOIN internal_message pm ON pm.id=n.pinned_message_id AND pm.workspace_id=w.id LEFT JOIN app_user u ON u.id=pm.sender_id WHERE w.id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")";
+        for(int offset=0;offset<visible.size();offset+=500){var batch=visible.subList(offset,Math.min(visible.size(),offset+500));List<Object> args=new ArrayList<>(List.of(owner,owner,owner,owner));args.addAll(batch.stream().map(ApiDtos.WorkspaceView::id).toList());
+            String sql="SELECT w.id,COALESCE(n.announcement,'') announcement,COALESCE(n.revision,0) revision,COALESCE(n.announcement_revision,0) announcement_revision,COALESCE(p.announcement_read_revision,0) announcement_read_revision,(SELECT lm.id FROM internal_message lm WHERE lm.workspace_id=w.id AND lm.sender_id<>? ORDER BY lm.created_at DESC,lm.id DESC LIMIT 1) latest_message_id,COALESCE(p.pinned,FALSE) pinned,COALESCE(p.muted,FALSE) muted,n.pinned_message_id,pm.body pinned_body,u.display_name pinned_sender,pm.created_at pinned_time,(SELECT COUNT(*) FROM internal_message m WHERE m.workspace_id=w.id AND wm.id IS NOT NULL AND m.sender_id<>? AND (m.created_at>CASE WHEN p.read_through>wm.created_at THEN p.read_through ELSE COALESCE(wm.created_at,CURRENT_TIMESTAMP) END OR (p.read_through>=wm.created_at AND m.created_at=p.read_through AND m.id>p.read_message_id))) unread FROM workspace w LEFT JOIN workspace_notice n ON n.workspace_id=w.id LEFT JOIN workspace_preference p ON p.workspace_id=w.id AND p.owner_id=? LEFT JOIN workspace_member wm ON wm.workspace_id=w.id AND wm.user_id=p.owner_id LEFT JOIN internal_message pm ON pm.id=n.pinned_message_id AND pm.workspace_id=w.id LEFT JOIN app_user u ON u.id=pm.sender_id WHERE w.id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")";
             // Membership baseline must also work before the first preference row is created.
             sql=sql.replace("wm.user_id=p.owner_id","wm.user_id=?");
-            jdbc.query(sql,r->{long id=r.getLong("id");String message=r.getString("pinned_message_id");PinnedMessage pin=message==null||r.getTimestamp("pinned_time")==null?null:new PinnedMessage(message,r.getString("pinned_body"),r.getString("pinned_sender"),r.getTimestamp("pinned_time").toInstant());found.put(id,new Features(id,r.getString("announcement"),r.getLong("revision"),r.getBoolean("pinned"),r.getBoolean("muted"),r.getLong("unread"),pin));},args.toArray());
+            jdbc.query(sql,r->{long id=r.getLong("id");String message=r.getString("pinned_message_id");PinnedMessage pin=message==null||r.getTimestamp("pinned_time")==null?null:new PinnedMessage(message,r.getString("pinned_body"),r.getString("pinned_sender"),r.getTimestamp("pinned_time").toInstant());found.put(id,new Features(id,r.getString("announcement"),r.getLong("revision"),r.getBoolean("pinned"),r.getBoolean("muted"),r.getLong("unread"),pin,r.getLong("announcement_revision"),!r.getString("announcement").isBlank()&&r.getLong("announcement_revision")>r.getLong("announcement_read_revision"),r.getString("latest_message_id")));},args.toArray());
         }
-        return visible.stream().map(g->{Features f=found.get(g.id());if(f==null)throw new IllegalStateException("Group metadata missing");return canRead&&g.currentPermissions().contains("CONTENT_READ")?f:new Features(g.id(),"",f.revision(),f.pinned(),f.muted(),0,null);}).toList();
+        return visible.stream().map(g->{Features f=found.get(g.id());if(f==null)throw new IllegalStateException("Group metadata missing");return canRead&&g.currentPermissions().contains("CONTENT_READ")?f:new Features(g.id(),"",f.revision(),f.pinned(),f.muted(),0,null,0,false,null);}).toList();
     }
     @Transactional
     public Features preferences(long id,Preferences input){groups.detail(id);long owner=lockOwner();ensurePreference(id,owner);jdbc.update("UPDATE workspace_preference SET pinned=?,muted=? WHERE workspace_id=? AND owner_id=?",input.pinned(),input.muted(),id,owner);live.changed(List.of(owner));return get(id);}
@@ -45,7 +46,17 @@ public class GroupConversationService {
     public Features read(long id,Read input){groups.requireContentPermission(id,false);long owner=lockOwner();var message=jdbc.query("SELECT created_at FROM internal_message WHERE id=? AND workspace_id=?",(r,i)->r.getTimestamp(1),input.messageId(),id).stream().findFirst().orElseThrow(this::missing);ensurePreference(id,owner);
         int changed=jdbc.update("UPDATE workspace_preference SET read_through=?,read_message_id=? WHERE workspace_id=? AND owner_id=? AND (read_through IS NULL OR read_through<? OR (read_through=? AND read_message_id<?))",message,input.messageId(),id,owner,message,message,input.messageId());if(changed>0)live.changed(List.of(owner));return get(id);}
     @Transactional
-    public Features announcement(long id,Announcement input){groups.requireSettingsPermission(id);Notice notice=lockedNotice(id);checkRevision(notice,input.revision());saveNotice(id,input.text().trim(),notice.message(),notice.revision()+1);return get(id);}
+    public Features announcement(long id,Announcement input){groups.requireSettingsPermission(id);Notice notice=lockedNotice(id);checkRevision(notice,input.revision());String text=input.text().trim();if(!text.equals(notice.text())){saveNotice(id,text,notice.message(),notice.revision()+1);jdbc.update("UPDATE workspace_notice SET announcement_revision=? WHERE workspace_id=?",notice.revision()+1,id);acknowledgeAnnouncement(id,notice.revision()+1);}return get(id);}
+    @Transactional
+    public Features readAnnouncement(long id,ReadAnnouncement input){
+        groups.requireContentPermission(id,false);
+        long revision=jdbc.query("SELECT announcement_revision FROM workspace_notice WHERE workspace_id=?",(r,i)->r.getLong(1),id).stream().findFirst().orElse(0L);
+        if(input.revision()>revision)throw new BusinessException(HttpStatus.BAD_REQUEST,"NOTICE_REVISION_INVALID","只能标记已显示的公告版本");
+        acknowledgeAnnouncement(id,input.revision());return get(id);
+    }
+    private void acknowledgeAnnouncement(long id,long revision){long owner=lockOwner();ensurePreference(id,owner);
+        if(jdbc.update("UPDATE workspace_preference SET announcement_read_revision=? WHERE workspace_id=? AND owner_id=? AND announcement_read_revision<?",revision,id,owner,revision)>0)live.changed(List.of(owner));
+    }
     @Transactional
     public Features pin(long id,Pin input){groups.requireSettingsPermission(id);Notice notice=lockedNotice(id);checkRevision(notice,input.revision());if(input.messageId()!=null&&!input.messageId().isBlank()&&jdbc.queryForList("SELECT id FROM internal_message WHERE id=? AND workspace_id=?",String.class,input.messageId(),id).isEmpty())throw missing();saveNotice(id,notice.text(),input.messageId()==null||input.messageId().isBlank()?null:input.messageId(),notice.revision()+1);return get(id);}
     @Transactional(readOnly=true)

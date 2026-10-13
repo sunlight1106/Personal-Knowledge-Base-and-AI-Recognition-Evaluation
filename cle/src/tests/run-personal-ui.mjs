@@ -7,7 +7,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
-import { parse, compileScript } from '@vue/compiler-sfc'
+import { parse, compileScript, compileTemplate } from '@vue/compiler-sfc'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(here, '../..')
 const suite = process.argv[2] || 'personal-ui.mjs'
@@ -37,6 +37,11 @@ await build({
   alias:{'@':path.join(root,'src')}, define:{'import.meta.env':'{}','__VUE_OPTIONS_API__':'true','__VUE_PROD_DEVTOOLS__':'false','__VUE_PROD_HYDRATION_MISMATCH_DETAILS__':'false'},
   plugins:[{name:'vue-sfc-test',setup(api){api.onLoad({filter:/\.vue$/},async ({path:filename})=>{
     const text=await fs.readFile(filename,'utf8');const {descriptor}=parse(text,{filename})
+    if (!descriptor.script && !descriptor.scriptSetup) {
+      const compiled=compileTemplate({source:descriptor.template?.content||'',filename,id:filename})
+      if (compiled.errors.length) throw compiled.errors[0]
+      return {contents:compiled.code+'\nexport default { render }',loader:'js',resolveDir:path.dirname(filename)}
+    }
     const compiled=compileScript(descriptor,{id:filename,inlineTemplate:true})
     return {contents:compiled.content,loader:'ts',resolveDir:path.dirname(filename)}
   })}}],

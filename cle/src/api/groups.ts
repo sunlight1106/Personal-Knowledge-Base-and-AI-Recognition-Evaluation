@@ -2,6 +2,7 @@ import { request } from './client'
 import type { MessageView, WorkspaceView } from '@/types/api'
 export interface GroupFeatures {
   groupId: number; announcement: string; revision: number; pinned: boolean; muted: boolean; unread: number
+  announcementRevision: number; announcementUnread: boolean; latestMessageId: string | null
   pinnedMessage: { id: string; body: string; senderName: string; createdAt: string } | null
 }
 export interface GroupPerson { id: number; identityCode: string; username: string; displayName: string }
@@ -15,6 +16,7 @@ export const groupApi = {
   features: (id: number) => request<GroupFeatures>(`/workspaces/${id}/features`),
   preferences: (id: number, pinned: boolean, muted: boolean) => request<GroupFeatures>(`/workspaces/${id}/preferences`, json({ pinned, muted })),
   announcement: (id: number, text: string, revision: number) => request<GroupFeatures>(`/workspaces/${id}/announcement`, json({ text, revision })),
+  readAnnouncement: (id: number, revision: number) => request<GroupFeatures>(`/workspaces/${id}/announcement/read`, { method: 'POST', body: JSON.stringify({ revision }) }),
   pin: (id: number, messageId: string | null, revision: number) => request<GroupFeatures>(`/workspaces/${id}/pin`, json({ messageId, revision })),
   read: (id: number, messageId: string) => request<GroupFeatures>(`/workspaces/${id}/read`, { method: 'POST', body: JSON.stringify({ messageId }) }),
   people: (id: number, q: string, page = 0, signal?: AbortSignal) => request<GroupDirectory>(`/workspaces/${id}/people?${new URLSearchParams({ q, page: String(page) })}`, { signal }),

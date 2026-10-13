@@ -45,6 +45,7 @@ function recoverDraft(){const d=recoveredDraft.value;if(!d)return;title.value=d.
 function discardLocalDraft(){clearDraft(localKey());recoveredDraft.value=null}
 
 const router = useRouter()
+let replacingSavedRoute = false
 
 const canWrite = computed(() => authStore.has('note:write'))
 
@@ -252,7 +253,11 @@ async function save(automatic = false): Promise<string | null> {
       || saved.status.code !== payload.status || JSON.stringify(saved.tags) !== JSON.stringify([...new Set(payload.tags.split(/[,，、;；\s]+/).filter(Boolean))])
     if (!dirty.value) clearDraft(localKey()); else cacheDraft()
     if (!automatic) toastStore.success('已保存到服务器')
-    if (wasNew) await router.replace({ name: 'note-edit', params: { id: saved.id } })
+    if (wasNew) {
+      replacingSavedRoute = true
+      try { await router.replace({ name: 'note-edit', params: { id: saved.id } }) }
+      finally { replacingSavedRoute = false }
+    }
     return saved.id
   } catch (reason) {
     if (version === loadVersion) {
@@ -514,7 +519,7 @@ function confirmLeave() {
   if (saving.value) { toastStore.info('正在保存，请稍候再离开'); return false }
   return !dirty.value || window.confirm('笔记有未保存的更改。离开会丢弃这些更改，继续？')
 }
-onBeforeRouteLeave(confirmLeave)
+onBeforeRouteLeave(to => replacingSavedRoute && to.name === 'note-edit' && to.params.id === currentId.value ? true : confirmLeave())
 onBeforeRouteUpdate((to, from) => {
   if (to.params.id !== from.params.id && to.params.id !== currentId.value && !confirmLeave()) return false
 })

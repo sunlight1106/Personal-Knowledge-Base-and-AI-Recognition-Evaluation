@@ -9,5 +9,7 @@ public class WorkspaceNoticeEntity {
     @Column(nullable=false,columnDefinition="TEXT") public String announcement;
     @JdbcTypeCode(SqlTypes.CHAR) @Column(name="pinned_message_id",length=36) public String pinnedMessageId;
     @Column(nullable=false) public long revision;
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name="announcement_revision",nullable=false) public long announcementRevision;
     @Column(name="updated_at",nullable=false) public Instant updatedAt;
 }

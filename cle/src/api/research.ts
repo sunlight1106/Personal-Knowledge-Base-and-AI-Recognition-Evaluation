@@ -6,6 +6,7 @@ export interface SearchPage { items:Hit[];hasMore:boolean;page:number }
 export interface SearchFilters { q:string;type:string;tag:string;since:string|null;group:number|null;sort:string }
 export interface SavedSearch { id:string;name:string;filters:SearchFilters;createdAt:string }
 export interface RecordItem { id:string; kind:string; title:string; data:any; revision:number; updatedAt:string }
+export interface NotificationItem { id:string;title:string;url:string;count:number;version?:string;popup?:boolean }
 const json=(method:string,data?:unknown)=>({method,body:data===undefined?undefined:JSON.stringify(data)})
 export const researchApi={
  search:(params:Record<string,string>,signal?:AbortSignal)=>request<SearchPage>('/research/search?'+new URLSearchParams(params),{signal}),
@@ -31,7 +32,7 @@ export const researchApi={
  versions:(id:string,page=0)=>request<{id:string;revision:number;title:string;createdAt:string}[]>(`/notes/${id}/versions?page=${page}`),
  version:(id:string,v:string)=>request<{id:string;title:string;body:string;revision:number;contentFormat:string}>(`/notes/${id}/versions/${v}`),
  restoreVersion:(id:string,v:string,baseRevision:number)=>request<void>(`/notes/${id}/versions/${v}/restore`,json('POST',{baseRevision})),
- notifications:()=>request<{id:string;title:string;url:string;count:number}[]>('/notifications'),
+ notifications:(signal?:AbortSignal)=>request<NotificationItem[]>('/notifications',{signal}),
  evaluate:(payload:unknown)=>request<RecordItem>('/research/evaluations',json('POST',payload)),
  evaluations:()=>request<RecordItem[]>('/research/evaluations'),
 }

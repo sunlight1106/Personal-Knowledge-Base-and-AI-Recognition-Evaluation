@@ -147,6 +147,11 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
         envelope?.traceId,
       )
     }
+    // Refresh counters immediately even when the live connection is reconnecting.
+    if ((/^\/messages\/[^/]+$/.test(path) && (!init.method || init.method === 'GET'))
+        || (/^\/(social\/contacts|workspaces)\//.test(path) && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(init.method || ''))) {
+      window.dispatchEvent(new Event('personal-platform:notifications-changed'))
+    }
     return envelope.data
   })
 }

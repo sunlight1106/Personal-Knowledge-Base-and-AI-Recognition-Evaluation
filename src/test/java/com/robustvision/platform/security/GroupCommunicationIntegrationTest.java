@@ -82,6 +82,42 @@ class GroupCommunicationIntegrationTest {
         }
     }
 
+    @Test void announcementReadReceiptsArePerMemberAndVersionAndIgnorePinChanges() throws Exception {
+        long id=group(ownerToken);
+        membership(id,ownerToken,member,"MEMBER",Set.of("CONTENT_READ","CONTENT_WRITE")).andExpect(status().isOk());
+        mvc.perform(json(put("/api/v1/workspaces/{id}/announcement",id),ownerToken,Map.of("text","First announcement","revision",0))).andExpect(status().isOk()).andExpect(jsonPath("$.data.announcementUnread").value(false));
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(status().isOk()).andExpect(jsonPath("$.data[?(@.id == 'announcement-"+id+"')].count").value(org.hamcrest.Matchers.hasItem(1)));
+        mvc.perform(json(post("/api/v1/workspaces/{id}/announcement/read",id),outsiderToken,Map.of("revision",1))).andExpect(status().isForbidden());
+        mvc.perform(json(post("/api/v1/workspaces/{id}/announcement/read",id),memberToken,Map.of("revision",2))).andExpect(status().isBadRequest());
+        mvc.perform(json(post("/api/v1/workspaces/{id}/announcement/read",id),memberToken,Map.of("revision",1))).andExpect(status().isOk()).andExpect(jsonPath("$.data.announcementUnread").value(false));
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(jsonPath("$.data[?(@.id == 'announcement-"+id+"')]").isEmpty());
+        mvc.perform(json(put("/api/v1/workspaces/{id}/pin",id),ownerToken,Map.of("revision",1))).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/workspaces/{id}/features",id),memberToken)).andExpect(jsonPath("$.data.announcementUnread").value(false));
+        mvc.perform(json(put("/api/v1/workspaces/{id}/announcement",id),ownerToken,Map.of("text","Updated announcement","revision",2))).andExpect(status().isOk());
+        // A delayed acknowledgement of the old text cannot mark the new announcement read.
+        mvc.perform(json(post("/api/v1/workspaces/{id}/announcement/read",id),memberToken,Map.of("revision",1))).andExpect(status().isOk()).andExpect(jsonPath("$.data.announcementUnread").value(true));
+        mvc.perform(json(put("/api/v1/workspaces/{id}/preferences",id),memberToken,Map.of("pinned",false,"muted",true))).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(jsonPath("$.data[?(@.id == 'announcement-"+id+"')]").isEmpty());
+        membership(id,ownerToken,member,"MEMBER",Set.of("MEMBERS_READ")).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/workspaces/{id}/features",id),memberToken)).andExpect(jsonPath("$.data.announcement").value("")).andExpect(jsonPath("$.data.announcementUnread").value(false));
+    }
+
+    @Test void mailAndGroupReadReceiptsClearNotificationsWithoutHidingNewMessages() throws Exception {
+        String mail=data(direct(adminToken,List.of(member.getId()),null).andExpect(status().isOk()).andReturn()).path("id").asText();
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(jsonPath("$.data[?(@.id == '"+mail+"')].count").value(org.hamcrest.Matchers.hasItem(1)));
+        mvc.perform(auth(get("/api/v1/messages/{id}",mail),outsiderToken)).andExpect(status().isForbidden());
+        mvc.perform(auth(get("/api/v1/messages/{id}",mail),memberToken)).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(jsonPath("$.data[?(@.id == '"+mail+"')]").isEmpty());
+        long id=group(ownerToken);membership(id,ownerToken,member,"MEMBER",Set.of("CONTENT_READ","CONTENT_WRITE")).andExpect(status().isOk());
+        String message=data(postGroup(id,ownerToken,"First message",null,false).andReturn()).path("id").asText();
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(jsonPath("$.data[?(@.id == 'group-"+id+"')].version").value(org.hamcrest.Matchers.hasItem(message)));
+        mvc.perform(json(post("/api/v1/workspaces/{id}/read",id),memberToken,Map.of("messageId",message))).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(jsonPath("$.data[?(@.id == 'group-"+id+"')]").isEmpty());
+        String second=data(postGroup(id,ownerToken,"Second message",null,false).andReturn()).path("id").asText();
+        mvc.perform(json(post("/api/v1/workspaces/{id}/read",id),memberToken,Map.of("messageId",message))).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/notifications"),memberToken)).andExpect(jsonPath("$.data[?(@.id == 'group-"+id+"')].version").value(org.hamcrest.Matchers.hasItem(second)));
+    }
+
     @Test void recipientSearchPagesDuplicateNamesAndRespectsPermissionsForIdentityLookups() throws Exception {
         String name = "Same " + UUID.randomUUID();
         List<UserEntity> peers = new ArrayList<>();

@@ -137,7 +137,14 @@ async function download(file: MessageView['attachments'][number]) {
   catch (reason) { if (version === epoch) error.value = reasonText(reason) }
 }
 watch(() => authStore.state.user?.id, () => { reset(); if (authStore.state.user) void load() }, { flush: 'sync' })
-function liveRefresh(){if(!busy.value&&!composing.value)void load()}
+let refreshing = false
+async function liveRefresh(){
+  if(busy.value||composing.value||loading.value||refreshing)return
+  const version=epoch, currentTab=tab.value; refreshing=true
+  try{const rows=await(currentTab==='inbox'?api.inbox():api.sent());if(version===epoch&&currentTab===tab.value)messages.value=rows}
+  catch{/* Keep the current letter readable while the connection recovers. */}
+  finally{refreshing=false}
+}
 onMounted(()=>window.addEventListener("pkb:live-update",liveRefresh))
 onBeforeUnmount(()=>window.removeEventListener("pkb:live-update",liveRefresh))
 onMounted(async () => { const version = epoch + 1; await load(); if (epoch === version) { if (route.query.to) compose(Number(route.query.to)); else void openNotification() } })

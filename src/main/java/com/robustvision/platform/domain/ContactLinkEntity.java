@@ -45,6 +45,7 @@ public class ContactLinkEntity {
         else updatedAt = Instant.now();
     }
     public long clearedThrough(long user) { return lowUserId == user ? lowClearedThrough : highClearedThrough; }
+    public long readThrough(long user) { return lowUserId == user ? lowReadThrough : highReadThrough; }
     public void preferences(long user, String remark, Boolean pinned, Boolean muted) {
         if (lowUserId == user) {
             if (remark != null) lowRemark = remark.trim();
