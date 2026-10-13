@@ -1,153 +1,145 @@
-# Personal Knowledge Base and AI Recognition Evaluation
+<p align="center">
+  <img src="docs/assets/readme-cover.svg" alt="Personal Knowledge Base — Make room for ideas." width="100%" />
+</p>
 
-个人知识库与 AI 识别评测。用来写笔记、背单词、整理学习资料，也可以接入自己的 AI 分析图片和代码，与其他用户交流。
+<h1 align="center">个人知识库与 AI 识别评测</h1>
+<p align="center">写下所学，记住新词，留住每一次探索。</p>
+<p align="center">
+  <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/archive/refs/heads/main.zip"><strong>下载项目</strong></a>
+  &nbsp; · &nbsp; <a href="#首次启动">开始使用</a>
+  &nbsp; · &nbsp; <a href="docs/README.md">使用文档</a>
+  &nbsp; · &nbsp; <a href="#常见问题">常见问题</a>
+</p>
 
-项目在自己的电脑或服务器上运行，数据保存在部署这套平台的服务器中。Docker 部署不需要另外安装 Java、Node.js 或 Maven。
+---
 
-[下载 ZIP](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/archive/refs/heads/main.zip) · [首次启动](#首次启动) · [日常使用](#日常使用) · [更新版本](#更新版本) · [常见问题](#常见问题)
+把笔记、词汇和学习资料放在同一个空间里。需要时，接入自己的 AI 分析图片、解释代码、整理思路；也可以与其他用户聊天、建群和分享资料。
+
+项目运行在你自己的电脑或服务器上。**普通笔记、背单词和交流不需要 AI 密钥；使用 Docker 部署，不需要另外安装 Java、Node.js 或 Maven。**
+
+<details>
+<summary><strong>看看界面</strong> · 首页与工作入口</summary>
+
+![网站首页：笔记、每日学习与 AI 实验的工作入口](docs/assets/home-preview.png)
+
+支持浅色、深色和四套主题配色。波纹动效可以关闭，编辑和阅读区域保持静止。
+
+</details>
+
+## 可以做什么
+
+| | 日常操作 | 详细说明 |
+| :--- | :--- | :--- |
+| **笔记与知识库** | Markdown / HTML 边写边预览，分类整理、历史版本与回收站；导出 MD、PDF、Word、HTML、TXT | [笔记与资料整理](docs/LEARNING_WORKSPACE.md) |
+| **背单词** | 场景、搭配和拼写练习，美音自动听读；跨词书接续进度，熟词 Skip，导入与备份 | [词书与学习](docs/VOCABULARY.md) |
+| **AI 与图片理解** | 上传图片提问，解释代码，辅助笔记与词汇学习；配置自己的模型和共享记忆 | [个人 AI](docs/PERSONAL_AI.md) |
+| **学习资料** | 搜索、收藏、复习卡、表格、看板与月历，整理实验评测记录 | [学习中心](docs/LEARNING_WORKSPACE.md) |
+| **交流与协作** | 按唯一身份码找人，聊天、站内信、建群、发资料；公告、置顶与免打扰 | [群组与站内信](docs/GROUPS.md) |
+| **账户与管理** | 邮箱验证、登录记录、双重验证；用户权限、统计折线图与举报审核 | [账户安全](docs/ACCOUNT_AND_RECOVERY.md) · [平台管理](docs/ADMINISTRATION.md) |
 
 ## 下载项目
 
-不熟悉 Git：点击上面的 ZIP 链接，完整解压到一个固定目录，例如 `D:\KnowledgeAI`。打开这个目录，确认里面有 `compose.yaml`、`deploy.ps1` 和 `cle` 文件夹。
+**直接下载：** [下载 ZIP](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/archive/refs/heads/main.zip)，完整解压到固定目录，例如 `D:\KnowledgeAI`。确认目录里有 `compose.yaml`、`deploy.ps1` 和 `cle` 文件夹。
 
-使用 Git：
+<details>
+<summary>使用 Git 下载</summary>
 
 ```sh
 git clone --depth 1 https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation.git
 cd Personal-Knowledge-Base-and-AI-Recognition-Evaluation
 ```
 
+</details>
+
 ## 首次启动
 
-### 1. 准备 Docker
+### 01 · 准备 Docker
 
-Windows 和 macOS 安装并启动 [Docker Desktop](https://docs.docker.com/desktop/)。Windows 使用 WSL 2 和 Linux 容器。Linux 安装 Docker Engine 和 Compose 插件。Compose 版本至少为 2.20.2。
+Windows / macOS 安装并打开 [Docker Desktop](https://docs.docker.com/desktop/)，等待引擎就绪。Windows 使用 WSL 2 和 Linux 容器。Linux 安装 Docker Engine 和 Compose 插件。
 
-建议给 Docker 分配 8 GB 内存。首次构建要下载镜像、依赖和病毒库，需要联网，也会比日常启动慢。当前对象存储构建使用 `linux/amd64`，ARM 电脑需要相应仿真支持。
+Compose 至少为 **2.20.2**，建议给 Docker 分配 **8 GB 内存**。首次安装需要联网下载镜像、依赖和病毒库，比日常启动慢。当前对象存储使用 `linux/amd64`，ARM 电脑需要相应仿真支持。
 
-### 2. 启动项目
+### 02 · 在项目目录启动
 
-Windows：在项目文件夹的地址栏输入 `powershell`，回车后运行：
+**Windows** — 打开解压后的项目文件夹，在地址栏输入 `powershell` 并回车，粘贴运行：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1
 ```
 
-Linux / macOS：在项目目录打开终端，运行：
+**Linux / macOS** — 在项目目录打开终端，运行：
 
 ```sh
 sh deploy.sh
 ```
 
-脚本会生成 `.env`、构建镜像并等待服务就绪。看到 `Ready: http://localhost:4173` 后，打开这个地址。端口有调整时，以脚本输出为准。
+脚本会生成配置、构建镜像并等待服务就绪。看到 **`Ready: http://localhost:4173`** 后，在浏览器打开这个地址；如果调整过端口，以实际输出为准。
 
-`.env` 由脚本生成，里面有管理员初始密码、数据库密码和加密密钥。已有安装会继续使用原文件，不要用 `.env.example` 覆盖它，也不要上传到 GitHub。
+### 03 · 登录自己的空间
 
-### 3. 登录
+| 登录信息 | 去哪里找 |
+| :--- | :--- |
+| 管理员用户名 | 默认 `admin`；修改过则查看 `.env` 的 `BOOTSTRAP_ADMIN_USERNAME` |
+| 管理员初始密码 | 用文本编辑器打开项目根目录的 `.env`，查看 `BOOTSTRAP_ADMIN_PASSWORD=` 后面的内容 |
+| 普通用户 | 在登录页点击「注册」，或由管理员创建账号 |
 
-默认管理员用户名为 `admin`。用文本编辑器打开本机 `.env`，找到 `BOOTSTRAP_ADMIN_PASSWORD=`，等号后面就是初始密码。如果改过用户名，查看 `BOOTSTRAP_ADMIN_USERNAME`。
+登录后可在个人设置中修改密码。已有安装继续使用原来的密码。
 
-登录后可以在个人设置中修改密码。普通用户在登录页点击「注册」，也可以由管理员创建账号。旧安装升级后仍使用原来的密码。
+> **保管好 `.env`。** 它包含密码和加密密钥，不要上传到 GitHub，也不要用 `.env.example` 覆盖。恢复已有数据时需要原配置。
 
-如果 4173 端口被占用，首次部署可以这样指定端口：
+<details>
+<summary>4173 端口被占用，怎么换一个？</summary>
+
+首次部署可指定端口：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1 -Port 4273
 ```
 
-已有 `.env` 时，直接修改里面的 `WEB_PORT`，然后重新运行脚本。
+如果已经生成 `.env`，先修改其中的 `WEB_PORT`，再更新前端容器以应用新端口：
+
+```sh
+docker compose up -d --no-deps frontend
+```
+
+</details>
 
 ## 日常使用
 
-首页右侧的工作目录可直接进入笔记、背单词和识别实验，未登录时会先跳转到登录页。下面按知识整理、每日学习和 AI 实验列出常用入口。
+右上角的 **「目录与账户」** 是所有功能的入口，也可以在这里切换账号或退出。
 
-顶部波纹图标可暂停或开启动态效果，选择保存在当前浏览器。系统开启「减少动态效果」时自动停用；切到后台或滚出波纹区域时也会暂停。动效只用于背景和点击反馈，不影响编辑、学习或按钮操作。
+1. **先写一篇笔记。** 打开「我的笔记」，选择学习库，新建内容；左边编写，右边预览。
+2. **开始一次背词。** 打开「背单词 → 我的词书」，选一本再开始学习。换词书后，同一个单词沿用之前的进度。
+3. **需要 AI 时再配置。** 打开「设置 → 个人 AI」，填写自己的供应商、模型和密钥。调用前先预览发送内容，再确认；部署者需要开启远程调用。
+4. **调成习惯的样子。** 在「设置 → 外观」选择鼠尾草、玫瑰、雾蓝或鸢尾；常用页面可在「目录与账户」点 **＋** 固定到顶部，最多 5 个。
 
-背单词、笔记、知识库、信箱和设置沿用同一套浅色与深色界面。页面标题旁有轻微波纹，目录和词书按钮有点击反馈；背单词开始答题后，学习卡片内的波纹会隐藏。笔记正文和预览区保持静止，适合长时间编写与阅读。
+工作台可继续最近的笔记、词书和实验。更多操作见 [日常使用指南](docs/USAGE.md)，全部说明见 [文档目录](docs/README.md)。
 
-在「设置 → 外观 → 主题配色」选择鼠尾草、玫瑰、雾蓝或鸢尾，整站背景、文字、按钮和波纹会一起换色。每套配色都支持浅色、深色和跟随系统；选择即时保存，刷新后保留，同一浏览器里的不同账号各自设置。
+### 再次启动与停止
 
-右上角「目录与账户」可以进入各个功能，也可以切换账号或退出。每个账号都有系统分配的唯一身份码，显示名称可以重复，身份码不会重复。
+| 操作 | 方法 |
+| :--- | :--- |
+| Windows 再次启动 | 双击项目目录里的 **`start.cmd`** |
+| Linux / macOS 再次启动 | 在项目目录执行 **`sh deploy.sh`** |
+| 停止并保留数据 | 在项目目录执行 **`docker compose stop`** |
 
-登录后的工作台会显示最近编辑的笔记、当前词书、待复习数量和实验记录。点击笔记标题接着写，点击「继续学习」进入词书；「刷新概览」可以手动更新进度。各区域分别加载，某一项失败时可重试，其余功能仍可使用。
+日常启动会复用已有容器和镜像。Windows 安装了 Python 时会打开启动进度页，没有 Python 也能从终端启动。启动异常或想了解耗时，查看 [启动与排查](docs/STARTUP.md)。
 
-常用页面可以自己选：打开「目录与账户」，点击页面右侧的 **＋**，固定到顶部导航；再次点击 **✓** 取消，最多 5 个。工作台右侧的「最近访问」可直接返回之前打开的模块，也能一键清除。这两项仅保存在当前浏览器，按账号分开，不保存笔记内容或搜索关键词，不会同步到其他设备。管理员收回某项权限后，相应入口会隐藏。
-
-「我的笔记」左侧切换学习库，右侧搜索和筛选；回收站在左侧底部。背单词页面顶部切换学习、词书、单词本和记录，学习统计与每周目标放在同一块概览中。学习区可开关新词自动听读，展开「键盘快捷操作」查看按键说明。
-
-
-| 功能 | 入口 | 用法 |
-| --- | --- | --- |
-| 笔记 | 我的笔记 | Markdown / HTML 左侧编写、右侧预览；模板、批量整理和定期复习；AI 解释、润色与自测；自动保存、历史版本、回收站和分享；导出 MD、PDF、Word、HTML、TXT |
-| 知识库 | 知识库 | 按主题整理知识卡，或转成自己的笔记继续写 |
-| 背单词 | 背单词 | 开始背词自动读一次美音，可切英音、慢速；按场景、搭配和拼写练习，查看每周计划；跨词书沿用进度；熟词可 Skip；可导入和备份 |
-| 学习资料 | 学习中心 | 按关键词检索、收藏资料、保存常用搜索；制作复习卡，使用表格、看板和月历，保存评测报告 |
-| 图片理解 | 实验台 | 上传图片，选择自己的视觉模型，提问或识别图片中的票据、车牌等内容 |
-| 个人 AI | 设置 → 个人 AI | 设置供应商、模型、地址和密钥，管理共享记忆，运行本地训练 |
-| 协作 | 联系人、站内信箱、群组协作 | 通过身份码找人，添加联系人、聊天、收发资料；群内权限单独设置 |
-| 平台管理 | 平台总览、用户管理、权限管理 | 查看统计折线图，管理账号、角色、单独用户权限和使用期限 |
-
-普通笔记、词汇学习和交流不需要 AI 密钥。个人 AI 调用需要自己的配置，以及部署者开启远程调用开关。发送前会显示内容预览，确认后才提交给供应商。
-
-实验台的 DEMO 用于体验流程，结果是演示数据；真实视频模型调用尚未开放。本地训练目前是 PyTorch CPU 文本分类器，不能直接训练大型语言模型。代码注释分析是 AI 静态推断，不会在服务器执行用户代码。
-
-详细操作：
-
-- [学习中心、搜索和评测](docs/LEARNING_WORKSPACE.md)
-- [个人 AI、共享记忆和训练](docs/PERSONAL_AI.md)
-- [群组与站内信](docs/GROUPS.md)
-- [管理员和用户权限](docs/ADMINISTRATION.md)
-- [举报、审核和处罚](docs/MODERATION.md)：用户提交消息举报，审核员填写理由和时长，支持禁言、功能限制、封禁与申诉。
-
-在「目录与账户 → 操作文档」查看逐步说明；文档页面内按 Ctrl K 可以搜索操作。
-
-常查的资料可以在搜索结果旁点「收藏」，以后从「学习中心 → 我的收藏」打开。常用筛选条件点「保存当前搜索」，起一个名字即可保存。资料搜索支持空格分隔多个关键词、相关性和更新时间排序；Ctrl K 打开的搜索框可用 ↑↓ 选择、Enter 打开、Esc 关闭。操作文档里的 Ctrl K 搜索帮助条目。
-
-## 账号安全与新增操作
-
-- [验证邮箱、密码找回、验证器和每日备份](docs/ACCOUNT_AND_RECOVERY.md)
-- [邮箱绑定、登录记录、停用与注销、学习计划、笔记整理和群资料](docs/PERSONAL_WORKFLOWS.md)
-- [听写、易混词、笔记合并、图片附件、群组和 AI 接入检查](docs/LEARNING_AND_GROUPS.md)
-
-这些入口在各自的设置页和使用页面中。邮件找回需要部署者配置 SMTP；真实模型检查需要用户保存自己的配置并手动确认。没有配置时，页面会说明缺少什么，不会显示测试通过。
-
-## 再次启动与停止
-
-Windows 部署完成后，双击 `start.cmd` 即可启动。安装了 Python 的电脑会打开本地启动进度页，可查看当前阶段、重试失败的启动并进入平台；没有 Python 时使用原有终端启动。平时复用已有容器和镜像，不会重新编译。Docker 启动前会检查已知残留通信文件；如果目录内容不符合安全检查，会停止自动处理并保留原数据。
-
-其他系统也可以在项目目录执行：
-
-```sh
-docker compose start --wait --wait-timeout 600
-```
-
-停止项目并保留数据：
-
-```sh
-docker compose stop
-```
-
-不要在普通停止、重启和更新时使用 `docker compose down -v`，它会删除数据卷。启动和构建是两件事，耗时记录见 [启动说明](docs/STARTUP.md)。
-
-## 学习和交流
-
-群组支持公告、置顶消息、会话置顶、未读、免打扰和按身份码查找成员。背单词增加英美音切换、慢速听读、AI 搭配讲解、练习生成与造句纠错；笔记增加概念解释、润色和自测。AI 内容先预览再确认，需要自己的模型配置，不会自动写入笔记或记忆进度。
-
-[群组操作](docs/GROUPS.md) · [背单词](docs/VOCABULARY.md) · [个人 AI](docs/PERSONAL_AI.md)
-
-收到站内信、聊天消息或群公告时，右上角会提醒约 5 秒。鼠标移入或用键盘选中可暂停收起；关闭提醒不会标记已读。打开信件、阅读会话后，未读数量会同步清除。群公告点击「我已阅读」确认，更新后的公告会重新提醒。免打扰会话不弹出提醒。
-
-通知角标只计算未读消息。联系人申请、群邀请、到期复习和备份告警放在菜单的「待处理事项」中，处理完成前保留，但不计入角标。点击「备份需要处理」可查看备份状态和恢复说明。
+> 普通停止和更新不要使用 `docker compose down -v`，它会删除数据卷。
 
 ## 更新版本
 
-更新前做好备份。Git 下载的用户，在原项目目录运行：
+**先备份，再更新源码，最后构建新版。** 只运行 `start.cmd` 不会安装新代码。
+
+Git 下载的用户，在原项目目录运行：
 
 ```sh
 git pull --ff-only
 ```
 
-然后更新应用：
+ZIP 下载的用户：下载最新 ZIP 到临时目录，停止原项目，将新版源码覆盖到原项目目录，保留原 `.env` 和本地数据文件。
+
+然后选择对应系统的命令：
 
 ```powershell
 # Windows
@@ -159,48 +151,103 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1 -Build
 sh deploy.sh --build
 ```
 
-这会更新前后端、任务和训练服务，数据库迁移在后端启动时执行。原数据和 `.env` 保留。只运行 `start.cmd` 不会安装新代码。
+数据库迁移随新版后端启动执行，原数据和 `.env` 保留。如果修改了数据库、缓存或存储组件的 Compose 配置，使用 `-FullBuild` / `--full-build`。多个源码目录默认连接同一组 Compose 服务，不代表多个独立环境。
 
-ZIP 下载的用户：下载最新 ZIP 到临时目录，停止原项目，把新版源码覆盖到原项目目录，保留原 `.env`，再执行上面的更新命令。
+<details>
+<summary>之前下载过旧名称的仓库</summary>
 
-如果修改了数据库、缓存或存储组件的 Compose 配置，使用 `-FullBuild` / `--full-build`；基础组件可能重新构建。多个源码目录默认使用同一组 Compose 服务，不代表多个独立环境。
-
-旧名称仓库只需更新一次远程地址，本地目录不用改名：
+在原项目目录更新一次远程地址即可，本地文件夹不必改名：
 
 ```sh
 git remote set-url origin https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation.git
 ```
 
+</details>
+
 ## 备份与部署
 
-笔记和账号保存在 MySQL，上传资料放在 MinIO，运行数据使用 Docker 命名卷。`database` 目录里的文件是结构和词库，不是当前用户的数据库。
+笔记和账户保存在 **MySQL**，上传资料放在 **MinIO**；实际运行数据使用 Docker 命名卷。仓库的 `database` 目录保存结构和词库，不是当前用户的数据库。
 
-- 完整备份：[Docker 数据加密备份与恢复](docs/COMPOSE_BACKUP.md)。保留数据库、文件和原 `.env`，否则加密后的个人 AI 配置可能无法恢复。
-- 词汇备份：背单词页面的备份入口可下载进度和私有词书，在同一账号中恢复时自动合并。
-- 个人数据：设置 → 隐私与数据，确认密码后下载自己的数据副本。
-- 多人在线使用：[服务器、域名、HTTPS 与公网部署步骤](docs/PUBLIC_DEPLOYMENT.md)。各自在电脑上启动的站点不会互通账号；同一服务器、同一域名才使用同一套数据。
+| 你想做什么 | 从这里开始 |
+| :--- | :--- |
+| 备份整个网站，或迁移到新电脑 | [完整备份与恢复](docs/COMPOSE_BACKUP.md) — 保留数据库、文件和原 `.env` |
+| 定时备份 | [每日备份设置](docs/ACCOUNT_AND_RECOVERY.md#windows-每日自动备份) |
+| 保存词书和学习进度 | 「背单词」的备份入口；同一账号恢复时自动合并 |
+| 下载自己的资料 | 「设置 → 隐私与数据」，确认密码后导出 |
+| 让其他人联网使用 | [服务器、域名与 HTTPS 部署](docs/PUBLIC_DEPLOYMENT.md) |
 
-默认只监听本机 `127.0.0.1:4173`。公网访问和异地备份需要另外配置服务器与备份目标。
+默认只监听本机 `127.0.0.1:4173`。各自在电脑上启动的站点不会互通账号；多人使用需要连接同一个服务器和域名。公网访问、SMTP 邮件和异地备份需要另外配置。
 
 ## 常见问题
 
-| 问题 | 检查什么 |
-| --- | --- |
-| Docker 没有启动 | 打开 Docker Desktop，等待 Linux 引擎就绪，再运行脚本 |
-| 网页打不开 | 使用脚本给出的 Ready 地址；运行 `docker compose ps` 检查服务状态 |
-| 首次启动很慢 | 首次需要下载和构建；用 `docker compose logs --tail 100 clamav backend` 查看是否仍在下载或启动 |
-| 登录报错或 500 | 用 `docker compose logs --tail 100 backend` 查看错误；旧账号使用原密码，权限变动后需要重新登录 |
-| 用户看不到某个功能 | 管理员检查用户角色和单独权限；「单独禁止」会覆盖角色允许 |
-| AI 无法发送 | 检查个人配置是否启用，以及部署端的远程调用开关是否打开 |
-| 更新后还是旧页面 | 确认使用 `-Build` / `--build` 更新，完成后 Ctrl+F5 刷新 |
+<details>
+<summary><strong>网页打不开，或启动一直没完成</strong></summary>
 
-排查时可以提供错误码或 traceId，不要公开 `.env`、密钥、密码或私人资料。
+先确认 Docker Desktop 的 Linux 引擎已就绪，使用脚本输出的 `Ready` 地址。在项目目录查看状态：
+
+```sh
+docker compose ps
+docker compose logs --tail 100 clamav backend
+```
+
+首次安装需要下载和构建，病毒库也可能仍在下载。更多情况见 [启动排查](docs/STARTUP.md)。
+
+</details>
+
+<details>
+<summary><strong>忘记管理员初始密码，或登录提示 500</strong></summary>
+
+初始密码在本机 `.env` 的 `BOOTSTRAP_ADMIN_PASSWORD` 中。改过密码的已有账号使用新密码；权限变动后需要重新登录。
+
+如果提示 500，在项目目录运行 `docker compose logs --tail 100 backend` 查看错误。排查时提供错误码或 traceId 即可，不要公开 `.env`、密码或密钥。
+
+</details>
+
+<details>
+<summary><strong>AI 无法发送，或者邮箱收不到验证邮件</strong></summary>
+
+- AI：检查个人配置是否保存并启用，以及部署端是否开启远程调用。见 [个人 AI 配置](docs/PERSONAL_AI.md)。
+- 邮箱：需要部署者配置 SMTP。见 [邮箱验证与找回密码](docs/ACCOUNT_AND_RECOVERY.md)。
+
+没有 AI 密钥仍可写普通笔记、背单词和交流。
+
+</details>
+
+<details>
+<summary><strong>用户看不到某个功能，或已读后仍有待处理事项</strong></summary>
+
+功能入口取决于角色和个人权限，「单独禁止」覆盖角色允许，由管理员在用户管理中调整。
+
+通知角标只计算未读消息。联系人申请、群邀请、到期复习和备份告警属于待处理事项，处理完成前会保留，但不计入角标。详见 [通知与已读](docs/USAGE.md#通知与已读)。
+
+</details>
+
+<details>
+<summary><strong>更新后还是旧页面</strong></summary>
+
+确认执行了 `-Build` / `--build` 更新，等待服务就绪后按 **Ctrl + F5** 刷新浏览器。日常启动只启动现有版本。
+
+</details>
+
+### AI 功能的当前范围
+
+图片理解使用用户配置的视觉模型。实验台 DEMO 用于体验流程，真实视频模型调用尚未开放。本地训练目前提供 **PyTorch CPU 文本分类器**；代码分析由 AI 静态推断，不会在服务器执行笔记里的代码。使用前可查看 [配置与训练说明](docs/PERSONAL_AI.md)。
 
 ## 开发与验证
 
-`cle` 是 Vue 客户端，`src` 是 Spring Boot 后端，`ai` 放模型适配和媒体处理，`database/migrations` 放数据库迁移。具体组件见 [部署结构](docs/STACK.md)。
+<details>
+<summary><strong>源码结构与本地检查命令</strong></summary>
 
-开发需要 Node.js 22.22.2+（22.x）、JDK 17 和 FFmpeg。只启动前端无法完成登录，还需要数据库和其他服务。
+| 目录 | 内容 |
+| :--- | :--- |
+| `cle/` | Vue 客户端 |
+| `src/` | Spring Boot 后端 |
+| `ai/` | 模型适配、媒体处理和训练 |
+| `database/migrations/` | 数据库迁移 |
+| `scripts/` | 启动、备份与运行维护 |
+| `docs/` | 使用和部署文档 |
+
+开发需要 Node.js **22.22.2+（22.x）**、JDK **17** 和 FFmpeg。只启动前端无法完成登录，还需要数据库等服务。组件关系见 [部署结构](docs/STACK.md)。
 
 ```sh
 npm ci --prefix cle
@@ -209,14 +256,14 @@ npm run test:ui --prefix cle
 npm run build --prefix cle
 ```
 
-后端测试：Windows 运行 `.\mvnw.cmd -B verify`，Linux / macOS 运行 `./mvnw -B verify`。H2 仅用于测试；MySQL 检查步骤见 [数据库说明](database/README.md)。
+后端测试：Windows 运行 `.\mvnw.cmd -B verify`，Linux / macOS 运行 `./mvnw -B verify`。H2 仅用于测试，MySQL 检查见 [数据库说明](database/README.md)。
 
-需要检查不同用户能做什么，可按 [权限检查](docs/PERMISSION_TESTS.md) 操作。权限矩阵会逐个验证单独授权和禁止，账号安全测试检查角色变更、登录撤销和私有资料隔离。
+自动交互检查使用模拟资料，不发送真实消息或收费 AI 请求。已完成的检查及范围记录在 [验证记录](docs/VALIDATION.md)。
 
-点击、快速切换、重复提交、草稿保留和网络失败的复查步骤见 [交互检查](docs/INTERACTION_CHECKS.md)。自动检查使用模拟资料，不会发送真实消息或收费 AI 请求。
+</details>
 
-[自动构建记录](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/actions) · [验证范围](docs/VALIDATION.md) · [账户安全](docs/SECURITY.md) · [上传内容检查](docs/CONTENT_SECURITY.md)
+[自动构建](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/actions) · [权限检查](docs/PERMISSION_TESTS.md) · [交互检查](docs/INTERACTION_CHECKS.md) · [安全说明](docs/SECURITY.md)
 
 ## 许可
 
-项目代码使用 [MIT License](LICENSE)。依赖和自行上传的内容按各自许可使用，依赖许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+项目代码使用 [MIT License](LICENSE)。依赖许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，自行上传的内容按其许可使用。
