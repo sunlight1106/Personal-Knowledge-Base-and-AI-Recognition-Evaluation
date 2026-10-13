@@ -9,7 +9,8 @@
 .directory-pin:hover,.directory-pin[aria-pressed=true] { color:var(--green);background:var(--green-soft);border-color:var(--line); }
 .directory-feedback { min-height:18px;margin:16px 0 0;font-size:11px;color:var(--muted); }
 .workspace-home { --section-gap:30px;display:grid;gap:var(--section-gap); }
-.workspace-welcome { display:flex;align-items:center;justify-content:space-between;gap:30px;padding:10px 0 14px;border-bottom:1px solid var(--line); }
+.workspace-welcome { position:relative;isolation:isolate;display:flex;align-items:center;justify-content:space-between;gap:30px;padding:10px 0 14px;border-bottom:1px solid var(--line); }
+.workspace-welcome>.ambient-waves { left:45%;opacity:.2; }
 .workspace-welcome>div { min-width:0; }.workspace-welcome h1 { font-size:30px;font-weight:400;line-height:1.5;margin:10px 0;letter-spacing:-.025em;overflow-wrap:anywhere; }
 .workspace-welcome h1 span { font-weight:500;color:var(--green); }.workspace-welcome p:last-child { color:var(--muted);font-size:14px;margin:0; }.workspace-welcome>.button { flex-shrink:0; }
 .workspace-action-grid { display:grid;grid-template-columns:repeat(var(--action-count,4),minmax(0,1fr));gap:14px; }

@@ -6,6 +6,7 @@ import { researchApi, type Hit } from '@/api/research'
 import { vocabularyApi, type VocabularyDashboard } from '@/api/vocabulary'
 import type { DashboardSummary } from '@/types/api'
 import AppIcon from '@/components/AppIcon.vue'
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import { authStore } from '@/stores/auth'
 import { workspaceNavigation } from '@/stores/workspaceNavigation'
@@ -65,6 +66,7 @@ const date = (value: string) => Number.isFinite(Date.parse(value)) ? new Intl.Da
 <template>
   <div class="workspace-home">
     <header class="workspace-welcome">
+      <AmbientWaves />
       <div><p class="page-kicker">个人工作空间 / OVERVIEW</p><h1>欢迎回来，<span>{{ authStore.state.user?.displayName || '你' }}</span>。</h1><p>继续学习，记录想法，把每一次探索留在这里。</p></div>
       <button class="button button--ghost" :disabled="loading" @click="load"><AppIcon name="clock" :size="15" />{{ loading ? '正在更新…' : '刷新概览' }}</button>
     </header>

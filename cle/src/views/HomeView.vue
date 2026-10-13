@@ -2,6 +2,8 @@
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import BrandMark from '@/components/BrandMark.vue'
+import AmbientWaves from '@/components/AmbientWaves.vue'
+import MotionToggle from '@/components/MotionToggle.vue'
 import CodeListing from '@/components/CodeListing.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import { authStore } from '@/stores/auth'
@@ -17,10 +19,11 @@ const chapters = [
   <div class="lab-docs lab-home">
     <header class="home-header">
       <RouterLink to="/" class="home-brand"><BrandMark /><span>个人知识库<small>A SPACE FOR YOUR MIND</small></span></RouterLink>
-      <nav class="home-navigation" aria-label="首页导航"><a href="#collection">探索空间</a><RouterLink to="/docs">使用文档</RouterLink><RouterLink to="/models">模型目录</RouterLink><RouterLink :to="enter" class="home-enter">{{ authStore.state.user ? '进入工作台' : '登录平台' }}<AppIcon name="arrow" :size="16" /></RouterLink></nav>
+      <nav class="home-navigation" aria-label="首页导航"><a href="#collection">探索空间</a><RouterLink to="/docs">使用文档</RouterLink><RouterLink to="/models">模型目录</RouterLink><MotionToggle /><RouterLink :to="enter" class="home-enter">{{ authStore.state.user ? '进入工作台' : '登录平台' }}<AppIcon name="arrow" :size="16" /></RouterLink></nav>
     </header>
     <main>
       <section id="introduction" class="home-hero" aria-labelledby="home-title">
+        <AmbientWaves />
         <div class="home-hero-copy">
           <p class="home-eyebrow"><span aria-hidden="true" />个人知识库与 AI 识别评测</p>
           <h1 id="home-title">让知识有序。<br /><span>让探索有迹。</span></h1>

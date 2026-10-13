@@ -6,6 +6,7 @@ import WorkspaceTools from './WorkspaceTools.vue'
 import SafetyBanner from './SafetyBanner.vue'
 import AppIcon from './AppIcon.vue'
 import BrandMark from './BrandMark.vue'
+import MotionToggle from './MotionToggle.vue'
 import { authStore } from '@/stores/auth'
 import { themeStore } from '@/stores/theme'
 import { mainItems, adminItems, supportItems, canVisit, type NavItem } from '@/lib/navigation'
@@ -55,6 +56,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
         <span v-if="!quickItems.length" class="workspace-quick-hint">在「目录与账户」中固定常用页面</span>
       </nav>
       <div class="workspace-tools"><WorkspaceTools v-if="authStore.state.user" :key="authStore.state.user.id" />
+        <MotionToggle />
         <button class="topbar-tool" :aria-label="themeStore.isDark() ? '切换到浅色' : '切换到暗色'" @click="themeStore.toggle()"><AppIcon :name="themeStore.isDark() ? 'sun' : 'moon'" :size="16" /></button>
         <details ref="menu" class="workspace-directory" @keydown.esc="closeMenu(); menu?.querySelector('summary')?.focus()">
           <summary><AppIcon name="menu" :size="16" />目录与账户</summary>
