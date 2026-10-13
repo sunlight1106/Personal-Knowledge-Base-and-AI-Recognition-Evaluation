@@ -40,8 +40,15 @@ try{
  rows=[row('5')];refresh();await wait(()=>popup());assert(!!popup(),'Delivery state is isolated per account')
  Object.defineProperty(document,'hidden',{configurable:true,value:true});rows=[row('6')];refresh();await sleep(700);assert(popup()?.querySelector('strong')?.textContent==='Test conversation','Hidden-page refresh does not add a new popup')
  Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));await sleep(750)
- rows=[{...row('reminder'),id:'note-reviews',popup:false}];refresh();await sleep(750);assert(!popup()&&!!badge(),'Study reminders remain in the menu without repeated message popups')
+ rows=[{...row('reminder'),id:'note-reviews',kind:'ACTION',popup:false}];refresh();await sleep(750);assert(!popup()&&!badge()&&!!fixture.querySelector('.notification-actions'),'Study reminders remain visible as actions without unread badges or popups')
  assert(!fixture.querySelector('.notification-list a'),'Review link respects research permissions')
+ const backup={id:'backup-warning',title:'备份需要处理',url:'/app/research?tab=trash',count:1,kind:'ACTION',popup:false}
+ rows=[backup];refresh();await wait(()=>fixture.querySelector('.notification-actions button')?.textContent.includes(backup.title))
+ fixture.querySelector('.notification-actions button').click();await wait(()=>router.currentRoute.value.fullPath===backup.url);refresh();await sleep(700)
+ assert(!badge()&&!popup()&&fixture.querySelector('.notification-actions button').textContent.includes(backup.title),'Opening a backup action reaches its actual page and does not reintroduce an unread badge or erase the warning')
+ rows=[backup,{...row('older'),id:'mail-older',count:7,popup:false,kind:'MESSAGE'}];refresh();await wait(()=>badge()?.textContent==='7')
+ assert(!popup(),'Older unread mail still counts even though its popup is disabled; pending actions do not count')
+ rows=[backup];refresh();await wait(()=>!badge());assert(!!fixture.querySelector('.notification-actions'),'Reading the last message clears the badge even while a backup task is unresolved')
  rows=Array.from({length:7},(_,i)=>({...row(),id:'mail-'+i}));refresh();await wait(()=>document.querySelectorAll('.notification-popup').length===3);assert(document.querySelectorAll('.notification-popup').length===3,'Notification bursts are capped at three visible cards')
  let expired=false
  const onExpired=()=>{expired=true;authStore.state.user=null}

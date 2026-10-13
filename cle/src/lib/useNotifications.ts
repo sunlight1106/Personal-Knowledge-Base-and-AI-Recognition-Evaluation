@@ -6,7 +6,10 @@ import { authStore } from '@/stores/auth'
 // A popup is a delivery hint, never a read receipt. Only the source page marks content read.
 export function useNotifications() {
   const items = ref<NotificationItem[]>([]), popups = ref<NotificationItem[]>([])
-  const total = computed(() => items.value.reduce((sum, item) => sum + item.count, 0))
+  const unreadItems = computed(() => items.value.filter(item => item.kind !== 'ACTION'))
+  const actions = computed(() => items.value.filter(item => item.kind === 'ACTION'))
+  const total = computed(() => unreadItems.value.reduce((sum, item) => sum + item.count, 0))
+  const actionTotal = computed(() => actions.value.reduce((sum, item) => sum + item.count, 0))
   let epoch = 0, stopped = false, running = false, pending = false
   let transport: AbortController | undefined, stream: AbortController | undefined
   let retry: ReturnType<typeof setTimeout> | undefined, poll: ReturnType<typeof setInterval> | undefined
@@ -134,5 +137,5 @@ export function useNotifications() {
     window.removeEventListener('personal-platform:notifications-changed', refresh)
     document.removeEventListener('visibilitychange', visibility)
   })
-  return { items, popups, total, dismiss, pause, resume, refresh }
+  return { items, unreadItems, actions, actionTotal, popups, total, dismiss, pause, resume, refresh }
 }

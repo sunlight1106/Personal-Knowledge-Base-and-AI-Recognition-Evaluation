@@ -6,7 +6,7 @@ export interface SearchPage { items:Hit[];hasMore:boolean;page:number }
 export interface SearchFilters { q:string;type:string;tag:string;since:string|null;group:number|null;sort:string }
 export interface SavedSearch { id:string;name:string;filters:SearchFilters;createdAt:string }
 export interface RecordItem { id:string; kind:string; title:string; data:any; revision:number; updatedAt:string }
-export interface NotificationItem { id:string;title:string;url:string;count:number;version?:string;popup?:boolean }
+export interface NotificationItem { id:string;title:string;url:string;count:number;version?:string;popup?:boolean;kind?:'MESSAGE'|'ACTION' }
 const json=(method:string,data?:unknown)=>({method,body:data===undefined?undefined:JSON.stringify(data)})
 export const researchApi={
  search:(params:Record<string,string>,signal?:AbortSignal)=>request<SearchPage>('/research/search?'+new URLSearchParams(params),{signal}),
