@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import DocRow from '@/components/DocRow.vue'
 import CodeListing from '@/components/CodeListing.vue'
+import AppIcon from '@/components/AppIcon.vue'
 import { authStore } from '@/stores/auth'
 onMounted(() => { void authStore.ensureUser() })
 const enter = computed(() => authStore.state.user ? '/app/home' : '/login')
@@ -12,12 +13,43 @@ const chapters = [
   { id: 'reproduce', title: '结果与复现', intro: '保留输入、配置和输出，让结论有据可查。', links: [{ title: '调用日志', to: '/app/logs', text: '查询任务状态与运行记录' }, { title: '下载中心', to: '/app/downloads', text: '导出实验文件与结果' }, { title: '使用文档', to: '/docs', text: '部署说明与操作指南' }] },
 ]
 </script>
-<template><div class="lab-docs lab-home"><header class="lab-header"><nav aria-label="面包屑"><a href="#introduction">HOME</a><span>›</span></nav><div class="lab-header-links"><RouterLink to="/docs">使用文档</RouterLink><RouterLink to="/models">模型目录</RouterLink><RouterLink :to="enter">{{ authStore.state.user ? '工作台' : '登录' }} ↗</RouterLink></div></header><main>
-<DocRow id="introduction" title="个人知识库与 AI 识别评测" intro><p>连接模型、组织知识，理解每一次识别的结果。</p><p>从原始输入开始，对照退化条件下的模型表现，记录优化过程。将数据、实验和笔记放在同一个工作空间里。</p><p><RouterLink :to="enter">进入工作台</RouterLink> · <RouterLink to="/docs">阅读使用文档</RouterLink></p><template #detail><div class="lab-index-note"><span>PERSONAL KNOWLEDGE BASE / AI RECOGNITION EVALUATION</span><p>研究、记录与复现。</p><p>选择一个主题，继续你的工作。</p></div></template></DocRow>
-<DocRow v-for="chapter in chapters" :key="chapter.id" :id="chapter.id" :title="chapter.title"><p>{{ chapter.intro }}</p><ul class="lab-index-list"><li v-for="item in chapter.links" :key="item.to"><RouterLink :to="item.to">{{ item.title }}</RouterLink><p>{{ item.text }}</p></li></ul><template #detail><p class="lab-margin-note">{{ chapter.id.toUpperCase() }}</p><p class="lab-section-description">{{ chapter.id === 'recognition' ? '个人模型用于图片识别；双路 DEMO 输出用于检查流程。' : chapter.id === 'knowledge' ? '按主题整理知识，用笔记连接素材与实验。' : '保留配置、输出和观察，为下一次实验留下依据。' }}</p></template></DocRow>
-<DocRow id="method" title="同一输入，两条对照路径"><p>分别记录基线和优化结果。置信度变化只是一条线索，真实标注才是判断准确率的依据。</p><RouterLink to="/docs#interactive-notes">逐行阅读实验配置 →</RouterLink><template #detail><CodeListing id="home-method" code="# 实验流程示意
+<template>
+  <div class="lab-docs lab-home">
+    <header class="lab-header home-header"><RouterLink to="/" class="home-brand"><AppIcon name="book" :size="22" /><span>个人知识库 <small>AI RECOGNITION & EVALUATION</small></span></RouterLink><nav class="lab-header-links" aria-label="首页导航"><RouterLink to="/docs">使用文档</RouterLink><RouterLink to="/models">模型目录</RouterLink><RouterLink :to="enter" class="home-enter">{{ authStore.state.user ? '进入工作台' : '登录平台' }} <AppIcon name="arrow" :size="15" /></RouterLink></nav></header>
+    <main>
+      <DocRow id="introduction" title="让知识有序，让探索有迹。" intro>
+        <p class="home-intro-label">个人知识库与 AI 识别评测</p><p>一个安静的工作空间。记录所学，积累词汇，借助自己的 AI 理解图片与资料。</p>
+        <div class="home-intro-actions"><RouterLink :to="enter" class="button button--dark">进入工作台 <AppIcon name="arrow" :size="16" /></RouterLink><RouterLink to="/docs">从使用指南开始 ↗</RouterLink></div>
+        <template #detail><div class="home-reading-index"><p class="lab-margin-note">IN THIS WORKSPACE / 工作目录</p><a href="#knowledge"><span>01</span><div><strong>知识与笔记</strong><small>收集、整理，写下自己的理解</small></div><AppIcon name="arrow" :size="16" /></a><RouterLink to="/app/vocabulary"><span>02</span><div><strong>每日学习</strong><small>场景搭配、发音与间隔复习</small></div><AppIcon name="arrow" :size="16" /></RouterLink><a href="#recognition"><span>03</span><div><strong>AI 与识别实验</strong><small>理解输入，检查输出，保留记录</small></div><AppIcon name="arrow" :size="16" /></a></div></template>
+      </DocRow>
+      <DocRow v-for="chapter in chapters" :key="chapter.id" :id="chapter.id" :title="chapter.title"><p>{{ chapter.intro }}</p><p class="lab-section-description">{{ chapter.id === 'recognition' ? '个人模型用于图片识别；双路 DEMO 输出用于检查流程。' : chapter.id === 'knowledge' ? '按主题整理资料，在 Markdown 与 HTML 中记录，随时导出或分享。' : '从输入到结果，保留下一次实验需要的依据。' }}</p><template #detail><ul class="home-chapter-links"><li v-for="item in chapter.links" :key="item.to"><RouterLink :to="item.to"><div><strong>{{ item.title }}</strong><span>{{ item.text }}</span></div><AppIcon name="arrow" :size="16" /></RouterLink></li></ul></template></DocRow>
+      <DocRow id="method" title="同一输入，两条对照路径"><p>分别记录基线和优化结果。置信度变化只是一条线索，真实标注才是判断准确率的依据。</p><RouterLink to="/docs#interactive-notes">逐行阅读实验配置 →</RouterLink><template #detail><CodeListing id="home-method" code="# 实验流程示意
 input → baseline
 input → preprocessing → optimized
 
 # 比较输出，保留记录
-compare(baseline, optimized)" /></template></DocRow></main><footer class="lab-footer"><span>个人知识库与 AI 识别评测</span><a href="#introduction">返回顶部 ↑</a></footer></div></template>
+compare(baseline, optimized)" /></template></DocRow>
+    </main><footer class="lab-footer"><span>个人知识库与 AI 识别评测</span><a href="#introduction">返回顶部 ↑</a></footer>
+  </div>
+</template>
+
+<style scoped>
+.home-header { display:flex;align-items:center;justify-content:space-between;gap:30px;min-height:88px; }
+.home-brand { display:flex;align-items:center;gap:12px;color:var(--ink-strong);font-size:16px;font-weight:600;text-decoration:none; }
+.home-brand small { display:block;margin-top:3px;font:9px/1.6 ui-monospace,monospace;letter-spacing:.08em;color:var(--muted); }
+.home-header .lab-header-links { margin:0;display:flex;align-items:center;gap:28px;font-size:13px;line-height:1.5; }
+.home-enter { display:flex;align-items:center;gap:12px;border-left:1px solid var(--line);padding-left:28px; }
+.lab-home :deep(.lab-row-intro) { grid-template-columns:52% minmax(0,48%); }
+.lab-home :deep(.lab-row-intro .lab-prose) { padding:72px 50px 64px; }
+.lab-home :deep(.lab-row-intro .lab-detail) { background:transparent;border-left:0;display:flex;align-items:center;padding:50px; }
+.lab-home :deep(h1.lab-heading) { max-width:12em;text-wrap:balance;font-size:42px;line-height:1.45;letter-spacing:-.04em;margin-bottom:22px; }
+.home-intro-label { color:var(--green);font-size:13px!important;letter-spacing:.04em; }
+.home-intro-actions { display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:28px; }
+.lab-home :deep(.home-intro-actions .button) { padding:11px 20px;background:var(--green);color:var(--on-dark);border-color:var(--green);text-decoration:none;font-size:13px; }
+.home-intro-actions>a:last-child { font-size:12px;text-decoration:none; }
+.home-reading-index { width:100%;border:1px solid var(--line);border-radius:8px;background:var(--paper);padding:26px 30px; }
+.home-reading-index>a { display:flex;align-items:center;gap:20px;padding:18px 0;border-bottom:1px solid var(--line);text-decoration:none!important; }
+.home-reading-index>a:last-child { border-bottom:0;padding-bottom:4px; }.home-reading-index>a>span { font:11px ui-monospace,monospace;color:var(--muted); }.home-reading-index>a>div { flex:1; }.home-reading-index strong { color:var(--ink);font-size:16px;font-weight:500; }.home-reading-index small { display:block;font-size:12px;color:var(--muted);margin-top:5px; }.home-reading-index>a:hover strong { color:var(--green); }
+.home-chapter-links { list-style:none;margin:0;padding:0; }.home-chapter-links li+li { border-top:1px solid var(--line); }.home-chapter-links a { display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px 10px;text-decoration:none!important;border-radius:4px; }.home-chapter-links a:hover { background:var(--paper); }.home-chapter-links strong { font-size:15px;font-weight:500;color:var(--ink); }.home-chapter-links span { display:block;font-size:12px;margin-top:4px;color:var(--muted); }.home-chapter-links svg { flex-shrink:0; }
+@media(max-width:800px) { .home-header { flex-wrap:wrap; }.lab-home :deep(.lab-row-intro) { grid-template-columns:1fr; }.lab-home :deep(.lab-row-intro .lab-prose),.lab-home :deep(.lab-row-intro .lab-detail) { padding:32px; }.lab-home :deep(h1.lab-heading) { font-size:32px; }.home-header .lab-header-links { gap:18px; }.home-enter { padding-left:18px; } }
+</style>

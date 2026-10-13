@@ -79,25 +79,20 @@ try {
     assert(lateListeners === 0 && fixture.children.length === 0, 'Late authentication resolution after navigation cannot attach listeners to a destroyed guide')
   } finally { authStore.ensureUser = ensureUser; window.addEventListener = addEventListener }
   const envelope = data => new Response(JSON.stringify({ success: true, data }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-  let providerValue = null
+  let legacyRequests = 0
   window.fetch = async url => {
     if (String(url).endsWith('/dashboard/summary')) return envelope({ totalTasks: 0, successRate: 0, completedTasks: 0, averageConfidenceLift: 0, failedTasks: 0, recentTasks: [] })
-    if (String(url).endsWith('/billing/summary')) return envelope({ wallet: { balanceCny: 0, monthSpentCny: 0, quotaProgressPercent: 0, remainingQuotaCny: 0 } })
-    if (String(url).endsWith('/billing/providers')) return envelope([{ provider: 'DEEPSEEK', displayName: 'Synthetic legacy provider', configuredKeyCount: 0, usedCny: 0, remainingCny: 500, monthlyBudgetCny: 500, providerReportedBalance: providerValue, progressPercent: 0 }])
+    if (String(url).includes('/billing/')) legacyRequests++
     throw new Error(`Unexpected overview request ${url}`)
   }
-  authStore.state.user = { id: 1001, displayName: 'Synthetic help reader', permissions: ['billing:read', 'billing:read:any'] }
+  authStore.state.user = { id: 1001, displayName: 'Synthetic help reader', permissions: ['dashboard:read', 'billing:read', 'billing:read:any'] }
   app = createApp(OverviewView).use(router); app.mount(fixture); await settle(); await settle()
   const overview = fixture.textContent
-  assert(overview.includes('平台沙箱余额') && overview.includes('ADMIN · LEGACY BUDGET'), 'Overview labels sandbox wallet and legacy budget explicitly')
-  assert(overview.includes('与个人 BYOK 用量和账单无关') && overview.includes('当前新实验为 DEMO 合成结果'), 'Overview distinguishes personal AI from demo experiments and old budgets')
-  assert(!overview.includes('LIVE BUDGET') && !overview.includes('真实模型已经接入') && !overview.includes('round robin'), 'Overview no longer advertises live shared-model readiness')
-  assert(overview.includes('本地月度预算') && overview.includes('¥500.00'), 'Missing legacy upstream balance is honestly shown as a local budget')
-  app.unmount()
-  providerValue = 12.34
-  app = createApp(OverviewView).use(router); app.mount(fixture); await settle(); await settle()
-  const legacyValue = Array.from(fixture.querySelectorAll('.home-provider-values span')).find(el => el.textContent.includes('币种待核对'))
-  assert(legacyValue?.querySelector('b')?.textContent === '12.34', 'Legacy upstream balance is not relabeled as CNY when the API omits its currency')
+  assert(legacyRequests === 0, 'Overview does not automatically request legacy provider budgets or balances')
+  assert(fixture.querySelector('a[href="/app/billing"]')?.textContent.includes('账单与用量'), 'Billing remains accessible from the workspace')
+  assert(overview.includes('演示结果不代表真实识别准确率'), 'Experiment summary retains its demo accuracy boundary')
+  assert(!overview.includes('LIVE BUDGET') && !overview.includes('真实模型已经接入') && !overview.includes('round robin'), 'Overview does not advertise live shared-model readiness')
+  assert(!overview.includes('¥500.00') && !overview.includes('供应商余额'), 'No historical budget is presented as a live provider balance')
   app.unmount(); authStore.state.user = null
   document.getElementById('results').textContent = `PASS ${passed.length}\n` + passed.join('\n')
   document.documentElement.dataset.result = 'passed'

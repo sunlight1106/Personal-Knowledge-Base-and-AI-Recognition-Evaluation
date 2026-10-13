@@ -7,14 +7,8 @@ import SafetyBanner from './SafetyBanner.vue'
 import AppIcon from './AppIcon.vue'
 import { authStore } from '@/stores/auth'
 import { themeStore } from '@/stores/theme'
-
-interface NavItem {
-  label: string
-  to: string
-  icon: string
-  permission?: string
-  any?: string[]
-}
+import { mainItems, adminItems, supportItems, canVisit, type NavItem } from '@/lib/navigation'
+import { workspaceNavigation } from '@/stores/workspaceNavigation'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,42 +17,10 @@ onMounted(() => window.addEventListener('personal-platform:session-expired', han
 onBeforeUnmount(() => window.removeEventListener('personal-platform:session-expired', handleSessionExpired))
 const menu = ref<HTMLDetailsElement | null>(null)
 function closeMenu() { menu.value?.removeAttribute('open') }
-watch(() => route.fullPath, closeMenu)
-const mainItems: NavItem[] = [
-  { label: '学习中心', to: '/app/research', icon: 'book', permission: 'research:use' },
-  { label: '工作台', to: '/app/home', icon: 'home', permission: 'dashboard:read' },
-  { label: '知识库', to: '/app/knowledge', icon: 'book', permission: 'knowledge:read' },
-  { label: '背单词', to: '/app/vocabulary', icon: 'book', permission: 'vocabulary:use' },
-  { label: '我的笔记', to: '/app/notes', icon: 'note', permission: 'note:read' },
-  { label: '实验台', to: '/app/upload', icon: 'spark', permission: 'experiment:run' },
-  { label: '模型中心', to: '/app/models', icon: 'model', permission: 'model:read' },
-  { label: '素材库', to: '/app/images', icon: 'images', any: ['file:read', 'file:read:any'] },
-  { label: '调用日志', to: '/app/logs', icon: 'logs', any: ['experiment:read', 'experiment:read:any'] },
-  { label: '优化对比', to: '/app/comparisons', icon: 'compare', any: ['experiment:read', 'experiment:read:any'] },
-  { label: '下载中心', to: '/app/downloads', icon: 'download', any: ['file:read', 'file:read:any', 'experiment:read', 'experiment:read:any'] },
-  { label: '余额与充值', to: '/app/billing', icon: 'wallet', permission: 'billing:read' },
-  { label: '联系人与聊天', to: '/app/contacts', icon: 'users', permission: 'contacts:use' },
-  { label: '站内信箱', to: '/app/mail', icon: 'mail', permission: 'message:read' },
-  { label: '群组协作', to: '/app/groups', icon: 'users', permission: 'group:use' },
-]
-
-const adminItems: NavItem[] = [
-  { label: '举报审核', to: '/app/moderation', icon: 'shield', permission: 'moderation:review' },
-  { label: '平台总览', to: '/app/admin', icon: 'logs', any: ['admin:stats', 'admin:audit'] },
-  { label: '用户管理', to: '/app/users', icon: 'users', permission: 'user:read' },
-  { label: '权限管理', to: '/app/roles', icon: 'shield', permission: 'role:read' },
-]
-
-const supportItems: NavItem[] = [
-  { label: '举报与处罚记录', to: '/app/safety', icon: 'shield' },
-  { label: '操作文档', to: '/docs', icon: 'docs' },
-  { label: '设置', to: '/app/settings', icon: 'settings' },
-]
-
+watch(() => route.fullPath, () => { closeMenu(); pinMessage.value = '' })
+watch(() => [route.path, authStore.state.user?.id], () => workspaceNavigation.visit(route.path), { immediate: true })
 function visible(items: NavItem[]) {
-  return items.filter(item => !item.permission && !item.any
-    ? true
-    : item.permission ? authStore.has(item.permission) : authStore.hasAny(...(item.any || [])))
+  return items.filter(item => canVisit(item, authStore.state.user?.permissions))
 }
 
 const navGroups = computed(() => [
@@ -68,10 +30,14 @@ const navGroups = computed(() => [
 ])
 const title = computed(() => {
   const all = [...mainItems, ...adminItems, ...supportItems]
-  return all.find(item => route.path === item.to)?.label || '控制台'
+  return all.find(item => route.path === item.to || route.path.startsWith(item.to + '/'))?.label || '工作空间'
 })
 
-const quickItems = computed(() => visible(mainItems.filter(item => ['/app/home', '/app/upload', '/app/knowledge'].includes(item.to))))
+const quickItems = workspaceNavigation.pinned
+const pinMessage = ref('')
+function togglePin(item: NavItem) {
+  pinMessage.value = workspaceNavigation.toggle(item.to) ? '常用入口已更新' : '最多固定 5 个入口，请先取消一个'
+}
 
 function outside(event: PointerEvent) { if (menu.value?.open && event.target instanceof Node && !menu.value.contains(event.target)) closeMenu() }
 onMounted(() => document.addEventListener('pointerdown', outside))
@@ -82,22 +48,27 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
   <div class="portal-app">
     <a class="portal-skip" href="#workspace-content">跳转到内容</a>
     <header class="workspace-header">
-      <nav class="workspace-breadcrumb" aria-label="当前位置"><RouterLink to="/">HOME</RouterLink><span>/</span><RouterLink to="/app/home">WORKSPACE</RouterLink><span>/</span><span>{{ title }}</span></nav>
+      <nav class="workspace-breadcrumb" aria-label="当前位置"><RouterLink to="/" class="workspace-brand"><AppIcon name="book" :size="19" /><span>个人知识库 <small>WORKSPACE</small></span></RouterLink><span>/</span><span>{{ title }}</span></nav>
       <nav class="workspace-quick" aria-label="常用页面">
         <RouterLink v-for="item in quickItems" :key="item.to" :to="item.to">{{ item.label }}</RouterLink>
-        <RouterLink to="/docs">操作文档</RouterLink>
+        <span v-if="!quickItems.length" class="workspace-quick-hint">在「目录与账户」中固定常用页面</span>
       </nav>
       <div class="workspace-tools"><WorkspaceTools v-if="authStore.state.user" :key="authStore.state.user.id" />
         <button class="topbar-tool" :aria-label="themeStore.isDark() ? '切换到浅色' : '切换到暗色'" @click="themeStore.toggle()"><AppIcon :name="themeStore.isDark() ? 'sun' : 'moon'" :size="16" /></button>
         <details ref="menu" class="workspace-directory" @keydown.esc="closeMenu(); menu?.querySelector('summary')?.focus()">
-          <summary>目录与账户</summary>
+          <summary><AppIcon name="menu" :size="16" />目录与账户</summary>
           <div class="workspace-directory-body">
+            <div class="directory-caption"><span>全部页面</span><small>固定到顶部 · {{ quickItems.length }}/5</small></div>
             <nav aria-label="全部页面">
               <section v-for="group in [...navGroups, {label:'系统管理',items:visible(adminItems)}, {label:'帮助',items:supportItems}].filter(group => group.items.length)" :key="group.label">
                 <p>{{ group.label }}</p>
-                <RouterLink v-for="item in group.items" :key="item.to" :to="item.to">{{ item.label }}</RouterLink>
+                <div v-for="item in group.items" :key="item.to" class="directory-item">
+                  <RouterLink :to="item.to">{{ item.label }}</RouterLink>
+                  <button class="directory-pin" :aria-label="`${quickItems.some(pin => pin.to === item.to) ? '取消固定' : '固定'}${item.label}`" :aria-pressed="quickItems.some(pin => pin.to === item.to)" @click="togglePin(item)"><AppIcon :name="quickItems.some(pin => pin.to === item.to) ? 'check' : 'plus'" :size="13" /></button>
+                </div>
               </section>
             </nav>
+            <p class="directory-feedback" role="status">{{ !workspaceNavigation.state.persistent ? '浏览器无法保存设置，本次打开期间仍可使用。' : pinMessage }}</p>
             <footer class="workspace-account">
               <div class="workspace-account-identity"><span class="account-monogram">{{ authStore.state.user?.displayName?.slice(0, 1) || 'U' }}</span><div><strong>{{ authStore.state.user?.displayName }}</strong><small>@{{ authStore.state.user?.username }}</small></div><span class="account-role">{{ authStore.state.user?.roleName }}</span></div>
               <nav class="workspace-account-links" aria-label="账户操作">

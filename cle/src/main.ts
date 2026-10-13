@@ -5,6 +5,7 @@ import { themeStore } from './stores/theme'
 import './styles/main.css'
 import './styles/portal.css'
 import './styles/research.css'
+import './styles/workspace.css'
 
 themeStore.init()
 

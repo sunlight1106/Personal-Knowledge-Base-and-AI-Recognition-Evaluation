@@ -179,7 +179,7 @@ export const api = {
   register: (payload: { username: string; email: string; password: string; displayName?:string; discoverable?:boolean }) =>
     request<UserView>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<UserView>('/auth/me'),
-  dashboard: () => request<DashboardSummary>('/dashboard/summary'),
+  dashboard: (signal?: AbortSignal) => request<DashboardSummary>('/dashboard/summary', { signal }),
   files: () => request<FileView[]>('/files'),
   upload: (file: File, signal?: AbortSignal) => {
     const body = new FormData()
