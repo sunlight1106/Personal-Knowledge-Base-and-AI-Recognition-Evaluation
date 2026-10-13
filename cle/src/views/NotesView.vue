@@ -70,7 +70,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
 </script>
 
 <template>
-  <div class="page-stack learning-notes-page"><RouterLink to="/app/research?tab=trash" class="button button--ghost">打开回收站</RouterLink>
+  <div class="page-stack learning-notes-page">
     <section class="page-intro page-intro--split">
       <div><p class="page-kicker">KNOWLEDGE / NOTEBOOKS</p><h2>{{ library || '我的学习库' }}</h2><p>把理解写下来，把知识连接起来。笔记仅自己可见，主动分享后他人才能阅读。</p></div>
       <div class="intro-actions"><NoteTemplateGallery v-if="canWrite" @choose="chooseTemplate" />
@@ -86,6 +86,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
         <RouterLink v-for="name in libraries" :key="name" :to="{ name: 'notes', query: { library: name } }" :class="{ selected: library === name }"><span>{{ name }}</span><small>{{ libraryCount(name) }}</small></RouterLink>
         <p class="learning-aside-hint">新建笔记时可输入新的学习库名称。保存后会自动加入此列表。</p>
         <RouterLink v-if="library === '英语学习'" to="/app/vocabulary" class="learning-related"><span>词汇复习</span><span>↗</span></RouterLink>
+        <RouterLink v-if="authStore.has('research:use')" to="/app/research?tab=trash" class="learning-trash"><AppIcon name="trash" :size="15" /><span>回收站</span><AppIcon name="arrow" :size="14" /></RouterLink>
       </aside>
       <section class="learning-list">
         <LoraColabCard v-if="library === '计算机学习'" />
@@ -97,8 +98,9 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
         <p v-if="error" class="inline-alert inline-alert--error">{{ error }} <button class="button button--ghost" @click="load">重试</button></p>
         <div v-if="loading" class="table-skeleton" aria-label="正在加载笔记" />
         <template v-else-if="!filteredNotes.length">
-          <EmptyState icon="note" :title="keyword ? '没有匹配的笔记' : '从一篇学习记录开始'" :description="keyword ? '试试其他关键词或切换学习库。' : '使用模板记录目标、例子、理解与复习问题。'" />
-          <RouterLink v-if="canWrite && !keyword" class="button button--ghost" :to="{ name: 'note-create', query: { library: library || '综合学习', template: 'study' } }">用学习模板开始 →</RouterLink>
+          <EmptyState icon="note" :title="keyword ? '没有匹配的笔记' : '从一篇学习记录开始'" :description="keyword ? '试试其他关键词或切换学习库。' : '使用模板记录目标、例子、理解与复习问题。'">
+            <RouterLink v-if="canWrite && !keyword" class="button button--ghost" :to="{ name: 'note-create', query: { library: library || '综合学习', template: 'study' } }">用学习模板开始 →</RouterLink>
+          </EmptyState>
         </template>
         <article v-for="row in treeRows" v-else :key="row.note.id" class="learning-note-row" :style="{ paddingLeft: `${row.depth * 22 + 8}px` }">
           <div><label v-if="canWrite" class="note-row-selection"><input type="checkbox" :checked="selectedIds.has(row.note.id)" :disabled="batchBusy" :aria-label="`选择 ${row.note.title}`" @change="toggleSelected(row.note.id)" /></label><span class="learning-note-meta">{{ row.note.library || '综合学习' }} <span> / </span> {{ row.note.status.label }} <span> / </span> {{ row.note.contentFormat === 'HTML' ? 'HTML' : 'Markdown' }}</span>
