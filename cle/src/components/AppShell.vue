@@ -5,6 +5,7 @@ import { sectionLinks as vSectionLinks } from '@/directives/sectionLinks'
 import WorkspaceTools from './WorkspaceTools.vue'
 import SafetyBanner from './SafetyBanner.vue'
 import AppIcon from './AppIcon.vue'
+import BrandMark from './BrandMark.vue'
 import { authStore } from '@/stores/auth'
 import { themeStore } from '@/stores/theme'
 import { mainItems, adminItems, supportItems, canVisit, type NavItem } from '@/lib/navigation'
@@ -48,7 +49,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
   <div class="portal-app">
     <a class="portal-skip" href="#workspace-content">跳转到内容</a>
     <header class="workspace-header">
-      <nav class="workspace-breadcrumb" aria-label="当前位置"><RouterLink to="/" class="workspace-brand"><AppIcon name="book" :size="19" /><span>个人知识库 <small>WORKSPACE</small></span></RouterLink><span>/</span><span>{{ title }}</span></nav>
+      <nav class="workspace-breadcrumb" aria-label="当前位置"><RouterLink to="/" class="workspace-brand"><BrandMark /><span>个人知识库 <small>PERSONAL WORKSPACE</small></span></RouterLink><span>/</span><span>{{ title }}</span></nav>
       <nav class="workspace-quick" aria-label="常用页面">
         <RouterLink v-for="item in quickItems" :key="item.to" :to="item.to">{{ item.label }}</RouterLink>
         <span v-if="!quickItems.length" class="workspace-quick-hint">在「目录与账户」中固定常用页面</span>
