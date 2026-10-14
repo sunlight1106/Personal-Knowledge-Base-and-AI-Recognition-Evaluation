@@ -26,7 +26,7 @@ try {
  assert(!fixture.textContent.includes('work')&&!fixture.textContent.includes('wɜːk'),'Dictation does not reveal the word or its phonetics')
  assert(fixture.querySelector('[aria-label="播放本题语音"]'),'Dictation accessible label does not reveal the answer')
  assert(!requests.length,'Dictation does not request a lesson before answering');app.unmount();fixture.replaceChildren()
- app=createApp({render:()=>h(PersonalAiDiagnostics,{setting:{provider:'DEEPSEEK',revision:1,configured:true,enabled:true},disabled:false})});app.mount(fixture);button('测试当前模型').click();await wait(()=>fixture.textContent.includes('Fixed short request'))
+ app=createApp({render:()=>h(PersonalAiDiagnostics,{setting:{provider:'DEEPSEEK',model:'synthetic-model',revision:1,configured:true,enabled:true},disabled:false})});app.mount(fixture);button('测试当前模型').click();await wait(()=>fixture.textContent.includes('Fixed short request'))
  assert(!requests.some(r=>r.url.endsWith('/execute')),'Connection test only previews before explicit confirmation')
  assert(button('确认检查').disabled,'Sending remains disabled without confirmation')
  const consent=fixture.querySelector('input[type=checkbox]');consent.checked=true;consent.dispatchEvent(new Event('change',{bubbles:true}));await nextTick();button('确认检查').click();await wait(()=>fixture.textContent.includes('Connected synthetic'))
@@ -47,6 +47,7 @@ try {
   if(path.endsWith('/settings'))return envelope([savedProfile])
   if(path.endsWith('/settings/MOONSHOT')&&init.method==='PUT'){savedBody=JSON.parse(init.body);savedProfile={...savedProfile,...savedBody,revision:2};return envelope(savedProfile)}
   if(path.endsWith('/diagnostics/preview'))return envelope({token:'synthetic-region-consent',request:'Query saved region only',model:savedProfile.model,endpoint:savedProfile.baseUrl})
+  if(path.endsWith('/diagnostics/execute'))return envelope({success:true,code:'MODELS_RECEIVED',message:'Synthetic model catalog',milliseconds:5,models:['kimi-k3','kimi-k2.6'],usageStatus:'NOT_APPLICABLE'})
   throw Error('Unexpected region request')
  }
  app=createApp({render:()=>h(PersonalAiProviders)});app.mount(fixture);await wait(()=>button('查询模型目录'))
@@ -63,6 +64,24 @@ try {
  assert(savedBody.baseUrl==='https://api.moonshot.cn/v1'&&!Object.hasOwn(savedBody,'apiKey'),'Saving a region change preserves the existing secret')
  button('查询模型目录').click();await wait(()=>fixture.textContent.includes('Query saved region only'))
  assert(fixture.querySelector('.diagnostic-preview code').textContent==='https://api.moonshot.cn/v1','New diagnostic preview uses the saved China endpoint')
+ const catalogConsent=fixture.querySelector('.diagnostic-preview input[type=checkbox]');catalogConsent.checked=true;catalogConsent.dispatchEvent(new Event('change',{bubbles:true}));await nextTick();button('确认检查').click();await wait(()=>fixture.querySelector('[aria-label="使用模型 kimi-k3"]'))
+ assert(fixture.querySelector('details').open,'Returned model catalog is expanded for direct selection')
+ const savesBeforeSelection=requests.filter(r=>r.url.endsWith('/settings/MOONSHOT')).length
+ fixture.querySelector('[aria-label="使用模型 kimi-k3"]').click();await nextTick()
+ const modelInput=()=>fixture.querySelector('input[aria-describedby="personal-ai-model-hint"]')
+ assert(modelInput().value==='kimi-k3'&&fixture.textContent.includes('未保存的修改'),'Selecting a returned model fills the draft and requires an explicit save')
+ assert(requests.filter(r=>r.url.endsWith('/settings/MOONSHOT')).length===savesBeforeSelection&&requests.filter(r=>r.url.endsWith('/execute')).length===1,'Selecting a model neither saves automatically nor generates content')
+ fixture.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await wait(()=>savedProfile.model==='kimi-k3'&&button('查询模型目录'))
+ assert(savedBody.model==='kimi-k3'&&!Object.hasOwn(savedBody,'apiKey'),'Saving a selected model keeps the encrypted key untouched')
+ const savesBeforeInvalid=requests.filter(r=>r.url.endsWith('/settings/MOONSHOT')).length
+ for(const wrongModel of ['ak-synthetic-record-id','sk-synthetic-secret']){
+  modelInput().value=wrongModel;modelInput().dispatchEvent(new Event('input',{bubbles:true}));await nextTick()
+  fixture.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await nextTick()
+  assert(modelInput().getAttribute('aria-invalid')==='true'&&requests.filter(r=>r.url.endsWith('/settings/MOONSHOT')).length===savesBeforeInvalid,wrongModel.startsWith('ak-')?'Key record IDs cannot be saved as a model':'Secret keys cannot be saved as a model')
+ }
+ app.unmount();fixture.replaceChildren();savedProfile={...savedProfile,model:'ak-synthetic-old-record'}
+ app=createApp({render:()=>h(PersonalAiProviders)});app.mount(fixture);await wait(()=>button('查询模型目录'))
+ assert(button('测试当前模型').disabled&&!button('查询模型目录').disabled,'An existing wrong model blocks generation while leaving catalog recovery available')
  app.unmount();fixture.replaceChildren();requests.length=0;window.fetch=originalFetch
  app=createApp({render:()=>h(GroupInvitations)});app.mount(fixture);await wait(()=>fixture.textContent.includes('Synthetic group'))
  assert(!requests.some(r=>r.url.includes('/decision')),'Displaying an invitation does not silently join the group')

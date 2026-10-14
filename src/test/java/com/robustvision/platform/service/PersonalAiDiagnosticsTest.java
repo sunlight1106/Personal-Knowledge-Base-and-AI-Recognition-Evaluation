@@ -8,6 +8,13 @@ import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
 class PersonalAiDiagnosticsTest {
+ @Test void legacyKeyInModelCanQueryCatalogButCannotStartGeneration(){
+  setting.update("sk-synthetic-secret","https://api.deepseek.com","synthetic-cipher",true);
+  assertThatThrownBy(()->service.preview(AiProvider.DEEPSEEK,"CONNECTION")).isInstanceOfSatisfying(BusinessException.class,e->{
+   assertThat(e.getCode()).isEqualTo("PERSONAL_AI_MODEL_INVALID");assertThat(e.getMessage()).doesNotContain("sk-synthetic-secret");
+  });
+  assertThat(service.preview(AiProvider.DEEPSEEK,"MODELS").mode()).isEqualTo("MODELS");verifyNoInteractions(transport);
+ }
  @Test void localRejectionsNeverCreateUsageOrSuggestBilling(){
   for(String mode:List.of("MODELS","CONNECTION"))for(String code:List.of("PERSONAL_AI_ENDPOINT_REJECTED","PERSONAL_AI_DNS_FAKE_IP","PERSONAL_AI_DNS_FAILED")){
    setup();var error=new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,code,"Synthetic local rejection");

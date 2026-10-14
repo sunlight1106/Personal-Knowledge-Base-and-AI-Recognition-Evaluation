@@ -5,6 +5,7 @@ import { ApiClientError } from '@/api/client'
 import { personalApi } from '@/api/personal'
 import type { PersonalAiProvider, PersonalAiSetting } from '@/types/personal'
 import { toastStore } from '@/stores/toast'
+import { modelFieldError } from '@/lib/personalAiModel'
 
 const providers = ref<PersonalAiProvider[]>([])
 const settings = ref<PersonalAiSetting[]>([])
@@ -15,6 +16,7 @@ const error = ref('')
 const form = reactive({ model: '', baseUrl: '', apiKey: '', enabled: true })
 const selected = computed(() => providers.value.find(item => item.provider === provider.value))
 const existing = computed(() => settings.value.find(item => item.provider === provider.value))
+const modelError = computed(() => modelFieldError(provider.value, form.model))
 const configuredCount = computed(() => settings.value.filter(item => item.configured && item.enabled).length)
 const configurationChanged = computed(() => !!existing.value && (
   form.model.trim() !== existing.value.model || form.baseUrl.trim() !== existing.value.baseUrl ||
@@ -50,6 +52,7 @@ async function load() {
 }
 async function save() {
   if (busy.value || !provider.value) return
+  if (modelError.value) { error.value = modelError.value; return }
   busy.value = true; error.value = ''
   const chosen = provider.value
   try {
@@ -86,7 +89,7 @@ onBeforeUnmount(() => { active = false; form.apiKey = '' })
     <form v-else-if="providers.length" class="settings-form" autocomplete="off" @submit.prevent="save">
       <div class="settings-fields">
         <label class="field-label">供应商<select v-model="provider" class="field-input" :disabled="busy"><option v-for="item in providers" :key="item.provider" :value="item.provider">{{ item.displayName }}</option></select></label>
-        <label class="field-label">模型 ID<input v-model="form.model" class="field-input" maxlength="120" placeholder="填写此供应商账户可用的模型 ID" required :disabled="busy" /></label>
+        <label class="field-label">模型名称 / 模型 ID<input v-model="form.model" class="field-input" maxlength="120" placeholder="查询下方模型目录后选择，也可手动填写" required :disabled="busy" :aria-invalid="!!modelError" aria-describedby="personal-ai-model-hint" /><small id="personal-ai-model-hint">填写模型目录中的名称，不是密钥管理页的 ID，也不是你给密钥起的名字。</small><small v-if="modelError" class="model-field-error" role="alert">{{ modelError }}</small></label>
       </div>
       <p v-if="selected && !selected.remoteEnabled" class="inline-alert">此部署尚未开启外部模型调用。可以保存配置和预览内容；实际调用需部署管理员启用。</p>
       <label class="field-label">API 端点
@@ -101,6 +104,6 @@ onBeforeUnmount(() => { active = false; form.apiKey = '' })
       <div class="settings-button-row"><button class="button button--dark" :disabled="busy">{{ busy ? '处理中…' : '保存个人配置' }}</button><button type="button" class="button button--ghost" :disabled="busy" @click="resetForm">取消更改</button><button v-if="existing" type="button" class="button button--ghost note-danger" :disabled="busy" @click="remove">删除密钥与配置</button></div>
     </form>
     <p v-if="configurationChanged" class="field-hint" role="status">配置有未保存的修改，请先保存，再查询模型目录或测试连接。</p>
-    <PersonalAiDiagnostics v-if="existing && !configurationChanged && !busy" :key="existing.provider" :setting="existing" :disabled="busy" /><div v-if="settings.length" class="settings-saved-list"><h4>我的已保存配置</h4><div v-for="item in settings" :key="item.provider"><strong>{{ providers.find(p => p.provider === item.provider)?.displayName || item.provider }}</strong><span>{{ item.model }}</span><span>{{ item.configured ? item.enabled ? '已启用' : '已停用' : '未配置密钥' }}</span></div></div>
+    <PersonalAiDiagnostics v-if="existing && !configurationChanged && !busy" :key="existing.provider" :setting="existing" :disabled="busy" @select-model="form.model = $event" /><div v-if="settings.length" class="settings-saved-list"><h4>我的已保存配置</h4><div v-for="item in settings" :key="item.provider"><strong>{{ providers.find(p => p.provider === item.provider)?.displayName || item.provider }}</strong><span>{{ item.model }}</span><span>{{ item.configured ? item.enabled ? '已启用' : '已停用' : '未配置密钥' }}</span></div></div>
   </article>
 </template>

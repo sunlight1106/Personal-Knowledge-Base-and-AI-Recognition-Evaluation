@@ -20,6 +20,7 @@ public class PersonalAiDiagnosticsService {
   Long owner=current.requireCurrent().getId();if(!Set.of("MODELS","CONNECTION").contains(mode))throw bad("DIAGNOSTIC_INVALID","检查类型无效");
   var setting=settings.findByOwnerIdAndProvider(owner,provider).filter(s->s.isEnabled()&&s.getEncryptedKey()!=null&&!s.getEncryptedKey().isBlank()).orElseThrow(()->bad("PERSONAL_AI_CONFIG_REQUIRED","先保存并启用自己的供应商配置"));
   if(!remote)throw bad("PERSONAL_AI_REMOTE_DISABLED","部署者尚未开启外部模型调用。请先启用 PERSONAL_AI_REMOTE_ENABLED，再进行接入检查");
+  if(mode.equals("CONNECTION"))PersonalAiSettingsService.validateModel(provider,setting.getModel());
   String base=endpoints.validateBase(provider,setting.getBaseUrl());String token=UUID.randomUUID().toString()+UUID.randomUUID();Instant expires=Instant.now().plusSeconds(300);limits.preview(owner);
   synchronized(pending){pending.entrySet().removeIf(e->e.getValue().expires().isBefore(Instant.now())||e.getValue().owner()==owner);if(pending.size()>=256)throw bad("DIAGNOSTIC_BUSY","检查服务繁忙，请稍后再试");pending.put(token,new Pending(owner,setting.getId(),setting.getRevision(),mode,expires));}
   return new Preview(token,mode,setting.getModel(),base,mode.equals("MODELS")?"GET /models，仅查询模型目录":"仅发送固定短句 Reply with OK only.，输出上限 128 tokens。不发送笔记、记忆或文件，供应商可能计费。",expires);

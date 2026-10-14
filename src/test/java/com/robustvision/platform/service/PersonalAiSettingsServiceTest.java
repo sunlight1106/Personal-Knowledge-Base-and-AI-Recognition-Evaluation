@@ -12,6 +12,25 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class PersonalAiSettingsServiceTest {
+    @Test void keyIdsAndSecretsCannotBeStoredAsModelNames() {
+        var current = mock(CurrentUserService.class); var user = mock(UserEntity.class);
+        when(user.getId()).thenReturn(7L); when(current.requireCurrent()).thenReturn(user);
+        var repo = mock(PersonalAiSettingRepository.class);
+        var encryption = mock(SecretEncryptionService.class);
+        var service = new PersonalAiSettingsService(current, repo, mock(PersonalAiUsageRepository.class), encryption,
+                new PersonalAiEndpointPolicy(""), true);
+        for (String value : List.of("ak-synthetic-record-id", "AK-synthetic-record-id", "sk-synthetic-secret", "SK-synthetic-secret")) {
+            assertThatThrownBy(() -> service.save(AiProvider.MOONSHOT, new SettingRequest(value,
+                    "https://api.moonshot.cn/v1", "synthetic-key", true)))
+                    .isInstanceOfSatisfying(BusinessException.class, e -> {
+                        assertThat(e.getCode()).isEqualTo("PERSONAL_AI_MODEL_INVALID");
+                        assertThat(e.getMessage()).contains("模型目录").doesNotContain(value);
+                    });
+        }
+        verifyNoInteractions(repo, encryption);
+        for (String model : List.of("kimi-k3", "kimi-k2.6", "kimi-k2.7-code", "kimi-k2.7-code-highspeed"))
+            assertThatCode(() -> PersonalAiSettingsService.validateModel(AiProvider.MOONSHOT, model)).doesNotThrowAnyException();
+    }
     @Test void writesOnlyEncryptedKeyResponsesAndListsNeverExposeItAndDeleteIsOwnScoped() throws Exception {
         var current = mock(CurrentUserService.class); var repo = mock(PersonalAiSettingRepository.class);
         var usage = mock(PersonalAiUsageRepository.class); var user = mock(UserEntity.class);

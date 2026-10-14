@@ -36,9 +36,7 @@ public class PersonalAiSettingsService {
     public SettingView save(AiProvider provider, SettingRequest request) {
         Long owner = currentUser.requireCurrent().getId();
         String model = request.model() == null ? "" : request.model().trim();
-        if (!model.matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}") || model.contains("..")
-                || (provider == AiProvider.GEMINI && !model.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,159}")))
-            throw invalid("PERSONAL_AI_MODEL_INVALID", "请填写有效的模型 ID，Gemini 仅填写模型名称");
+        validateModel(provider, model);
         String base = endpoints.validateBase(provider, request.baseUrl());
         PersonalAiSettingEntity entity = settings.findByOwnerIdAndProvider(owner, provider)
                 .orElseGet(() -> new PersonalAiSettingEntity(owner, provider));
@@ -52,6 +50,13 @@ public class PersonalAiSettingsService {
         if (request.enabled() == null) throw invalid("PERSONAL_AI_SETTING_INVALID", "请选择是否启用个人配置");
         entity.update(model, base, cipher, request.enabled());
         return view(settings.saveAndFlush(entity));
+    }
+    static void validateModel(AiProvider provider, String model) {
+        if (model.regionMatches(true, 0, "sk-", 0, 3) || (provider == AiProvider.MOONSHOT && model.regionMatches(true, 0, "ak-", 0, 3)))
+            throw invalid("PERSONAL_AI_MODEL_INVALID", "这里需要模型名称，不是 API 密钥或密钥列表中的 ID；请查询模型目录并选择");
+        if (!model.matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}") || model.contains("..")
+                || (provider == AiProvider.GEMINI && !model.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,159}")))
+            throw invalid("PERSONAL_AI_MODEL_INVALID", "请填写有效的模型 ID，Gemini 仅填写模型名称");
     }
     @Transactional
     public void delete(AiProvider provider) {
