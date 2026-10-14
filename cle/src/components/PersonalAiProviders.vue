@@ -16,6 +16,17 @@ const form = reactive({ model: '', baseUrl: '', apiKey: '', enabled: true })
 const selected = computed(() => providers.value.find(item => item.provider === provider.value))
 const existing = computed(() => settings.value.find(item => item.provider === provider.value))
 const configuredCount = computed(() => settings.value.filter(item => item.configured && item.enabled).length)
+const configurationChanged = computed(() => !!existing.value && (
+  form.model.trim() !== existing.value.model || form.baseUrl.trim() !== existing.value.baseUrl ||
+  form.enabled !== existing.value.enabled || !!form.apiKey.trim()
+))
+function endpointLabel(url: string) {
+  if (provider.value === 'MOONSHOT') {
+    if (url === 'https://api.moonshot.cn/v1') return `国内开放平台 · ${url}`
+    if (url === 'https://api.moonshot.ai/v1') return `国际开放平台 · ${url}`
+  }
+  return url
+}
 let active = true
 function resetForm() {
   form.apiKey = ''
@@ -79,15 +90,17 @@ onBeforeUnmount(() => { active = false; form.apiKey = '' })
       </div>
       <p v-if="selected && !selected.remoteEnabled" class="inline-alert">此部署尚未开启外部模型调用。可以保存配置和预览内容；实际调用需部署管理员启用。</p>
       <label class="field-label">API 端点
-        <select v-if="selected?.baseUrls.length && !selected.customEndpointAllowed" v-model="form.baseUrl" class="field-input" :disabled="busy"><option v-for="url in selected.baseUrls" :key="url" :value="url">{{ url }}</option></select>
+        <select v-if="selected?.baseUrls.length && !selected.customEndpointAllowed" v-model="form.baseUrl" class="field-input" :disabled="busy"><option v-for="url in selected.baseUrls" :key="url" :value="url">{{ endpointLabel(url) }}</option></select>
         <input v-else v-model="form.baseUrl" class="field-input" type="url" maxlength="300" placeholder="https://…（必须在部署端允许列表中）" :disabled="busy" required />
         <small>仅支持后端允许的 HTTPS 端点。模型名称与账户可用性以供应商为准；保存配置不会验证额度或发起模型调用。</small>
+        <small v-if="provider === 'MOONSHOT'">请按创建密钥的平台选择：platform.moonshot.cn / platform.kimi.com 对应国内站；platform.moonshot.ai / platform.kimi.ai 对应国际站。Kimi Code 的密钥使用单独的接口。</small>
       </label>
       <label class="field-label">{{ existing?.configured ? '更换 API 密钥（留空保留现有密钥）' : 'API 密钥' }}<input v-model="form.apiKey" type="password" class="field-input" autocomplete="new-password" name="personal-ai-key" maxlength="1000" :required="!existing?.configured" :disabled="busy" :placeholder="existing?.configured ? '已配置 · 不回显密钥' : '输入你自己的 API 密钥'" /></label>
       <label class="settings-check"><input v-model="form.enabled" type="checkbox" :disabled="busy" /> 启用此个人配置</label>
       <p class="field-hint">输入的密钥不会写入浏览器存储。保存尝试结束、切换供应商或关闭此页面后，输入框都会清空。</p>
       <div class="settings-button-row"><button class="button button--dark" :disabled="busy">{{ busy ? '处理中…' : '保存个人配置' }}</button><button type="button" class="button button--ghost" :disabled="busy" @click="resetForm">取消更改</button><button v-if="existing" type="button" class="button button--ghost note-danger" :disabled="busy" @click="remove">删除密钥与配置</button></div>
     </form>
-    <PersonalAiDiagnostics v-if="existing" :key="existing.provider" :setting="existing" :disabled="busy" /><div v-if="settings.length" class="settings-saved-list"><h4>我的已保存配置</h4><div v-for="item in settings" :key="item.provider"><strong>{{ providers.find(p => p.provider === item.provider)?.displayName || item.provider }}</strong><span>{{ item.model }}</span><span>{{ item.configured ? item.enabled ? '已启用' : '已停用' : '未配置密钥' }}</span></div></div>
+    <p v-if="configurationChanged" class="field-hint" role="status">配置有未保存的修改，请先保存，再查询模型目录或测试连接。</p>
+    <PersonalAiDiagnostics v-if="existing && !configurationChanged && !busy" :key="existing.provider" :setting="existing" :disabled="busy" /><div v-if="settings.length" class="settings-saved-list"><h4>我的已保存配置</h4><div v-for="item in settings" :key="item.provider"><strong>{{ providers.find(p => p.provider === item.provider)?.displayName || item.provider }}</strong><span>{{ item.model }}</span><span>{{ item.configured ? item.enabled ? '已启用' : '已停用' : '未配置密钥' }}</span></div></div>
   </article>
 </template>

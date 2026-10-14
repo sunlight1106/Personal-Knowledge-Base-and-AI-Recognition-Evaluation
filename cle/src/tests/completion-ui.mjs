@@ -1,6 +1,7 @@
 import {createApp,h,nextTick,ref} from 'vue'
 import VocabularyRecallCard from '../components/VocabularyRecallCard.vue'
 import PersonalAiDiagnostics from '../components/PersonalAiDiagnostics.vue'
+import PersonalAiProviders from '../components/PersonalAiProviders.vue'
 import GroupInvitations from '../components/GroupInvitations.vue'
 import {diffLines,mergeDraft} from '../lib/noteDiff'
 import {renderNote} from '../lib/markdown'
@@ -39,6 +40,30 @@ try {
  }
  window.fetch=originalFetch
  app.unmount();fixture.replaceChildren();requests.length=0
+ let savedProfile={provider:'MOONSHOT',model:'synthetic-model',baseUrl:'https://api.moonshot.ai/v1',enabled:true,configured:true,revision:1},savedBody
+ window.fetch=async(url,init={})=>{
+  const path=String(url);requests.push({url:path,body:init.body})
+  if(path.endsWith('/providers'))return envelope([{provider:'MOONSHOT',displayName:'Moonshot Kimi',baseUrls:['https://api.moonshot.ai/v1','https://api.moonshot.cn/v1'],remoteEnabled:true,customEndpointAllowed:false}])
+  if(path.endsWith('/settings'))return envelope([savedProfile])
+  if(path.endsWith('/settings/MOONSHOT')&&init.method==='PUT'){savedBody=JSON.parse(init.body);savedProfile={...savedProfile,...savedBody,revision:2};return envelope(savedProfile)}
+  if(path.endsWith('/diagnostics/preview'))return envelope({token:'synthetic-region-consent',request:'Query saved region only',model:savedProfile.model,endpoint:savedProfile.baseUrl})
+  throw Error('Unexpected region request')
+ }
+ app=createApp({render:()=>h(PersonalAiProviders)});app.mount(fixture);await wait(()=>button('查询模型目录'))
+ const endpoint=()=>fixture.querySelectorAll('select')[1]
+ assert([...endpoint().options].some(o=>o.value==='https://api.moonshot.cn/v1'&&o.textContent.includes('国内开放平台')),'Moonshot endpoint labels identify the key origin')
+ button('查询模型目录').click();await wait(()=>fixture.textContent.includes('Query saved region only'))
+ endpoint().value='https://api.moonshot.cn/v1';endpoint().dispatchEvent(new Event('change',{bubbles:true}));await nextTick()
+ assert(!button('确认检查')&&!button('查询模型目录')&&fixture.textContent.includes('未保存的修改'),'Changing region removes old consent and requires saving before diagnostics')
+ assert(!requests.some(r=>r.url.endsWith('/execute')),'Editing the endpoint never sends a provider request')
+ button('取消更改').click();await nextTick()
+ assert(endpoint().value==='https://api.moonshot.ai/v1'&&button('查询模型目录')&&!button('确认检查'),'Cancel restores the saved endpoint without reviving old consent')
+ endpoint().value='https://api.moonshot.cn/v1';endpoint().dispatchEvent(new Event('change',{bubbles:true}));await nextTick()
+ fixture.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await wait(()=>savedBody&&button('查询模型目录'))
+ assert(savedBody.baseUrl==='https://api.moonshot.cn/v1'&&!Object.hasOwn(savedBody,'apiKey'),'Saving a region change preserves the existing secret')
+ button('查询模型目录').click();await wait(()=>fixture.textContent.includes('Query saved region only'))
+ assert(fixture.querySelector('.diagnostic-preview code').textContent==='https://api.moonshot.cn/v1','New diagnostic preview uses the saved China endpoint')
+ app.unmount();fixture.replaceChildren();requests.length=0;window.fetch=originalFetch
  app=createApp({render:()=>h(GroupInvitations)});app.mount(fixture);await wait(()=>fixture.textContent.includes('Synthetic group'))
  assert(!requests.some(r=>r.url.includes('/decision')),'Displaying an invitation does not silently join the group')
  button('拒绝').click();await wait(()=>requests.some(r=>r.url.includes('/decision')));assert(JSON.parse(requests.find(r=>r.url.includes('/decision')).body).accept===false,'Rejecting an invitation sends an explicit negative decision')
