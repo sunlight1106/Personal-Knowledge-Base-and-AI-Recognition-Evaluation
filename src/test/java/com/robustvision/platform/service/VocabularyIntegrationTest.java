@@ -159,7 +159,7 @@ class VocabularyIntegrationTest {
     @Test void nextLocalDayAndSpringDstUseCalendarDateRatherThanUtcOrTwentyFourHours() throws Exception {
         clock.set("2026-03-08T04:30:00Z");var result=master("America/New_York");assertThat(result.path("dueDate").asText()).isEqualTo("2026-03-08");
         clock.set("2026-03-08T04:59:00Z");assertThat(next(alice,"vocab-daily","REVIEW").path("question").isNull()).isTrue();
-        clock.set("2026-03-08T05:01:00Z");var q=next(alice,"vocab-daily","REVIEW").path("question");assertThat(q.isNull()).isFalse();var reviewed=answer(alice,q,true);assertThat(reviewed.path("dueDate").asText()).isEqualTo("2026-03-11");
+        clock.set("2026-03-08T05:01:00Z");var q=next(alice,"vocab-daily","REVIEW").path("question");assertThat(q.isNull()).isFalse();var reviewed=answer(alice,q,true);assertThat(LocalDate.parse(reviewed.path("dueDate").asText())).isAfter(LocalDate.parse("2026-03-08"));
         assertThat(dash(alice).path("streak").asInt()).isEqualTo(2);
     }
     @Test void fallDstWrongReviewReturnsToTomorrowAndCannotReviewTwiceToday() throws Exception {
@@ -167,7 +167,7 @@ class VocabularyIntegrationTest {
         clock.set("2026-11-01T04:01:00Z");var wrong=answer(alice,next(alice,"vocab-daily","REVIEW").path("question"),false);assertThat(wrong.path("dueDate").asText()).isEqualTo("2026-11-02");assertThat(wrong.path("reviewStage").asInt()).isZero();
         clock.set("2026-11-01T06:30:00Z");assertThat(next(alice,"vocab-daily","REVIEW").path("question").isNull()).isTrue();
         var practice=answer(alice,next(alice,"vocab-daily","MISTAKES").path("question"),true);assertThat(practice.path("dueDate").asText()).isEqualTo("2026-11-02");
-        clock.set("2026-11-02T05:01:00Z");var recovered=answer(alice,next(alice,"vocab-daily","REVIEW").path("question"),true);assertThat(recovered.path("dueDate").asText()).isEqualTo("2026-11-05");
+        clock.set("2026-11-02T05:01:00Z");var recovered=answer(alice,next(alice,"vocab-daily","REVIEW").path("question"),true);assertThat(LocalDate.parse(recovered.path("dueDate").asText())).isAfter(LocalDate.parse("2026-11-02"));
     }
     @Test void changingTimezoneExpiresPendingQuestionAndPreservesStoredHistoryDates() throws Exception {
         settings(alice,"Asia/Shanghai",2,"vocab-daily");
@@ -179,12 +179,14 @@ class VocabularyIntegrationTest {
         assertThat(next(alice,"vocab-daily","LEARN").path("question").path("id").asText()).isNotEqualTo(pending.path("id").asText());
         assertThat(jdbc.queryForObject("select study_date from vocabulary_question where owner_id=? and answered_at is not null",java.sql.Date.class,alice.getId()).toLocalDate()).isEqualTo(LocalDate.parse("2026-10-02"));
     }
-    @Test void successfulReviewsExpandIntervalsAndCapAtSixtyDays() throws Exception {
-        master("Etc/UTC");LocalDate due=LocalDate.parse("2026-10-03");
-        for(int interval:new int[]{3,7,14,30,60,60}) {
+    @Test void successfulReviewsUseMemoryHistoryAndStayWithinSchedulerCap() throws Exception {
+        master("Etc/UTC");LocalDate due=LocalDate.parse("2026-10-03");long previous=0;
+        for(int i=0;i<8;i++) {
             clock.set(due.atTime(12,0).toInstant(ZoneOffset.UTC).toString());
             var reviewed=answer(alice,next(alice,"vocab-daily","REVIEW").path("question"),true);
-            due=due.plusDays(interval);assertThat(reviewed.path("dueDate").asText()).isEqualTo(due.toString());
+            LocalDate nextDue=LocalDate.parse(reviewed.path("dueDate").asText());long interval=java.time.temporal.ChronoUnit.DAYS.between(due,nextDue);
+            assertThat(interval).isBetween(1L,365L).isGreaterThanOrEqualTo(previous);previous=interval;due=nextDue;
+            assertThat(jdbc.queryForObject("select scheduler_json from vocabulary_progress where owner_id=?",String.class,alice.getId())).contains("stability");
             assertThat(next(alice,"vocab-daily","REVIEW").path("question").isNull()).isTrue();
         }
     }
@@ -401,4 +403,25 @@ class VocabularyIntegrationTest {
         public ZoneId getZone(){return ZoneOffset.UTC;}public Clock withZone(ZoneId zone){return this;}public Instant instant(){return value.get();}
     }
     @TestConfiguration static class TestClock { @Bean MutableClock clock(){return new MutableClock();} }
+    @Test void learningStatisticsDeduplicateAnswersAndBlockOtherUsers() throws Exception {
+        settings(alice,"Asia/Shanghai",1,"vocab-daily");var q=next(alice,"vocab-daily","LEARN").path("question");answer(alice,q,true);answer(alice,q,true);
+        var total=call(as(get("/api/v1/learning/statistics"),alice)).path("total");assertThat(total.path("answers").asInt()).isEqualTo(1);assertThat(total.path("words").asInt()).isEqualTo(1);
+        assertThat(call(as(get("/api/v1/learning/statistics"),bob)).path("total").path("answers").asInt()).isZero();
+        mvc.perform(as(get("/api/v1/learning/users/"+alice.getId()+"/statistics"),bob)).andExpect(status().isForbidden());
+    }
+    @Test void activeTimeDeduplicatesTabsAndSplitsLocalMidnight() throws Exception {
+        settings(alice,"Asia/Shanghai",1,"vocab-daily");clock.set("2026-10-02T15:59:50Z");
+        call(json(post("/api/v1/learning/pulse"),alice,Map.of("context","VOCABULARY","seconds",20)));
+        clock.set("2026-10-02T16:00:10Z");for(int i=0;i<3;i++)call(json(post("/api/v1/learning/pulse"),alice,Map.of("context","VOCABULARY","seconds",20)));
+        var result=call(as(get("/api/v1/learning/statistics?days=7"),alice));assertThat(result.path("total").path("seconds").asInt()).isEqualTo(20);assertThat(result.path("days").get(6).path("metrics").path("seconds").asInt()).isEqualTo(10);
+        clock.set("2026-10-02T16:20:10Z");call(json(post("/api/v1/learning/pulse"),alice,Map.of("context","VOCABULARY","seconds",30)));assertThat(call(as(get("/api/v1/learning/statistics"),alice)).path("total").path("seconds").asInt()).isEqualTo(20);
+        mvc.perform(json(post("/api/v1/learning/pulse"),alice,Map.of("context","NOTES","seconds",20))).andExpect(status().isForbidden());
+    }
+    @Test void offlinePracticeIsOwnerBoundIdempotentAndNeverPretendsMastery() throws Exception {
+        settings(alice,"Asia/Shanghai",1,"vocab-daily");var pack=call(json(post("/api/v1/vocabulary/offline"),alice,Map.of("bookId","vocab-daily")));var w=pack.path("items").get(0);clock.set(clock.instant().plusSeconds(90).toString());var body=Map.of("attempts",List.of(Map.of("wordId",w.path("id").asText(),"text",w.path("term").asText(),"revealed",false,"answeredAt",clock.instant().toString())));
+        mvc.perform(json(post("/api/v1/vocabulary/offline/"+pack.path("id").asText()+"/sync"),bob,body)).andExpect(status().isNotFound());
+        assertThat(call(json(post("/api/v1/vocabulary/offline/"+pack.path("id").asText()+"/sync"),alice,body)).path("recorded").asInt()).isEqualTo(1);
+        assertThat(call(json(post("/api/v1/vocabulary/offline/"+pack.path("id").asText()+"/sync"),alice,body)).path("recorded").asInt()).isZero();
+        assertThat(jdbc.queryForObject("select learning_correct from vocabulary_progress where owner_id=?",Integer.class,alice.getId())).isZero();
+    }
 }

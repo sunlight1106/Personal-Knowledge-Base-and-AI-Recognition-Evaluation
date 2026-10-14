@@ -13,6 +13,21 @@ function Start-Platform([switch]$Build, [switch]$FullBuild, [switch]$SkipBuild) 
     $installed = @(& docker compose ps --all --format '{{.Service}}')
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect installed services.' }
     $missing = @($required | Where-Object { $_ -notin $installed })
+    # Repeated clicks should only inspect the current stack. Require every
+    # configured service to report running AND healthy before the fast return.
+    if (-not $Build -and -not $FullBuild -and -not $missing.Count) {
+        $snapshot = @(& docker compose ps --all --format json)
+        if ($LASTEXITCODE -eq 0) {
+            try {
+                $states = @($snapshot | ForEach-Object { ConvertFrom-Json -InputObject $_ })
+                $ready = @($states | Where-Object { $_.State -eq 'running' -and $_.Health -eq 'healthy' } | ForEach-Object { $_.Service })
+                if (-not @($required | Where-Object { $_ -notin $ready }).Count) {
+                    Write-Host 'All configured services are already healthy; no restart is needed.'
+                    return
+                }
+            } catch { Write-Verbose 'Health snapshot could not be parsed; using normal verified startup.' }
+        }
+    }
     if ($FullBuild -or $missing.Count) {
         if ($SkipBuild) { throw 'This installation is incomplete. Run deploy.ps1 once without -SkipBuild.' }
         Write-Host 'Installing services / applying full configuration. This can download and compile dependencies.'

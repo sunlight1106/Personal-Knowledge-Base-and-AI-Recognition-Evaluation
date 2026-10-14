@@ -156,6 +156,28 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   })
 }
 
+export async function streamRequest<T>(path:string, body:unknown, onDelta:(text:string)=>void, signal?:AbortSignal):Promise<T>{
+  const session=captureSession()
+  return deadline(signal,150000,async active=>{
+    const response=await fetch(`${API_BASE}${path}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.token||''}`},body:JSON.stringify(body),signal:active})
+    assertSession(session)
+    if(!response.ok||!response.body){if(response.status===401)expireSession(session);throw new ApiClientError('STREAM_FAILED',`生成请求失败 (${response.status})`,response.status)}
+    const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',total=0,result:T|undefined
+    const abortRead=()=>{void reader.cancel().catch(()=>{})};active.addEventListener('abort',abortRead,{once:true})
+    try{while(true){const chunk=await reader.read();active.throwIfAborted();assertSession(session);if(chunk.done)break
+      total+=chunk.value.length;if(total>2*1024*1024)throw new Error('生成结果超过大小限制')
+      buffer+=decoder.decode(chunk.value,{stream:true});let at:number
+      while((at=buffer.indexOf('\n'))>=0){const raw=buffer.slice(0,at);buffer=buffer.slice(at+1);if(!raw.trim())continue;const event=JSON.parse(raw)
+        if(event.type==='delta'&&typeof event.text==='string')onDelta(event.text)
+        else if(event.type==='result')result=event.data as T
+        else if(event.type==='error')throw new ApiClientError(event.code,event.message,502)
+      }
+    }}finally{active.removeEventListener('abort',abortRead);await reader.cancel().catch(()=>{});reader.releaseLock()}
+    if(!result)throw new ApiClientError('STREAM_INCOMPLETE','连接已中断，已收到的文字可能不完整。',502)
+    return result
+  })
+}
+
 export async function fetchBlob(path: string): Promise<Blob> {
   const session = captureSession()
   const headers = new Headers()

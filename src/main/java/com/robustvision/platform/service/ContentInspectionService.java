@@ -37,7 +37,7 @@ public class ContentInspectionService {
     private static final Set<String> TEXT_EXTENSIONS = Set.of("txt", "csv", "json", "md");
     private static final Set<String> OFFICE_EXTENSIONS = Set.of("docx", "xlsx", "pptx");
     private static final Pattern ACTIVE_TEXT = Pattern.compile("(?is)^(?:<\\?xml[^>]*>\\s*)?(?:<!doctype\\s+(?:html|svg)\\b|<(?:html|head|body|script|svg|iframe|object|embed)\\b|<\\?php\\b|#!)");
-    private static final Pattern PDF_ACTIVE_NAME = Pattern.compile("/(?:JavaScript|JS|Launch|OpenAction|AA|RichMedia|EmbeddedFile|EmbeddedFiles|XFA|AcroForm|ObjStm|Encrypt|SubmitForm|ImportData|GoToR|GoToE|Rendition|Movie|Sound)\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PDF_ACTIVE_NAME = Pattern.compile("/(?:JavaScript|JS|Launch|OpenAction|AA|RichMedia|EmbeddedFile|EmbeddedFiles|XFA|AcroForm|Encrypt|SubmitForm|ImportData|GoToR|GoToE|Rendition|Movie|Sound)\\b", Pattern.CASE_INSENSITIVE);
     private static final Charset ZIP_CHARSET = Charset.forName("IBM437");
 
     public InspectedType inspectMedia(byte[] bytes, String filename, String declaredType) {
@@ -77,6 +77,9 @@ public class ContentInspectionService {
             String decoded = decodePdfNames(pdf);
             if (PDF_ACTIVE_NAME.matcher(decoded).find() || decoded.toLowerCase(Locale.ROOT).contains("javascript:")) throw active();
             if (!pdf.contains("%%EOF")) throw rejected("FILE_CONTENT_INVALID", "文件内容无效或不完整");
+            // Object streams are a normal PDF compression feature. Parse their
+            // dictionaries as well, so compressed active content is still blocked.
+            if (decoded.contains("/ObjStm")) inspectCompressedPdf(bytes);
             return new InspectedType("application/pdf", "pdf");
         }
         if (starts(bytes, "PK") || OFFICE_EXTENSIONS.contains(extension)) {
@@ -158,6 +161,26 @@ public class ContentInspectionService {
                     || !seen.contains(main) || !validMainType) throw invalidArchive();
         } catch (BusinessException exception) { throw exception; }
         catch (Exception exception) { throw invalidArchive(); }
+    }
+
+    private void inspectCompressedPdf(byte[] bytes) {
+        try (var pdf=org.apache.pdfbox.Loader.loadPDF(bytes)) {
+            if(pdf.isEncrypted())throw active();
+            var visited=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<org.apache.pdfbox.cos.COSBase,Boolean>());
+            var queue=new java.util.ArrayDeque<org.apache.pdfbox.cos.COSBase>();
+            queue.add(pdf.getDocument().getTrailer());
+            var keys=pdf.getDocument().getXrefTable().keySet();
+            if(keys.size()>100000)throw rejected("FILE_CONTENT_INVALID","PDF 结构过于复杂，请拆分后上传");
+            for(var key:keys)queue.add(pdf.getDocument().getObjectFromPool(key));
+            while(!queue.isEmpty()) {
+                var node=queue.removeFirst();if(!visited.add(node))continue;
+                if(visited.size()>100000||queue.size()>100000)throw rejected("FILE_CONTENT_INVALID","PDF 结构过于复杂，请拆分后上传");
+                if(node instanceof org.apache.pdfbox.cos.COSObject object){if(object.getObject()!=null)queue.add(object.getObject());}
+                else if(node instanceof org.apache.pdfbox.cos.COSName name){if(PDF_ACTIVE_NAME.matcher("/"+name.getName()).find())throw active();}
+                else if(node instanceof org.apache.pdfbox.cos.COSDictionary dictionary){for(var e:dictionary.entrySet()){queue.add(e.getKey());if(e.getValue()!=null)queue.add(e.getValue());}}
+                else if(node instanceof org.apache.pdfbox.cos.COSArray array){for(var child:array)if(child!=null)queue.add(child);}
+            }
+        } catch(BusinessException e){throw e;}catch(Exception e){throw rejected("FILE_CONTENT_INVALID","PDF 内容无法安全读取，请重新导出后上传");}
     }
 
     private boolean inspectOfficeXml(byte[] bytes, boolean contentTypes, String main, String mainType) {

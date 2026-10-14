@@ -5,6 +5,9 @@ server:
     include-message: never
 
 spring:
+  mvc:
+    async:
+      request-timeout: 150000
   mail:
     host: ${SMTP_HOST:}
     port: ${SMTP_PORT:587}
@@ -144,7 +147,7 @@ app:
     test-username: ${BOOTSTRAP_TEST_USERNAME:test}
     test-password: ${BOOTSTRAP_TEST_PASSWORD:}
     test-email: ${BOOTSTRAP_TEST_EMAIL:test@personal-platform.local}
-    reset-test-password: ${RESET_TEST_PASSWORD:true}
+    reset-test-password: ${RESET_TEST_PASSWORD:false}
   model:
     mode: ${MODEL_MODE:demo}
     base-url: ${MODEL_BASE_URL:http://localhost:8000}

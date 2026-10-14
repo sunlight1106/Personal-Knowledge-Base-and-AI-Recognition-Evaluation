@@ -31,7 +31,7 @@ public class VocabularyRequestSizeFilter extends OncePerRequestFilter {
             if(request.getContentLengthLong()>VocabularyBackupService.MAX_FILE_BYTES+65536L){reject(response);return;}
             chain.doFilter(request,response);return;
         }
-        int max = path.equals("/api/v1/vocabulary/books/import") ? MAX_IMPORT_BYTES : MAX_WRITE_BYTES;
+        int max = path.equals("/api/v1/vocabulary/books/import") ? MAX_IMPORT_BYTES : path.startsWith("/api/v1/vocabulary/offline/") ? 100000 : MAX_WRITE_BYTES;
         if (request.getContentLengthLong() > max) { reject(response); return; }
         byte[] bytes = request.getInputStream().readNBytes(max + 1);
         if (bytes.length > max) { reject(response); return; }

@@ -33,7 +33,9 @@
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>3.0.8</version>
-            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.open-spaced-repetition</groupId><artifactId>fsrs</artifactId><version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>

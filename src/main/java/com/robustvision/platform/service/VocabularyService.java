@@ -26,10 +26,11 @@ import java.util.stream.Collectors;
  * the lock and could miss a concurrent committed answer/progress row. */
 @Service
 public class VocabularyService {
+    @org.springframework.beans.factory.annotation.Autowired private LearningStatisticsService statistics;
+    @org.springframework.beans.factory.annotation.Autowired private ReviewScheduler reviewScheduler;
     @org.springframework.beans.factory.annotation.Autowired private VocabularySkillsService skills;
     private static final List<List<String>> CONFUSABLES=List.of(List.of("accept","except"),List.of("affect","effect"),List.of("advice","advise"),List.of("adapt","adopt"),List.of("borrow","lend"),List.of("raise","rise"),List.of("work","job"),List.of("say","tell"),List.of("learn","study"),List.of("remember","remind"),List.of("economic","economical"),List.of("later","latter"),List.of("personal","personnel"),List.of("quite","quiet"));
     static final int MASTERY_TARGET = 4;
-    private static final int[] REVIEW_DAYS = {3, 7, 14, 30, 60};
     private final EntityManager em;
     private final CurrentUserService current;
     private final UserRepository users;
@@ -54,7 +55,7 @@ public class VocabularyService {
         }
         return profile;
     }
-    Settings settings(VocabularyProfileEntity p) { return new Settings(p.zoneId,p.dailyGoal,p.selectedBookId,MASTERY_TARGET); }
+    Settings settings(VocabularyProfileEntity p) { return new Settings(p.zoneId,p.dailyGoal,p.selectedBookId,MASTERY_TARGET,p.retention); }
     LocalDate today(VocabularyProfileEntity p) {
         if(p.zoneId==null) throw bad("VOCAB_TIMEZONE_REQUIRED","请先确认学习时区和每日目标");
         return now().atZone(ZoneId.of(p.zoneId)).toLocalDate();
@@ -70,6 +71,7 @@ public class VocabularyService {
             em.createQuery("update VocabularyQuestionEntity q set q.expiresAt=:now where q.ownerId=:owner and q.answeredAt is null and q.expiresAt>:now")
                     .setParameter("owner",owner).setParameter("now",now()).executeUpdate();
         }
+        if(request.retention()!=null){if(!Double.isFinite(request.retention())||request.retention()<0.8||request.retention()>0.97)throw bad("INVALID_RETENTION","目标记忆率须在 80% 至 97% 之间");p.retention=request.retention();}
         p.zoneId=request.zoneId(); p.dailyGoal=request.dailyGoal();
         p.selectedBookId=request.selectedBookId(); p.updatedAt=now(); return settings(p);
     }
@@ -217,7 +219,7 @@ public class VocabularyService {
                 p.learningCorrect++;
                 if(p.learningCorrect==MASTERY_TARGET) { learned=true;p.learnedDate=day;p.dueDate=day.plusDays(1);p.reviewStage=0; }
             } else if(q.mode.equals("REVIEW")) {
-                p.dueDate=day.plusDays(REVIEW_DAYS[Math.min(p.reviewStage,REVIEW_DAYS.length-1)]);p.reviewStage=Math.min(p.reviewStage+1,REVIEW_DAYS.length);p.lastReviewDate=day;
+                p.reviewStage=Math.min(p.reviewStage+1,5);p.lastReviewDate=day;
             }
         } else if(!correct) {
             p.wrongCount++;p.mistake=true;
@@ -227,6 +229,12 @@ public class VocabularyService {
         p.lastAttemptAt=now();p.updatedAt=now();if(!choice)p.lastViewedAt=now();q.answeredAt=now();q.studyDate=day;q.answerCorrect=correct;
         String message=!correct?"已加入错词巩固，本次不增加记忆次数":learned?"累计答对 4 次，已加入明日复习":q.mode.equals("MISTAKES")?"错词已巩固，学习进度和复习日期保持不变":q.mode.equals("REVIEW")?"复习完成，已安排下一次复习":"答对了，记忆次数 +1";
         if(!choice&&correct&&!credit)message=q.hintLevel>0?"提示后答对：已记录，稍后再独立回忆": "即时回忆正确：已记录，隔开其他单词后再抽查";
+        if(learned || q.mode.equals("REVIEW")) {
+            var scheduled=reviewScheduler.review(p.schedulerJson,correct&&credit?2:0,profile.retention,now());
+            p.schedulerJson=scheduled.state();p.dueDate=scheduled.due().atZone(ZoneId.of(profile.zoneId)).toLocalDate();
+            if(learned||!p.dueDate.isAfter(day))p.dueDate=day.plusDays(1);
+        }
+        statistics.record(owner,"word:"+q.id,"WORD",word.termKey,correct,now(),day);
         skills.record(word,q,correct,delayed,now());
         var result=new Answer(q.id,word.id,correct,q.correctOptionId,word.meaning,word.exampleText,word.exampleTranslation,p.learningCorrect,MASTERY_TARGET,learned,p.dueDate,p.reviewStage,p.starred,message,evidence,q.expectedText,p.independentCorrect,p.promptedCorrect,p.immediateCorrect,p.spellingCorrect,p.collocationCorrect,lessons.forWord(word));q.resultJson=write(result);return result;
     }

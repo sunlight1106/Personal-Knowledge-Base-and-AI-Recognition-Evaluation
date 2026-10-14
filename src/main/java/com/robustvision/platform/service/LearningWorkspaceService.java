@@ -15,6 +15,9 @@ import java.util.*;
 
 @Service
 public class LearningWorkspaceService {
+    @org.springframework.beans.factory.annotation.Autowired private LearningStatisticsService statistics;
+    @org.springframework.beans.factory.annotation.Autowired private ReviewScheduler scheduler;
+    @org.springframework.beans.factory.annotation.Autowired private UserRepository users;
     private final LearningRecordRepository records;private final CurrentUserService current;
     private final ObjectMapper mapper;private final KnowledgeSearchService sources;private final NoteService notes;
     public LearningWorkspaceService(LearningRecordRepository records,CurrentUserService current,ObjectMapper mapper,KnowledgeSearchService sources,NoteService notes){this.records=records;this.current=current;this.mapper=mapper;this.sources=sources;this.notes=notes;}
@@ -35,15 +38,27 @@ public class LearningWorkspaceService {
         if(kind.equals("CARD")) {
             JsonNode previous=id==null?mapper.createObjectNode():parse(record.payload);
             data.put("due",previous.path("due").asText(Instant.now().toString()));data.put("stage",previous.path("stage").asInt(0));data.put("reviews",previous.path("reviews").asInt(0));data.put("mistakes",previous.path("mistakes").asInt(0));
+            data.put("scheduler",previous.path("scheduler").asText(""));
         }
         record.title=input.title().trim();record.payload=data.toString();record.updatedAt=Instant.now();return view(records.saveAndFlush(record));
+    }
+    public record CardDraft(@NotBlank @Size(max=2000) String question,@NotBlank @Size(max=10000) String answer){}
+    public record CardBatch(@NotBlank @Pattern(regexp="[a-fA-F0-9-]{36}") String requestId,@NotEmpty @Size(max=20) List<@jakarta.validation.Valid CardDraft> cards,@Size(max=36) String noteId){}
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+    public List<RecordView> importCards(CardBatch input){long owner=current.requireCurrent().getId();users.findLockedById(owner).orElseThrow();if(input.noteId()!=null&&!input.noteId().isBlank())sources.source("NOTE",input.noteId());List<RecordView> output=new ArrayList<>();int index=0;
+      for(var card:input.cards()){String id=UUID.nameUUIDFromBytes((owner+":"+input.requestId()+":"+index++).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();var existing=records.findByIdAndOwnerId(id,owner);if(existing.isPresent()){output.add(view(existing.get()));continue;}if(records.countByOwnerIdAndKind(owner,"CARD")>=2000)throw bad("最多保存 2000 张复习卡");
+        ObjectNode data=mapper.createObjectNode().put("question",card.question()).put("answer",card.answer()).put("subject","笔记自测").put("due",Instant.now().toString()).put("stage",0).put("reviews",0).put("mistakes",0);if(input.noteId()!=null&&!input.noteId().isBlank())data.put("sourceKind","NOTE").put("sourceId",input.noteId());
+        var row=new LearningRecordEntity(owner,"CARD",card.question().substring(0,Math.min(180,card.question().length())),data.toString());row.id=id;output.add(view(records.saveAndFlush(row)));}
+      return output;
     }
     @Transactional
     public RecordView grade(String id,Grade input){
         LearningRecordEntity r=owned(id);if(!r.kind.equals("CARD"))throw missing();if(r.revision!=input.revision())throw conflict();
         ObjectNode data=(ObjectNode)parse(r.payload);int stage=input.grade()==0?0:Math.min(9,data.path("stage").asInt()+1);
-        long seconds=input.grade()==0?600:input.grade()==1?86400:Math.min(180,1L<<stage)*86400*(input.grade()==3?2:1);
-        data.put("stage",stage);data.put("due",Instant.now().plusSeconds(seconds).toString());data.put("reviews",data.path("reviews").asInt()+1);data.put("mistakes",data.path("mistakes").asInt()+(input.grade()==0?1:0));
+        data.put("stage",stage);data.put("reviews",data.path("reviews").asInt()+1);data.put("mistakes",data.path("mistakes").asInt()+(input.grade()==0?1:0));
+        var scheduled=scheduler.review(data.path("scheduler").asText(""),input.grade(),0.9,Instant.now());
+        data.put("scheduler",scheduled.state());data.put("due",scheduled.due().toString());
+        statistics.record(r.ownerId,"card:"+r.id+":"+r.revision,"CARD",r.id,input.grade()>0,Instant.now(),null);
         r.payload=data.toString();r.updatedAt=Instant.now();return view(records.saveAndFlush(r));
     }
     @Transactional

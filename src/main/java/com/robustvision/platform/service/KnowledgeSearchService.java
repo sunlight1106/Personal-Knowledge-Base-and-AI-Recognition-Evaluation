@@ -19,7 +19,7 @@ public class KnowledgeSearchService {
     public record Source(String id,String kind,String title,String body,String url,Instant updatedAt) {}
     public record Page(List<Hit> items,boolean hasMore,int page) {}
     private record Scope(String sql,List<Object> args) {}
-    private static final Set<String> KINDS=Set.of("ALL","NOTE","ENTRY","FILE","TASK","RESULT","GROUP");
+    private static final Set<String> KINDS=Set.of("ALL","NOTE","ENTRY","FILE","TASK","RESULT","GROUP","DOCUMENT");
     public record Filters(String q,String type,String tag,Instant since,Long group,String sort) {}
     public static Filters validate(Filters input) {
         String q=input.q()==null?"":input.q().trim().replaceAll("\\s+"," ");
@@ -33,6 +33,9 @@ public class KnowledgeSearchService {
     }
     private Scope scope(String type,Long group) {
         UserEntity u=current.requireCurrent();long owner=u.getId(); List<String> sql=new ArrayList<>();List<Object> args=new ArrayList<>();
+        if(group==null&&accepts(type,"DOCUMENT")&&current.hasPermission(u,"research:use")){
+            sql.add("SELECT p.id,'DOCUMENT' kind,CONCAT(d.title,' · ',p.locator) title,p.body,d.created_at updated_at,'' tags FROM document_passage p JOIN study_document d ON d.id=p.document_id JOIN file_asset f ON f.id=d.file_id WHERE d.owner_id=? AND p.owner_id=? AND f.owner_id=? AND f.scan_status='CLEAN'");args.add(owner);args.add(owner);args.add(owner);
+        }
         if(group==null && accepts(type,"NOTE") && current.hasPermission(u,"note:read")) {
             sql.add("SELECT id,'NOTE' kind,title,body,updated_at,COALESCE(tags,'') tags FROM note WHERE owner_id=? AND deleted_at IS NULL");args.add(owner);
         }
@@ -101,11 +104,11 @@ public class KnowledgeSearchService {
     }
     @Transactional(readOnly=true)
     public Source source(String kind,String id) {
-        if(!Set.of("NOTE","ENTRY","FILE","TASK","RESULT","GROUP").contains(kind)) throw missing();
+        if(!KINDS.contains(kind)||kind.equals("ALL")) throw missing();
         Scope s=scope(kind,null);List<Object> args=new ArrayList<>(s.args());args.add(id);
         return jdbc.query("SELECT * FROM ("+s.sql()+") scoped WHERE id=?",(r,i)->new Source(id,kind,r.getString("title"),plain(r.getString("body")),url(kind,id),r.getTimestamp("updated_at").toInstant()),args.toArray()).stream().findFirst().orElseThrow(this::missing);
     }
     private BusinessException missing(){return new BusinessException(HttpStatus.NOT_FOUND,"SOURCE_UNAVAILABLE","资料不存在或当前无权访问");}
     static String plain(String body){return body==null?"":body;}
-    static String url(String kind,String id){return switch(kind){case "NOTE"->"/app/notes/"+id+"/edit";case "ENTRY"->"/app/knowledge?entry="+id;case "FILE"->"/app/images?file="+id;case "TASK"->"/app/logs?task="+id;case "RESULT"->"/app/research?tab=search&type=RESULT&source="+id;default->"/app/research?tab=search&type=GROUP&source="+id;};}
+    static String url(String kind,String id){return switch(kind){case "DOCUMENT"->"/app/research?tab=documents&passage="+id;case "NOTE"->"/app/notes/"+id+"/edit";case "ENTRY"->"/app/knowledge?entry="+id;case "FILE"->"/app/images?file="+id;case "TASK"->"/app/logs?task="+id;case "RESULT"->"/app/research?tab=search&type=RESULT&source="+id;default->"/app/research?tab=search&type=GROUP&source="+id;};}
 }

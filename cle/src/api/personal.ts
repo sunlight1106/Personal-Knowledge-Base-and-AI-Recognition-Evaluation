@@ -1,4 +1,4 @@
-import { request, fetchBlob } from './client'
+import { request, fetchBlob, streamRequest } from './client'
 import type { UserView } from '@/types/api'
 import type { PersonalAiMemory, TrainingEnvironment, TrainingJob, TrainingSample, AccountUsage, AccountSession, ExperimentPreview, ExperimentSource, PersonalAiAction, PersonalAiPreview, PersonalAiProvider, PersonalAiResult, PersonalAiSetting, PersonalAiUsage, PersonalRecognitionTask, RecognitionPreview, RecognitionResult } from '@/types/personal'
 
@@ -18,8 +18,10 @@ export const personalApi = {
   settings: (signal?: AbortSignal) => request<PersonalAiSetting[]>('/personal-ai/settings', { signal }),
   saveSetting: (provider: string, payload: { model: string; baseUrl?: string; apiKey?: string; enabled: boolean }) => request<PersonalAiSetting>(`/personal-ai/settings/${encodeURIComponent(provider)}`, json('PUT', payload)),
   deleteSetting: (provider: string) => request<void>(`/personal-ai/settings/${encodeURIComponent(provider)}`, json('DELETE')),
-  preview: (payload: { provider: string; action: PersonalAiAction; title: string; body: string; selectedTaskIds?: string[]; codeLanguage?: string; commentStyle?: string }, signal?: AbortSignal) => request<PersonalAiPreview>('/personal-ai/preview', json('POST', payload, signal)),
+  preview: (payload: { provider: string; action: PersonalAiAction; title: string; body: string; selectedTaskIds?: string[]; codeLanguage?: string; commentStyle?: string; streaming?: boolean }, signal?: AbortSignal) => request<PersonalAiPreview>('/personal-ai/preview', json('POST', payload, signal)),
   execute: (previewToken: string, signal?: AbortSignal) => request<PersonalAiResult>('/personal-ai/execute', json('POST', { previewToken, confirmed: true }, signal)),
+  stream: (previewToken:string,onDelta:(text:string)=>void,signal?:AbortSignal) => streamRequest<PersonalAiResult>('/personal-ai/stream',{previewToken,confirmed:true},onDelta,signal),
+  cancelStream: (token:string) => request<void>(`/personal-ai/streams/${encodeURIComponent(token)}/cancel`,json('POST')),
   usage: () => request<PersonalAiUsage[]>('/personal-ai/usage'),
   experiments: (signal?: AbortSignal) => request<ExperimentSource[]>('/notes/sources/experiments', { signal }),
   experimentPreview: (taskIds: string[], signal?: AbortSignal) => request<ExperimentPreview>('/notes/sources/experiments/preview', json('POST', { taskIds }, signal)),

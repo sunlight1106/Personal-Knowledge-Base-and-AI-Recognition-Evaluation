@@ -20,12 +20,13 @@ public class PersonalAiRequestSizeFilter extends OncePerRequestFilter {
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath().isEmpty() ? request.getRequestURI() : request.getServletPath();
         return !(path.startsWith("/api/v1/personal-ai/") || path.startsWith("/api/v1/account/")
-                || path.startsWith("/api/v1/auth/") || path.startsWith("/api/v1/notes"))
+                || path.startsWith("/api/v1/auth/") || path.startsWith("/api/v1/notes") || path.startsWith("/api/v1/learning/"))
                 || !Set.of("POST", "PUT", "PATCH", "DELETE").contains(request.getMethod());
     }
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         int max = request.getRequestURI().startsWith("/api/v1/notes") ? 1_000_000
+                : request.getRequestURI().equals("/api/v1/learning/cards/import") ? 800000
                 : request.getRequestURI().startsWith("/api/v1/personal-ai/") ? MAX_REQUEST_BYTES : 16384;
         if (request.getContentLengthLong() > max) { reject(response); return; }
         byte[] bytes = request.getInputStream().readNBytes(max + 1);

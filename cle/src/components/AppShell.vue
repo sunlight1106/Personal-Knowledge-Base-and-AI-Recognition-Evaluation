@@ -4,6 +4,7 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { sectionLinks as vSectionLinks } from '@/directives/sectionLinks'
 import WorkspaceTools from './WorkspaceTools.vue'
 import SafetyBanner from './SafetyBanner.vue'
+import LearningActivity from './LearningActivity.vue'
 import AppIcon from './AppIcon.vue'
 import BrandMark from './BrandMark.vue'
 import MotionToggle from './MotionToggle.vue'
@@ -27,7 +28,7 @@ function visible(items: NavItem[]) {
 }
 
 const navGroups = computed(() => [
-  { label: '探索与创作', items: visible(mainItems.filter(item => ['/app/home', '/app/knowledge', '/app/vocabulary', '/app/notes', '/app/research'].includes(item.to))) },
+  { label: '探索与创作', items: visible(mainItems.filter(item => ['/app/home', '/app/knowledge', '/app/vocabulary', '/app/notes', '/app/research', '/app/learning'].includes(item.to))) },
   { label: '识别与评测', items: visible(mainItems.filter(item => ['/app/upload', '/app/models', '/app/images', '/app/comparisons'].includes(item.to))) },
   { label: '记录与账户', items: visible(mainItems.filter(item => ['/app/logs', '/app/downloads', '/app/billing', '/app/contacts', '/app/mail', '/app/groups'].includes(item.to))) },
 ])
@@ -49,6 +50,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
 
 <template>
   <div class="portal-app">
+    <LearningActivity v-if="authStore.state.user" :key="'activity-'+authStore.state.user.id" />
     <a class="portal-skip" href="#workspace-content">跳转到内容</a>
     <header class="workspace-header">
       <nav class="workspace-breadcrumb" aria-label="当前位置"><RouterLink to="/" class="workspace-brand"><BrandMark /><span>个人知识库 <small>PERSONAL WORKSPACE</small></span></RouterLink><span>/</span><span>{{ title }}</span></nav>

@@ -94,3 +94,11 @@ python scripts/performance/compose_start_benchmark.py --restart --url http://127
 普通请求测量：`python scripts/performance/http_latency.py --output .runtime/http-check.json`。它使用本地 `.env` 的管理员账户登录一次，测量首页和只读接口后撤销这次会话；只保存耗时，不保存密码、令牌或响应内容。若管理员已改密，需使用有效的本地测试凭据；不要为了测试重置真实账户密码。这项测量不包含浏览器渲染、外网距离、并发压测或模型生成时间。
 
 相关机制：[Docker Compose 启动已有容器](https://docs.docker.com/reference/cli/docker/compose/start/)、[依赖顺序与健康检查](https://docs.docker.com/compose/how-tos/startup-order/)、[Flyway 并发迁移锁](https://documentation.red-gate.com/flyway/reference/configuration/flyway-namespace/flyway-lock-retry-count-setting)、[Spring Boot 容器打包](https://docs.spring.io/spring-boot/3.3/reference/packaging/efficient.html)、[Java 编译线程选项](https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html)、[MySQL 批量写入](https://dev.mysql.com/doc/connector-j/en/connector-j-connp-props-performance-extensions.html)。
+
+## 已经运行时再次点击启动
+
+Windows 启动脚本先检查所有配置服务的实时健康状态。如果已经全部健康，就直接返回现有地址，不重复启动容器。Docker 探测只读取服务端版本，避免拉取完整的运行信息。
+
+首次构建、Docker Desktop 冷启动、应用重启和已经运行后的检查是四种不同耗时。日志仍分别记录 Docker 与项目耗时；一次快速检查不能用来代表冷启动速度。完整健康检查与上传病毒扫描保持启用。
+
+如果管理员或体验账号每次重启都要重新登录，检查 `.env` 中的 `RESET_ADMIN_PASSWORD` 和 `RESET_TEST_PASSWORD`。日常使用应为 `false`；设为 `true` 会在每次初始化时重置对应密码并撤销旧会话。只在明确要恢复账号密码时临时启用，完成后改回 `false` 并重新应用配置。

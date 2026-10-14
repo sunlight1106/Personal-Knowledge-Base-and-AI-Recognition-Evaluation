@@ -3,7 +3,7 @@ function Test-DockerReady {
     $probe = New-Object Diagnostics.Process
     try {
         $probe.StartInfo.FileName = (Get-Command docker -ErrorAction Stop).Source
-        $probe.StartInfo.Arguments = 'info --format "{{.ServerVersion}}"'
+        $probe.StartInfo.Arguments = 'version --format "{{.Server.Version}}"'
         $probe.StartInfo.UseShellExecute = $false
         $probe.StartInfo.CreateNoWindow = $true
         $probe.StartInfo.RedirectStandardOutput = $true

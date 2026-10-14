@@ -4,11 +4,13 @@ $script:required = @('mysql','redis','minio','clamav','backend','model-worker','
 $script:installed = $script:required
 $script:calls = New-Object 'Collections.Generic.List[string]'
 $script:fail = ''
+$script:healthy = $false
 function docker {
     $command = $args -join ' '
     $script:calls.Add($command)
     $global:LASTEXITCODE = 0
     if ($script:fail -and $command -like $script:fail) { $global:LASTEXITCODE = 1; return }
+    if ($command -eq 'compose ps --all --format json' -and $script:healthy) { return ($script:required | ForEach-Object { @{ Service=$_; State='running'; Health='healthy' } | ConvertTo-Json -Compress }) }
     if ($command -eq 'compose config --services') { return $script:required }
     if ($command -eq 'compose ps --all --format {{.Service}}') { return $script:installed }
 }
@@ -41,4 +43,7 @@ Assert-Startup $rejected 'A failed start cannot be reported as ready'
 $rejected=$false
 try { Start-Platform -Build -SkipBuild } catch { $rejected=$true }
 Assert-Startup $rejected 'Conflicting startup options are rejected'
+$script:fail=''; $script:healthy=$true; $script:calls.Clear()
+Start-Platform
+Assert-Startup (-not ($script:calls | Where-Object { $_ -match '^compose (start|up|build)' })) 'An already healthy stack is not started again'
 Remove-Item Function:docker

@@ -1,0 +1,14 @@
+// Only ciphertext is persisted. The passphrase and decrypted notes live in memory.
+export interface VaultNote { id:string; title:string; body:string; revision:number; contentFormat:'MARKDOWN'|'HTML'; dirty:boolean; conflict?:boolean; copyId?:string }
+export interface OfflineWord {id:string;term:string;ipa:string;meaning:string;example:string;translation:string}
+export interface OfflinePack {id:string;ownerId:number;expiresAt:string;items:OfflineWord[];attempts:{wordId:string;text:string;revealed:boolean;answeredAt:string}[]}
+export interface Vault { owner:number;notes:VaultNote[];packs:OfflinePack[] }
+interface Stored {owner:number;salt:Uint8Array;iv:Uint8Array;cipher:ArrayBuffer}
+async function database(){return new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('pkb-offline-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('vaults',{keyPath:'owner'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function storage<T>(mode:IDBTransactionMode,action:(s:IDBObjectStore)=>IDBRequest<T>):Promise<T>{const db=await database();return new Promise((resolve,reject)=>{const tx=db.transaction('vaults',mode),r=action(tx.objectStore('vaults'));let value:T;r.onsuccess=()=>value=r.result;tx.oncomplete=()=>{db.close();resolve(value)};tx.onerror=()=>{db.close();reject(tx.error)}})}
+const encoder=new TextEncoder()
+async function key(passphrase:string,salt:Uint8Array){const material=await crypto.subtle.importKey('raw',encoder.encode(passphrase),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:210000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+export async function vaultOwners(){return storage<IDBValidKey[]>('readonly',s=>s.getAllKeys())}
+export async function unlockVault(owner:number,passphrase:string):Promise<Vault|null>{const row=await storage<Stored|undefined>('readonly',s=>s.get(owner));if(!row)return null;try{const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:row.iv,additionalData:encoder.encode(String(owner))},await key(passphrase,row.salt),row.cipher);const result=JSON.parse(new TextDecoder().decode(plain)) as Vault;if(result.owner!==owner)throw new Error();return result}catch{throw new Error('离线口令不正确，或本地数据已损坏。')}}
+export async function saveVault(vault:Vault,passphrase:string){if(passphrase.length<10)throw new Error('请设置至少 10 个字符的离线口令');const raw=JSON.stringify(vault);if(raw.length>5_000_000)throw new Error('离线内容超过 5 MB，请减少笔记');const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:encoder.encode(String(vault.owner))},await key(passphrase,salt),encoder.encode(raw));await storage('readwrite',s=>s.put({owner:vault.owner,salt,iv,cipher}));}
+export async function deleteVault(owner:number){await storage('readwrite',s=>s.delete(owner))}

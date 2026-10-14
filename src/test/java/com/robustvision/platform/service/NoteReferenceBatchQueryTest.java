@@ -46,6 +46,7 @@ import static org.mockito.Mockito.when;
 @Import({NoteReferenceService.class, NoteService.class, NoteShareService.class, NoteHistoryService.class, NoteLinkService.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class NoteReferenceBatchQueryTest {
+    @org.springframework.boot.test.mock.mockito.MockBean LearningStatisticsService learningStatistics;
     @Autowired EntityManager em;
     @Autowired EntityManagerFactory factory;
     @Autowired NoteReferenceService references;

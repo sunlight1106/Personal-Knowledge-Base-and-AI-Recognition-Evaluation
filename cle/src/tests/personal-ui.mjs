@@ -79,7 +79,7 @@ try {
   await check(fixture.querySelector('[aria-label="发送前确认"] input[type=checkbox]'),true)
   const send = button('确认发送并生成'); send.click(); send.click(); await nextTick(); await wait(() => pendingExecute)
   assert(executeCalls === 1, 'Repeated confirm click executes once')
-  await click('停止等待'); pendingExecute(); await wait()
+  await click('停止生成'); pendingExecute(); await wait()
   assert(!fixture.querySelector('[aria-label="生成结果预览"]'), 'Canceled execution cannot apply a late result')
   await click('摘要'); await wait(() => fixture.querySelector('[aria-label="发送前确认"]'))
   await check(fixture.querySelector('[aria-label="发送前确认"] input[type=checkbox]'),true)

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name="vocabulary_progress", uniqueConstraints={@UniqueConstraint(name="uq_vocabulary_owner_word",columnNames={"owner_id","word_id"}), @UniqueConstraint(name="uq_vocabulary_owner_term",columnNames={"owner_id","term_key"})})
 public class VocabularyProgressEntity {
+    @Column(name="scheduler_json",columnDefinition="TEXT") public String schedulerJson;
     @Id @Column(length=36) public String id;
     @Column(name="owner_id",nullable=false) public Long ownerId;
     @Column(name="word_id",nullable=false,length=36) public String wordId;

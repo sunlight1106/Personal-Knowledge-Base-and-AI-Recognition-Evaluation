@@ -7,6 +7,7 @@ export interface NavItem {
 }
 
 export const mainItems: NavItem[] = [
+  { label: '学习统计', to: '/app/learning', icon: 'logs' },
   { label: '学习中心', to: '/app/research', icon: 'book', permission: 'research:use' },
   { label: '工作台', to: '/app/home', icon: 'home', permission: 'dashboard:read' },
   { label: '知识库', to: '/app/knowledge', icon: 'book', permission: 'knowledge:read' },

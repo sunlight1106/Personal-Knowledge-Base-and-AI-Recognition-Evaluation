@@ -7,6 +7,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name="vocabulary_profile")
 public class VocabularyProfileEntity {
+    @org.hibernate.annotations.ColumnDefault("0.9") @Column(nullable=false) public double retention=0.9;
     @org.hibernate.annotations.ColumnDefault("'{}'") @Column(name="history_json",columnDefinition="TEXT",nullable=false) public String historyJson="{}";
     @Id @Column(name="owner_id") public Long ownerId;
     @Column(name="zone_id",length=80) public String zoneId;

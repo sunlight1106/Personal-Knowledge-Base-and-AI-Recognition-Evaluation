@@ -61,7 +61,8 @@ public class ModerationGuard {
     private String feature(String p,String method) {
         if(p.startsWith("/api/v1/social") || p.startsWith("/api/v1/messages") && !p.startsWith("/api/v1/messages/groups/"))return "CHAT";
         if(p.startsWith("/api/v1/workspaces") || p.startsWith("/api/v1/messages/groups/"))return "GROUP";
-        if(p.startsWith("/api/v1/notes") || p.startsWith("/api/v1/knowledge") || p.startsWith("/api/v1/note-"))return "NOTES";
+        if(p.startsWith("/api/v1/notes") || p.startsWith("/api/v1/knowledge") || p.startsWith("/api/v1/note-")
+                ||p.startsWith("/api/v1/research/documents")||p.startsWith("/api/v1/learning/cards"))return "NOTES";
         if(p.startsWith("/api/v1/vocabulary"))return "VOCABULARY";
         if(p.startsWith("/api/v1/personal-ai/training"))return "TRAINING";
         if(p.startsWith("/api/v1/personal-ai") || p.startsWith("/api/v1/research/answers"))return "AI";

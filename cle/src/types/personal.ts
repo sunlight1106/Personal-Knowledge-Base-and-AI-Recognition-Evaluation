@@ -29,6 +29,7 @@ export interface PersonalAiSetting {
   updatedAt: string
 }
 export interface PersonalAiPreview {
+  streaming?: boolean
   previewToken: string
   expiresAt: string
   provider: string

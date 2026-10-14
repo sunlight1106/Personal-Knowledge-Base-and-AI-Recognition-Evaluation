@@ -10,6 +10,7 @@
 | :--- | :--- |
 | [日常使用](USAGE.md) | 找到功能入口，管理通知，调整配色与动效 |
 | [词书与背单词](VOCABULARY.md) | 选词书、练搭配、听读、Skip、导入、去重和备份 |
+| [学习统计、文档与离线](LEARNING_STATISTICS.md) | 每日和累计记录、PDF / Word 导入、AI 复习卡、离线准备与同步 |
 | [学习中心与资料整理](LEARNING_WORKSPACE.md) | 搜索、收藏、复习卡、看板、月历和评测报告 |
 | [个人流程与笔记整理](PERSONAL_WORKFLOWS.md) | 学习计划、笔记批量操作、账户与群资料 |
 | [听写、笔记合并与附件](LEARNING_AND_GROUPS.md) | 使用听写、易混词、笔记合并和图片附件 |

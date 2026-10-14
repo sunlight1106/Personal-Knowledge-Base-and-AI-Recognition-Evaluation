@@ -122,6 +122,29 @@ public class PersonalAiTransport {
         catch (Exception exception) { throw PersonalAiEndpointPolicy.unavailable(); }
         finally { client.connectionPool().evictAll(); }
     }
+    public Payload streamingPayload(AiProvider provider,Payload payload) {
+        try {var body=(ObjectNode)mapper.readTree(payload.json());String url=payload.url();
+            if(provider.protocol()==AiProvider.Protocol.GEMINI)url=url.replace(":generateContent",":streamGenerateContent?alt=sse");
+            else {body.put("stream",true);if(provider.protocol()==AiProvider.Protocol.OPENAI_CHAT)body.set("stream_options",mapper.valueToTree(Map.of("include_usage",true)));}
+            return new Payload(url,mapper.writeValueAsString(body));
+        }catch(Exception e){throw PersonalAiEndpointPolicy.unavailable();}
+    }
+    public Completion executeStreaming(AiProvider provider,Payload payload,String apiKey,java.util.function.Consumer<String> delta,PersonalAiStreams.Running running){
+        String suffix=switch(provider.protocol()){
+            case ANTHROPIC -> "/messages";case OPENAI_CHAT -> "/chat/completions";
+            case GEMINI -> {int at=payload.url().lastIndexOf("/models/");if(at<0||!payload.url().substring(at).matches("/models/[A-Za-z0-9._-]+:streamGenerateContent[?]alt=sse"))throw PersonalAiEndpointPolicy.invalid();yield payload.url().substring(at);}
+        };
+        if(!payload.url().endsWith(suffix))throw PersonalAiEndpointPolicy.invalid();
+        policy.validateBase(provider,payload.url().substring(0,payload.url().length()-suffix.length()));
+        HttpUrl url=HttpUrl.get(payload.url());var client=connectionClient(url.host(),policy.resolvePublic(url.host())).newBuilder().callTimeout(Duration.ofSeconds(120)).readTimeout(Duration.ofSeconds(30)).build();
+        var request=new Request.Builder().url(url).post(RequestBody.create(payload.json(),MediaType.get("application/json; charset=utf-8")));
+        switch(provider.protocol()){case GEMINI->request.header("x-goog-api-key",apiKey);case ANTHROPIC->request.header("x-api-key",apiKey).header("anthropic-version","2023-06-01");default->request.header("Authorization","Bearer "+apiKey);}
+        var call=client.newCall(request.build());running.attach(call);
+        try(var response=call.execute()){
+            if(!response.isSuccessful())throw upstreamFailure(response.code());if(response.body()==null)throw PersonalAiEndpointPolicy.unavailable();
+            return PersonalAiStreamParser.read(response.body().byteStream(),provider,mapper,apiKey,delta,running::check);
+        }catch(BusinessException e){throw e;}catch(Exception e){running.check();throw PersonalAiEndpointPolicy.unavailable();}finally{client.connectionPool().evictAll();}
+    }
     public Payload prepareDiagnostic(AiProvider provider,String base,String model) {
         Payload original=prepare(provider,base,model,"Reply briefly.","Reply with OK only.");
         try {var body=(ObjectNode)mapper.readTree(original.json());

@@ -35,4 +35,22 @@ public class PersonalAiController {
     public ApiResponse<PreviewView> preview(@Valid @RequestBody PreviewRequest request) { return ApiResponse.ok(ai.preview(request)); }
     @PostMapping("/execute") @PreAuthorize("hasAuthority('personal-ai:use')")
     public ApiResponse<ResultView> execute(@Valid @RequestBody ExecuteRequest request) { return ApiResponse.ok(ai.execute(request)); }
+    @org.springframework.beans.factory.annotation.Autowired private PersonalAiStreams streams;
+    @org.springframework.beans.factory.annotation.Autowired private CurrentUserService current;
+    @org.springframework.beans.factory.annotation.Autowired private com.fasterxml.jackson.databind.ObjectMapper mapper;
+    @PostMapping("/stream") @PreAuthorize("hasAuthority('personal-ai:use')")
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> stream(@Valid @RequestBody ExecuteRequest request){
+        long owner=current.requireCurrent().getId();var task=streams.begin(owner,request.previewToken());
+        var context=org.springframework.security.core.context.SecurityContextHolder.getContext();
+        org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody body=output->{
+            org.springframework.security.core.context.SecurityContextHolder.setContext(context);
+            java.util.function.Consumer<Object> send=value->{try{output.write(mapper.writeValueAsBytes(value));output.write(10);output.flush();}catch(java.io.IOException e){task.cancel();throw new java.io.UncheckedIOException(e);}};
+            try{var result=ai.executeStream(request,text->send.accept(java.util.Map.of("type","delta","text",text)),task);send.accept(java.util.Map.of("type","result","data",result));}
+            catch(com.robustvision.platform.common.BusinessException e){send.accept(java.util.Map.of("type","error","code",e.getCode(),"message",e.getMessage()));}
+            catch(Exception e){send.accept(java.util.Map.of("type","error","code","PERSONAL_AI_INCOMPLETE","message","生成中断，已收到的文字可能不完整。请检查后再决定是否重试。"));}
+            finally{task.cancel();streams.end(request.previewToken(),task);org.springframework.security.core.context.SecurityContextHolder.clearContext();}
+        };
+        return ResponseEntity.ok().header("Cache-Control","no-store").header("X-Accel-Buffering","no").contentType(org.springframework.http.MediaType.parseMediaType("application/x-ndjson")).body(body);
+    }
+    @PostMapping("/streams/{token}/cancel") public ApiResponse<Void> cancelStream(@PathVariable String token){streams.cancel(current.requireCurrent().getId(),token);return ApiResponse.ok(null);}
 }

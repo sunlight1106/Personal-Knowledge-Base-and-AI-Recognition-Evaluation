@@ -8,6 +8,7 @@ import type { ExperimentPreview, ExperimentSource, PersonalAiAction, PersonalAiP
 import { toastStore } from '@/stores/toast'
 import { authStore } from '@/stores/auth'
 import { createRequestGuard, isPreviewExpired } from '@/lib/requestGuard'
+import QuizCardImport from '@/components/QuizCardImport.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
 const props = defineProps<{ title: string; body: string; disabled?: boolean; codeLanguage?: string; commentStyle?: string; contextKind?: 'vocabulary' }>()
@@ -22,6 +23,7 @@ const instruction = ref('')
 const wordMode = computed(() => props.contextKind === 'vocabulary')
 const localActions = new Set(['summarize', 'outline', 'tags', 'tidy'])
 const outboundBody = computed(() => props.body + (instruction.value.trim() ? `\n\n用户补充要求 / 我的练习句子：\n${instruction.value.trim()}` : ''))
+const liveText=ref(''),streamToken=ref(''),partial=ref(false),lastAction=ref<PersonalAiAction|null>(null)
 const busyAction = ref<PersonalAiAction | null>(null), phase = ref<'preview' | 'execute' | 'local' | null>(null)
 const aiError = ref(''), review = ref<PersonalAiPreview | null>(null), consent = ref(false)
 const result = ref<PersonalAiResult | NoteAssistResponse | null>(null)
@@ -41,7 +43,12 @@ const expired = computed(() => review.value ? isPreviewExpired(review.value.expi
 const actions = computed<Array<{ action: PersonalAiAction; label: string }>>(() => wordMode.value ? [{ action: 'word-explain', label: '讲解与搭配' }, { action: 'word-practice', label: '生成练习' }, { action: 'word-correct', label: '我的造句纠错' }] : props.codeLanguage ? [{ action: 'code-annotate', label: 'AI 解释并生成注释' }] : [{ action: 'summarize', label: '摘要' }, { action: 'outline', label: '大纲' }, { action: 'tags', label: '标签' }, { action: 'tidy', label: '格式整理' }, { action: 'explain', label: '解释概念' }, { action: 'polish', label: '润色' }, { action: 'quiz', label: '生成自测' }, { action: 'draft', label: '报告草稿' }])
 const actionLabel = (action: string) => actions.value.find(item => item.action === action)?.label || action
 function errorText(reason: unknown, fallback: string) { return reason instanceof ApiClientError ? reason.message : fallback }
+function stopGeneration(){
+  if(streamToken.value)void personalApi.cancelStream(streamToken.value).catch(()=>{})
+  streamToken.value='';aiGuard.cancel();busyAction.value=null;phase.value=null;partial.value=!!liveText.value
+}
 function cancelAi() {
+  stopGeneration();liveText.value='';partial.value=false
   aiGuard.cancel(); busyAction.value = null; phase.value = null
   review.value = null; result.value = null; consent.value = false
 }
@@ -88,7 +95,7 @@ async function startAssist(action: PersonalAiAction) {
   if (action === 'word-correct' && !instruction.value.trim()) { aiError.value = '先在下方写一句你自己的英文，再选择造句纠错。'; return }
   if (mode.value !== 'LOCAL_RULES' && !selectedSetting.value) { aiError.value = '请先保存并启用你自己的 AI 配置。'; return }
   if (outboundBody.value.length > 24000 && mode.value !== 'LOCAL_RULES') { aiError.value = '个人 AI 单次正文最多 24,000 个字符。请缩减正文后重新预览。'; return }
-  cancelAi(); aiError.value = ''
+  cancelAi(); aiError.value = '';lastAction.value=action
   const request = aiGuard.start(); busyAction.value = action
   try {
     if (mode.value === 'LOCAL_RULES') {
@@ -97,7 +104,7 @@ async function startAssist(action: PersonalAiAction) {
       if (request.current()) result.value = data
     } else {
       phase.value = 'preview'
-      const data = await personalApi.preview({ provider: mode.value, action, title: props.title, body: outboundBody.value, selectedTaskIds: !wordMode.value && !props.codeLanguage && includeSources.value ? [...selectedIds.value] : [], codeLanguage: props.codeLanguage, commentStyle: props.commentStyle }, request.signal)
+      const data = await personalApi.preview({ provider: mode.value, action, title: props.title, body: outboundBody.value, selectedTaskIds: !wordMode.value && !props.codeLanguage && includeSources.value ? [...selectedIds.value] : [], codeLanguage: props.codeLanguage, commentStyle: props.commentStyle, streaming: action !== 'code-annotate' }, request.signal)
       if (request.current()) { review.value = data; consent.value = false }
     }
   } catch (reason) { if (request.current()) aiError.value = errorText(reason, '整理准备失败，请重试') }
@@ -110,11 +117,13 @@ async function execute() {
   // A token is consumed at most once: hide it before initiating transport; never auto-retry.
   review.value = null; consent.value = false
   try {
-    const data = await personalApi.execute(confirmed.previewToken, request.signal)
-    if (request.current()) result.value = data
+    streamToken.value=confirmed.previewToken;liveText.value='';partial.value=false
+    const data = !confirmed.streaming ? await personalApi.execute(confirmed.previewToken, request.signal) : await personalApi.stream(confirmed.previewToken,text=>{if(request.current())liveText.value+=text},request.signal)
+    if (request.current()) { result.value = data; liveText.value='' }
   } catch (reason) {
+    if (request.current()) {partial.value=!!liveText.value;void personalApi.cancelStream(confirmed.previewToken).catch(()=>{})}
     if (request.current()) aiError.value = errorText(reason, '未能取得模型结果。请求可能已发送并产生费用，请先检查使用记录；如需重试，请重新预览并确认。')
-  } finally { if (request.current()) { busyAction.value = null; phase.value = null } }
+  } finally { if (request.current()) { busyAction.value = null; phase.value = null;streamToken.value='' } }
 }
 function applyResult() {
   const data = result.value
@@ -159,9 +168,11 @@ onBeforeUnmount(() => { cancelAi(); cancelSource(); listGuard.cancel(); settingG
       <p v-if="settingsError" class="inline-alert inline-alert--error" role="alert">{{ settingsError }}</p>
       <p v-if="mode === 'LOCAL_RULES' && !wordMode" class="field-hint">本地规则不会调用任何模型供应商，也不使用个人密钥。解释、润色、出题和代码注释需要选择个人模型。</p>
       <p v-else-if="mode === 'LOCAL_RULES' && wordMode" class="field-hint">先在个人 AI 设置中保存并启用模型，然后刷新配置。</p><template v-else><p v-if="!remoteEnabled" class="inline-alert" role="status">此部署尚未开启外部模型调用。可以查看发送预览；确认发送目前不可用。请联系部署管理员启用。</p><p class="settings-notice">内容将离开本平台，发送到选定供应商。使用你个人 API 账户的额度并由供应商计费；不会回退到平台共享密钥。</p><label v-if="!codeLanguage && !wordMode" class="settings-check"><input v-model="includeSources" type="checkbox" :disabled="!!busyAction || !selectedIds.length" /> 同时发送上方选中的 {{ selectedIds.length }} 份实验结果</label><small v-if="includeSources && selectedIds.length">已选实验将追加在笔记正文之外；若正文已插入相同实验，可以取消勾选以避免重复发送。</small></template>
-      <label v-if="!codeLanguage" class="field-label assistant-instruction">{{ wordMode ? '我的英文句子 / 想了解的用法' : '补充要求（选填）' }}<textarea v-model="instruction" class="field-input" maxlength="1000" rows="2" :placeholder="wordMode ? '例如：I am interested on research. 请检查介词和搭配。' : '例如：解释给初学者，保留代码示例。'" :disabled="disabled || !!busyAction || mode === 'LOCAL_RULES'" /></label><div class="note-ai-actions"><button v-for="item in actions" :key="item.action" class="button button--ghost button--small" :disabled="disabled || !!busyAction || (mode === 'LOCAL_RULES' && !localActions.has(item.action))" @click="startAssist(item.action)">{{ busyAction === item.action ? phase === 'execute' ? '模型生成中…' : '准备中…' : item.label }}</button><button v-if="busyAction" class="button button--ghost button--small" @click="cancelAi">停止等待</button></div>
-      <p v-if="phase === 'execute'" class="field-hint" role="status">请求已开始。停止等待或离开页面不能保证撤销供应商已接收的请求，仍可能产生费用。</p>
+      <label v-if="!codeLanguage" class="field-label assistant-instruction">{{ wordMode ? '我的英文句子 / 想了解的用法' : '补充要求（选填）' }}<textarea v-model="instruction" class="field-input" maxlength="1000" rows="2" :placeholder="wordMode ? '例如：I am interested on research. 请检查介词和搭配。' : '例如：解释给初学者，保留代码示例。'" :disabled="disabled || !!busyAction || mode === 'LOCAL_RULES'" /></label><div class="note-ai-actions"><button v-for="item in actions" :key="item.action" class="button button--ghost button--small" :disabled="disabled || !!busyAction || (mode === 'LOCAL_RULES' && !localActions.has(item.action))" @click="startAssist(item.action)">{{ busyAction === item.action ? phase === 'execute' ? '模型生成中…' : '准备中…' : item.label }}</button><button v-if="busyAction" class="button button--ghost button--small" @click="stopGeneration">停止生成</button></div>
+      <p v-if="phase === 'execute'" class="field-hint" role="status">正在接收模型输出。停止时会关闭上游连接；已经产生的费用以供应商账单为准。</p>
       <p v-if="aiError" class="inline-alert inline-alert--error" role="alert">{{ aiError }}</p>
+      <section v-if="liveText" class="note-outbound-review"><h4>{{ partial ? '已停止 · 内容未完成' : '正在生成' }}</h4><pre>{{ liveText }}</pre></section>
+      <button v-if="aiError && lastAction && !busyAction" class="button button--ghost" @click="startAssist(lastAction)">重新预览后再试</button>
       <section v-if="review" class="note-outbound-review" aria-label="发送前确认">
         <h4>发送前，请确认这一次请求</h4><dl class="settings-facts"><dt>操作</dt><dd>{{ actionLabel(review.action) }}</dd><dt>供应商 / 模型</dt><dd>{{ review.provider }} / {{ review.model }}</dd><dt>实际端点</dt><dd>{{ review.endpoint }}</dd><dt>内容大小 / 到期</dt><dd>{{ review.outboundBytes.toLocaleString() }} 字节 · {{ new Date(review.expiresAt).toLocaleTimeString('zh-CN') }}</dd></dl>
         <h5>系统指令</h5><pre>{{ review.systemPrompt }}</pre><h5>完整发送内容</h5><pre>{{ review.context }}</pre>
@@ -169,7 +180,7 @@ onBeforeUnmount(() => { cancelAi(); cancelSource(); listGuard.cancel(); settingG
         <label class="settings-check"><input v-model="consent" type="checkbox" :disabled="expired" /> 我确认将以上内容发送到 {{ review.provider }}，并使用我的 API 密钥及供应商额度。</label>
         <div class="settings-button-row"><button class="button button--dark" :disabled="!remoteEnabled || !consent || expired || !!busyAction || disabled" @click="execute">确认发送并生成</button><button class="button button--ghost" @click="cancelAi">取消，不发送</button></div>
       </section>
-      <section v-if="result" class="note-outbound-review" aria-label="生成结果预览"><div class="settings-button-row"><h4>{{ actionLabel(result.action) }} · {{ result.engine === 'LOCAL_RULES' ? '本地规则算法' : result.engine.replace('PERSONAL_AI:', '个人模型 ') }}</h4><button class="table-action" @click="result = null">关闭</button></div><p v-if="persistenceWarning" class="inline-alert inline-alert--error" role="alert">{{ persistenceWarning }}</p><p class="field-hint">尚未修改笔记。模型输出可能出错，请核对实验事实后应用。</p><p v-if="'inputTokens' in result || 'outputTokens' in result" class="field-hint">已报告 Tokens：{{ 'inputTokens' in result ? result.inputTokens ?? '未提供' : '未提供' }} / {{ 'outputTokens' in result ? result.outputTokens ?? '未提供' : '未提供' }}</p><ul v-if="result.action === 'tags'"><li v-for="(item, i) in result.items" :key="i">{{ item }}</li></ul><pre v-else>{{ result.result }}</pre><p v-if="result.note" class="field-hint">{{ result.note }}</p><div class="settings-button-row"><button class="button button--ghost" @click="copyResult">复制结果</button><button class="button button--ghost" @click="downloadResult">下载 Markdown</button></div><button class="button button--dark" :disabled="disabled || (wordMode && !authStore.has('note:write'))" @click="applyResult">{{ wordMode ? '保存到英语笔记' : result.action === 'code-annotate' ? '把注释应用到当前代码块' : result.action === 'tidy' ? '用此结果替换正文' : result.action === 'tags' ? '合并标签' : '插入到文末' }}</button></section>
+      <section v-if="result" class="note-outbound-review" aria-label="生成结果预览"><div class="settings-button-row"><h4>{{ actionLabel(result.action) }} · {{ result.engine === 'LOCAL_RULES' ? '本地规则算法' : result.engine.replace('PERSONAL_AI:', '个人模型 ') }}</h4><button class="table-action" @click="result = null">关闭</button></div><p v-if="persistenceWarning" class="inline-alert inline-alert--error" role="alert">{{ persistenceWarning }}</p><p class="field-hint">尚未修改笔记。模型输出可能出错，请核对实验事实后应用。</p><p v-if="'inputTokens' in result || 'outputTokens' in result" class="field-hint">已报告 Tokens：{{ 'inputTokens' in result ? result.inputTokens ?? '未提供' : '未提供' }} / {{ 'outputTokens' in result ? result.outputTokens ?? '未提供' : '未提供' }}</p><ul v-if="result.action === 'tags'"><li v-for="(item, i) in result.items" :key="i">{{ item }}</li></ul><pre v-else>{{ result.result }}</pre><QuizCardImport v-if="result.action==='quiz'" :text="result.result"/><p v-if="result.note" class="field-hint">{{ result.note }}</p><div class="settings-button-row"><button class="button button--ghost" @click="copyResult">复制结果</button><button class="button button--ghost" @click="downloadResult">下载 Markdown</button></div><button class="button button--dark" :disabled="disabled || (wordMode && !authStore.has('note:write'))" @click="applyResult">{{ wordMode ? '保存到英语笔记' : result.action === 'code-annotate' ? '把注释应用到当前代码块' : result.action === 'tidy' ? '用此结果替换正文' : result.action === 'tags' ? '合并标签' : '插入到文末' }}</button></section>
     </div>
   </section>
 </template>

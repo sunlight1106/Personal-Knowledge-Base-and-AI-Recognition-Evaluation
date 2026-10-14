@@ -46,7 +46,7 @@ public class DataInitializer implements CommandLineRunner {
                            @Value("${app.bootstrap.test-username:test}") String testUsername,
                            @Value("${app.bootstrap.test-password:}") String testPassword,
                            @Value("${app.bootstrap.test-email:test@personal-platform.local}") String testEmail,
-                           @Value("${app.bootstrap.reset-test-password:true}") boolean resetTestPassword) {
+                           @Value("${app.bootstrap.reset-test-password:false}") boolean resetTestPassword) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.modelRepository = modelRepository;

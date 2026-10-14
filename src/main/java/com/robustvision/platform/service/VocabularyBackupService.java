@@ -36,8 +36,8 @@ public class VocabularyBackupService {
             LocalDate dueDate,LocalDate learnedDate,Instant lastAttemptAt,LocalDate lastReviewDate,boolean skipped,
             @Min(0) @Max(10000000) int independentCorrect,@Min(0) @Max(10000000) int promptedCorrect,
             @Min(0) @Max(10000000) int immediateCorrect,@Min(0) @Max(10000000) int spellingCorrect,
-            @Min(0) @Max(10000000) int collocationCorrect,Instant introducedAt,Instant lastViewedAt,Instant updatedAt) {}
-    public record Backup(@Pattern(regexp="PKB_VOCABULARY") String format,@Min(1) @Max(2) int schemaVersion,
+            @Min(0) @Max(10000000) int collocationCorrect,Instant introducedAt,Instant lastViewedAt,Instant updatedAt,@Size(max=8000) String schedulerJson) {}
+    public record Backup(@Pattern(regexp="PKB_VOCABULARY") String format,@Min(1) @Max(3) int schemaVersion,
             @NotNull Instant exportedAt,@NotNull Settings settings,
             @NotNull @Size(max=20) List<@NotNull @Valid BookSnapshot> books,
             @NotNull @Size(max=30000) List<@NotNull @Valid ProgressSnapshot> progress,
@@ -52,9 +52,9 @@ public class VocabularyBackupService {
         var books=ownBooks(owner).stream().map(b->new BookSnapshot(b.id,portable(b))).toList();
         var progress=service.progress(owner).values().stream().map(p->{
             var w=em.find(VocabularyWordEntity.class,p.wordId);
-            return new ProgressSnapshot(w.term,p.learningCorrect,p.reviewStage,p.wrongCount,p.mistake,p.starred,p.dueDate,p.learnedDate,p.lastAttemptAt,p.lastReviewDate,p.skipped,p.independentCorrect,p.promptedCorrect,p.immediateCorrect,p.spellingCorrect,p.collocationCorrect,p.introducedAt,p.lastViewedAt,p.updatedAt);
+            return new ProgressSnapshot(w.term,p.learningCorrect,p.reviewStage,p.wrongCount,p.mistake,p.starred,p.dueDate,p.learnedDate,p.lastAttemptAt,p.lastReviewDate,p.skipped,p.independentCorrect,p.promptedCorrect,p.immediateCorrect,p.spellingCorrect,p.collocationCorrect,p.introducedAt,p.lastViewedAt,p.updatedAt,p.schedulerJson);
         }).toList();
-        var backup=new Backup("PKB_VOCABULARY",2,service.now(),service.settings(profile),books,progress,history(owner,profile).values().stream().sorted(Comparator.comparing(Day::date)).toList(),skills.export(owner));
+        var backup=new Backup("PKB_VOCABULARY",3,service.now(),service.settings(profile),books,progress,history(owner,profile).values().stream().sorted(Comparator.comparing(Day::date)).toList(),skills.export(owner));
         try(var output=new ByteArrayOutputStream()) {
             try(var gzip=new GZIPOutputStream(output)){json.writeValue(gzip,backup);}
             return output.toByteArray();
@@ -95,7 +95,7 @@ public class VocabularyBackupService {
                 backup=json.readValue(data,Backup.class);
             }
         } catch(BusinessException expected){throw expected;}catch(IOException invalid){throw bad("备份文件损坏或格式无效");}
-        if(backup==null||!"PKB_VOCABULARY".equals(backup.format())||backup.schemaVersion()<1||backup.schemaVersion()>2||!validator.validate(backup).isEmpty())throw bad("备份版本或内容无效");
+        if(backup==null||!"PKB_VOCABULARY".equals(backup.format())||backup.schemaVersion()<1||backup.schemaVersion()>3||!validator.validate(backup).isEmpty())throw bad("备份版本或内容无效");
         if(backup.settings().dailyGoal()<1||backup.settings().dailyGoal()>100||
                 (backup.settings().zoneId()!=null&&!ZoneId.getAvailableZoneIds().contains(backup.settings().zoneId())))throw bad("备份学习设置无效");
         if(backup.exportedAt().isAfter(service.now().plusSeconds(300)))throw bad("备份时间不能在未来");
@@ -129,7 +129,8 @@ public class VocabularyBackupService {
             p.learningCorrect=Math.max(p.learningCorrect,item.learningCorrect());p.wrongCount=Math.max(p.wrongCount,item.wrongCount());
             p.independentCorrect=Math.max(p.independentCorrect,item.independentCorrect());p.promptedCorrect=Math.max(p.promptedCorrect,item.promptedCorrect());
             p.immediateCorrect=Math.max(p.immediateCorrect,item.immediateCorrect());p.spellingCorrect=Math.max(p.spellingCorrect,item.spellingCorrect());p.collocationCorrect=Math.max(p.collocationCorrect,item.collocationCorrect());
-            if(newer){p.reviewStage=item.reviewStage();p.mistake=item.mistake();p.starred=item.starred();p.skipped=item.skipped();p.dueDate=item.dueDate();p.lastReviewDate=item.lastReviewDate();}
+            if(item.schedulerJson()!=null){try{ReviewScheduler.parse(item.schedulerJson());}catch(Exception e){throw bad("备份含无效的复习状态");}}
+            if(newer){p.schedulerJson=item.schedulerJson();p.reviewStage=item.reviewStage();p.mistake=item.mistake();p.starred=item.starred();p.skipped=item.skipped();p.dueDate=item.dueDate();p.lastReviewDate=item.lastReviewDate();}
             p.lastAttemptAt=max(p.lastAttemptAt,item.lastAttemptAt());p.introducedAt=min(p.introducedAt,item.introducedAt());p.lastViewedAt=max(p.lastViewedAt,item.lastViewedAt());
             if(p.learnedDate==null)p.learnedDate=item.learnedDate();p.updatedAt=service.now();
         }
@@ -141,6 +142,7 @@ public class VocabularyBackupService {
             extra.put(day.date().toString(),added);currentHistory.put(day.date(),new Day(day.date(),Math.max(live.answers(),day.answers()),Math.max(live.correct(),day.correct()),0,Math.max(live.reviews(),day.reviews())));
         }
         profile.historyJson=service.write(extra);
+        double retained=backup.settings().retention();if(retained>=0.8&&retained<=0.97)profile.retention=retained;
         var input=backup.settings();String selected=ids.getOrDefault(input.selectedBookId(),input.selectedBookId());
         if(selected!=null) {var book=em.find(VocabularyBookEntity.class,selected);if(book==null||(book.ownerId!=null&&book.ownerId!=owner))selected=profile.selectedBookId;}
         if(profile.zoneId==null&&input.zoneId()!=null)service.updateSettings(new SettingsRequest(input.zoneId(),input.dailyGoal(),selected));

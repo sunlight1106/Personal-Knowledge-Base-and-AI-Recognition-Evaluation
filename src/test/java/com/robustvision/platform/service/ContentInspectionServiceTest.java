@@ -58,9 +58,24 @@ class ContentInspectionServiceTest {
         assertCode(bytes("plain text"), "image.png", "image/png", "ATTACHMENT_TYPE_UNSUPPORTED");
     }
 
-    @ParameterizedTest @ValueSource(strings = {"/JavaScript", "/J#53", "/Java#53cript", "/Launch", "/EmbeddedFile", "/ObjStm", "/Encrypt", "/SubmitForm", "/GoToE"})
+    @ParameterizedTest @ValueSource(strings = {"/JavaScript", "/J#53", "/Java#53cript", "/Launch", "/EmbeddedFile", "/Encrypt", "/SubmitForm", "/GoToE"})
     void rejectsPdfActiveOrOpaqueObjects(String name) {
         assertCode(bytes("%PDF-1.4\n<< " + name + " 2 0 R >>\n%%EOF"), "document.pdf", "application/pdf", "FILE_ACTIVE_CONTENT_BLOCKED");
+    }
+
+    @Test void acceptsPassiveCompressedPdfButRejectsCompressedActionsAndBrokenStreams() throws Exception {
+        try (var pdf = new org.apache.pdfbox.pdmodel.PDDocument()) {
+            pdf.addPage(new org.apache.pdfbox.pdmodel.PDPage());
+            var out = new ByteArrayOutputStream();
+            pdf.save(out);
+            assertThat(new String(out.toByteArray(), StandardCharsets.ISO_8859_1)).contains("/ObjStm");
+            assertThat(inspector.inspectAttachment(out.toByteArray(), "document.pdf", "application/pdf").extension()).isEqualTo("pdf");
+            pdf.getDocumentCatalog().setOpenAction(new org.apache.pdfbox.pdmodel.interactive.action.PDActionJavaScript("void(0)"));
+            out.reset();
+            pdf.save(out);
+            assertCode(out.toByteArray(), "document.pdf", "application/pdf", "FILE_ACTIVE_CONTENT_BLOCKED");
+        }
+        assertCode(bytes("%PDF-1.4\n<< /ObjStm 2 0 R >>\n%%EOF"), "document.pdf", "application/pdf", "FILE_CONTENT_INVALID");
     }
 
     @Test void preservesCorrectOfficeMimeTypes() throws Exception {

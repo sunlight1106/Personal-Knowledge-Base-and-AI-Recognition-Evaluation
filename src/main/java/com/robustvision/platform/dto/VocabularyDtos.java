@@ -8,9 +8,9 @@ import java.util.List;
 
 public final class VocabularyDtos {
     private VocabularyDtos() {}
-    public record Settings(String zoneId, int dailyGoal, String selectedBookId, int masteryTarget) {}
+    public record Settings(String zoneId, int dailyGoal, String selectedBookId, int masteryTarget, double retention) { public Settings(String zoneId,int dailyGoal,String selectedBookId,int masteryTarget){this(zoneId,dailyGoal,selectedBookId,masteryTarget,0.9);} }
     public record SettingsRequest(@NotBlank @Size(max=80) String zoneId,
-                                  @Min(1) @Max(100) int dailyGoal, @Size(max=36) String selectedBookId) {}
+                                  @Min(1) @Max(100) int dailyGoal, @Size(max=36) String selectedBookId, @DecimalMin("0.8") @DecimalMax("0.97") Double retention) { public SettingsRequest(String zoneId,int dailyGoal,String selectedBookId){this(zoneId,dailyGoal,selectedBookId,null);} }
     public record Book(String id, String title, String description, String attribution, String level,
                        boolean owned, long totalWords, long learned, long learning, long due, long mistakes,
                        long skipped, long shared, int duplicatesRemoved) {

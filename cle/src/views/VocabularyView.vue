@@ -26,7 +26,7 @@ const studyCard = ref<HTMLElement | null>(null), continueButton = ref<HTMLButton
 const settingsDialog = ref<HTMLDialogElement | null>(null)
 const selectedOption = ref(''), emptyReason = ref(''), error = ref(''), busy = ref(''), loading = ref(true)
 const sessionCount = ref(0), sessionCorrect = ref(0), sessionLearned = ref(0), showSettings = ref(false), showImport = ref(false)
-const settings = reactive({ zoneId: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Etc/UTC', dailyGoal: 10 })
+const settings = reactive({ zoneId: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Etc/UTC', dailyGoal: 10, retention:0.9 })
 const wordPage = ref<VocabularyWordPage | null>(null), wordFilter = ref('ALL'), wordQuery = ref(''), page = ref(0)
 const importText = ref(''), rightsConfirmed = ref(false)
 const studyStyle = ref('RECALL'), showBackup = ref(false), backupFile = ref<File | null>(null), restoreConfirmed = ref(false), notice = ref('')
@@ -58,7 +58,7 @@ async function refresh() {
   if (!active || version !== generation) return
   dashboard.value = value
   if (!selected.value || !value.books.some(book => book.id === selected.value)) selected.value = value.settings.selectedBookId || value.books.find(book => book.id === 'vocab-context')?.id || value.books[0]?.id || ''
-  settings.zoneId = value.settings.zoneId || settings.zoneId; settings.dailyGoal = value.settings.dailyGoal
+  settings.zoneId = value.settings.zoneId || settings.zoneId; settings.dailyGoal = value.settings.dailyGoal;settings.retention=value.settings.retention||0.9
 }
 async function saveSettings() {
   await run('settings', async () => {
@@ -90,7 +90,7 @@ async function loadQuestion() {
 async function start(nextMode: VocabularyMode) {
   await run('question', async () => {
     if (!dashboard.value?.settings.zoneId) {
-      await vocabularyApi.settings({ zoneId: settings.zoneId, dailyGoal: settings.dailyGoal, selectedBookId: selected.value || null })
+      await vocabularyApi.settings({ zoneId: settings.zoneId, dailyGoal: settings.dailyGoal, retention:settings.retention, selectedBookId: selected.value || null })
       if (!active) return
       await refresh()
     }
@@ -223,6 +223,7 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
         <form @submit.prevent="saveSettings">
           <label>每日初步掌握目标<input v-model.number="settings.dailyGoal" class="field-input" type="number" min="1" max="100" required :disabled="!!busy" /></label>
           <label>学习时区<input v-model="settings.zoneId" class="field-input" list="vocab-timezones" placeholder="Asia/Shanghai" required maxlength="80" :disabled="!!busy" /><datalist id="vocab-timezones"><option v-for="zone in commonZones" :key="zone" :value="zone" /></datalist></label>
+          <label>目标记忆率 · FSRS<select v-model.number="settings.retention" class="field-input" :disabled="!!busy"><option :value="0.8">80% · 较轻负担</option><option :value="0.9">90% · 推荐</option><option :value="0.95">95% · 更多复习</option><option :value="0.97">97% · 高强度</option></select><small>记忆率越高，复习通常越频繁。新词隔日复习，之后按每个词的回忆记录调整；这是调度目标，不是掌握保证。</small></label>
           <button class="button button--dark" :disabled="!!busy">{{ busy === 'settings' ? '正在准备…' : '保存设置' }}</button>
           <button type="button" class="button button--light" :disabled="!!busy" @click="closeSettings">取消</button>
         </form>

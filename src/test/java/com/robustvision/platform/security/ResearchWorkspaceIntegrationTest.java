@@ -18,10 +18,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:research_suite;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE","app.bootstrap.enabled=false","app.worker.enabled=false","app.rate-limit.enabled=false"})
 @AutoConfigureMockMvc
 class ResearchWorkspaceIntegrationTest {
+    @org.springframework.boot.test.mock.mockito.MockBean com.robustvision.platform.service.AntivirusService scanner;
     @Autowired MockMvc mvc;@Autowired ObjectMapper json;@Autowired UserRepository users;@Autowired RoleRepository roles;@Autowired PasswordEncoder passwords;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     String token,other,admin,ownerName;
     @BeforeEach void setup() throws Exception {
+        org.mockito.Mockito.when(scanner.scan(org.mockito.ArgumentMatchers.any())).thenReturn(new com.robustvision.platform.service.AntivirusService.ScanResult(FileScanStatus.CLEAN,"fixture"));
         String suffix=UUID.randomUUID().toString().substring(0,8);
         RoleEntity role=roles.save(new RoleEntity("RESEARCH_"+suffix,"Writer","Tests",Set.of("note:read","note:write","knowledge:read","experiment:read","research:use","personal-ai:use","message:read","group:use","contacts:use","vocabulary:use")));
         token=login(ownerName="writer"+suffix,role);other=login("other"+suffix,role);
@@ -171,5 +173,24 @@ class ResearchWorkspaceIntegrationTest {
         assertThat(a.path("accuracy").asDouble()).isEqualTo(1);assertThat(a.path("knownCostCny").isNull()).isTrue();
         assertThat(b.path("failed").asInt()).isEqualTo(1);assertThat(b.path("characterErrorRate").asDouble()).isCloseTo(4.0/6,within(.000001));
         call(get("/api/v1/research/evaluations"),other,null).andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(0));
+    }
+    @Test void dailyNotesAndCardImportRemainIdempotentAndAdminOnlySeesCounts()throws Exception{
+        String id=note();ok(patch("/api/v1/notes/"+id),Map.of("baseRevision",0,"body","revision two"));
+        assertThat(ok(get("/api/v1/learning/statistics"),null).path("total").path("notes").asInt()).isEqualTo(1);
+        var batch=Map.of("requestId",UUID.randomUUID().toString(),"noteId",id,"cards",List.of(Map.of("question","What?","answer","This.")));
+        String first=ok(post("/api/v1/learning/cards/import"),batch).get(0).path("id").asText();assertThat(ok(post("/api/v1/learning/cards/import"),batch).get(0).path("id").asText()).isEqualTo(first);
+        call(post("/api/v1/learning/cards/import"),other,batch).andExpect(status().isNotFound());
+        call(get("/api/v1/learning/users/"+owner().getId()+"/statistics"),other,null).andExpect(status().isForbidden());
+        String aggregate=call(get("/api/v1/learning/users/"+owner().getId()+"/statistics"),admin,null).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();assertThat(aggregate).doesNotContain("lighthouse","revision two");
+    }
+    @Test void importedPdfSearchAndOriginalRemainPrivateAndDuplicateRollsBack()throws Exception{
+        byte[] bytes;try(var pdf=new org.apache.pdfbox.pdmodel.PDDocument()){var page=new org.apache.pdfbox.pdmodel.PDPage();pdf.addPage(page);try(var text=new org.apache.pdfbox.pdmodel.PDPageContentStream(pdf,page)){text.beginText();text.setFont(new org.apache.pdfbox.pdmodel.font.PDType1Font(org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName.HELVETICA),12);text.newLineAtOffset(50,700);text.showText("Private orbital document");text.endText();}var out=new java.io.ByteArrayOutputStream();pdf.save(out);bytes=out.toByteArray();}
+        var file=new org.springframework.mock.web.MockMultipartFile("file","fixture.pdf","application/pdf",bytes);
+        var upload=mvc.perform(multipart("/api/v1/research/documents").file(file).header("Authorization","Bearer "+token)).andExpect(status().isOk()).andReturn().getResponse();String id=json.readTree(upload.getContentAsByteArray()).path("data").path("id").asText();
+        var parts=ok(get("/api/v1/research/documents/"+id),null);assertThat(parts.get(0).path("locator").asText()).isEqualTo("第 1 页");String part=parts.get(0).path("id").asText();
+        assertThat(ok(get("/api/v1/research/search?type=DOCUMENT&q=orbital"),null).path("items").size()).isEqualTo(1);
+        for(String actor:List.of(other,admin)){call(get("/api/v1/research/documents/"+id),actor,null).andExpect(status().isNotFound());call(get("/api/v1/research/documents/"+id+"/original"),actor,null).andExpect(status().isNotFound());call(get("/api/v1/research/sources/DOCUMENT/"+part),actor,null).andExpect(status().isNotFound());}
+        long count=jdbc.queryForObject("SELECT COUNT(*) FROM file_asset WHERE owner_id=?",Long.class,owner().getId());mvc.perform(multipart("/api/v1/research/documents").file(file).header("Authorization","Bearer "+token)).andExpect(status().isConflict());assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM file_asset WHERE owner_id=?",Long.class,owner().getId())).isEqualTo(count);
+        ok(delete("/api/v1/research/documents/"+id),null);call(get("/api/v1/research/sources/DOCUMENT/"+part),token,null).andExpect(status().isNotFound());
     }
 }

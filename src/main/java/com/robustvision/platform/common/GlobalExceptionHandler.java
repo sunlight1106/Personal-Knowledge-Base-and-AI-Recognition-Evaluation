@@ -54,6 +54,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.failure("FILE_TOO_LARGE", "文件超过 20 MB 限制"));
     }
 
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethod(org.springframework.web.HttpRequestMethodNotSupportedException exception) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).headers(exception.getHeaders())
+                .body(ApiResponse.failure("METHOD_NOT_ALLOWED", "此接口不支持该请求方法"));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleDenied(AccessDeniedException exception) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

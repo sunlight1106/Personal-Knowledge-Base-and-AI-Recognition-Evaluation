@@ -5,6 +5,7 @@ import { adminApi, type UserDetail } from '@/api/admin'
 import type { PermissionView, RoleView, UserView } from '@/types/api'
 import { authStore } from '@/stores/auth'
 import IdentityCode from './IdentityCode.vue'
+import LearningStatistics from './LearningStatistics.vue'
 const props = defineProps<{ id: number; roles: RoleView[]; permissions: PermissionView[] }>()
 const emit = defineEmits<{ close: []; updated: [user: UserView] }>()
 const dialog = ref<HTMLDialogElement | null>(null), detail = ref<UserDetail | null>(null)
@@ -63,6 +64,7 @@ const date = (value: string | null) => value ? new Date(value).toLocaleString('z
     <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ error }}</p><p v-if="saved" class="inline-alert" role="status">{{ saved }}</p><p v-if="loading" role="status">正在读取用户详情…</p>
     <template v-if="detail">
       <div class="user-detail-identity"><span>@{{ detail.user.username }} · {{ detail.user.roleName }}</span><IdentityCode :value="detail.user.identityCode" /></div>
+      <details v-if="authStore.has('admin:stats')" class="user-detail-section"><summary>查看每天与累计学习统计</summary><LearningStatistics :user-id="id" /></details>
       <div class="user-detail-metrics"><div><strong>{{ detail.notes }}</strong><small>笔记</small></div><div><strong>{{ detail.files }}</strong><small>文件</small></div><div><strong>{{ detail.aiCalls }}</strong><small>AI 调用</small></div><div><strong>{{ detail.experiments }}</strong><small>实验</small></div><div><strong>{{ detail.activeSessions }}</strong><small>有效登录</small></div></div>
       <p class="user-detail-meta">最近登录：{{ date(detail.lastLoginAt) }} · 文件 {{ (detail.storageBytes / 1024 ** 2).toFixed(1) }} MB · 创建于 {{ date(detail.user.createdAt) }}</p>
       <form class="user-detail-section" @submit.prevent="saveProfile"><h4>账号资料</h4><div class="user-detail-fields"><label class="field-label">显示名称<input v-model="profile.displayName" class="field-input" required maxlength="80" :disabled="busy || !authStore.has('user:write')" /></label><label class="field-label">邮箱<input v-model="profile.email" class="field-input" type="email" required maxlength="160" :disabled="busy || !admin || self" /></label><label v-if="admin && roles.length" class="field-label">角色<select v-model.number="profile.roleId" class="field-input" :disabled="busy || self"><option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option></select></label><label v-if="admin" class="field-label">账号状态<select v-model="profile.status" class="field-input" :disabled="busy || self"><option value="ACTIVE">启用</option><option value="DISABLED">停用</option></select></label><label v-if="admin && !self" class="field-label">重置密码<input v-model="profile.password" class="field-input" type="password" minlength="8" maxlength="72" autocomplete="new-password" placeholder="留空保留原密码" :disabled="busy" /></label></div><div class="user-detail-actions"><button v-if="authStore.has('user:write')" class="button button--dark" :disabled="busy">保存资料</button><button v-if="admin && !self" type="button" class="button button--ghost" :disabled="busy" @click="revoke">撤销全部登录</button></div></form>

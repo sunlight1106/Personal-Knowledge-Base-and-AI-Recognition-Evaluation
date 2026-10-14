@@ -1,6 +1,6 @@
 import { api, request } from './client'
 export type VocabularyMode = 'LEARN' | 'REVIEW' | 'MISTAKES'
-export interface VocabularySettings { zoneId: string | null; dailyGoal: number; selectedBookId: string | null; masteryTarget: number }
+export interface VocabularySettings { zoneId: string | null; dailyGoal: number; selectedBookId: string | null; masteryTarget: number; retention?:number }
 export interface VocabularyBook { id: string; title: string; description: string; attribution: string; level: string; owned: boolean; totalWords: number; learned: number; learning: number; due: number; mistakes: number; skipped: number; shared: number; duplicatesRemoved: number }
 export interface VocabularyDay { date: string | null; answers: number; correct: number; learned: number; reviews: number }
 export interface VocabularyDashboard { settings: VocabularySettings; books: VocabularyBook[]; today: VocabularyDay; streak: number; history: VocabularyDay[]; dueTotal: number; starredTotal: number }

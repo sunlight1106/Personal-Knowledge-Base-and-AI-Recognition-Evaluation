@@ -8,6 +8,7 @@ const router = createRouter({
   history: createWebHistory(),
   scrollBehavior: to => ['/reset-password','/verify-email'].includes(to.path)?{top:0}:to.hash ? { el: to.hash, behavior: 'smooth', top: 88 } : { top: 0 },
   routes: [
+    { path: '/offline', component: () => import('@/views/OfflineView.vue') },
     { path: '/', name: 'home', component: HomeView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/forgot-password', component: () => import('@/views/AccountRecoveryView.vue') },
@@ -31,6 +32,7 @@ const router = createRouter({
       component: AppShell,
       meta: { requiresAuth: true },
       children: [
+        { path: 'learning', component: () => import('@/views/LearningView.vue') },
         { path: '', redirect: '/app/home' },
         { path: 'home', name: 'app-home', component: () => import('@/views/OverviewView.vue'), meta: { permission: 'dashboard:read' } },
         { path: 'research', name: 'research', component: () => import('@/views/ResearchView.vue'), meta: { permission: 'research:use' } },

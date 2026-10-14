@@ -73,7 +73,7 @@
 
 1. In recognition mode a correct LEARN choice increments the shared headword count once. In guided recall only a delayed, unprompted correct answer earns that count; immediate and prompted success remain separate evidence. An incorrect answer adds a mistake and does not increment or erase previous correct answers.
 2. At **4** correct answers the entry enters review, due on the **next local calendar date** in the user's explicitly saved IANA learning timezone.
-3. A correct due review schedules the next review in **3, 7, 14, 30, then 60 days**; later correct reviews keep a 60-day interval. A wrong review resets the interval stage and schedules the next local day.
+3. After the first next-day review, **FSRS-6** adapts each word's interval from its review history. Desired retention is adjustable from 80% to 97%; the maximum interval is 365 days. Hinted or immediate answers are not treated as independent recall. Existing progress is retained; default model weights are used, not user-fitted weights.
 4. MISTAKES practice clears the mistake flag on a credited correct answer but never increments learning or advances review. Historical wrong counts remain available.
 5. The daily goal counts distinct newly learned words across all books. An unfinished small batch rotates between entries; already started entries can be finished after lowering the goal. Switching books retains all progress.
 6. Day records use the saved timezone at answer time. A later timezone change does not relabel historical study dates. DST is handled as calendar dates, rather than adding fixed 24-hour durations.
@@ -161,3 +161,5 @@ Run `./mvnw -Dtest=VocabularyIntegrationTest test` and `npm run build --prefix c
 ## 发音与使用范围
 
 听读采用系统语音，没有真人录音和口语评分。词库、进度和答题功能无需外部模型；AI 辅助需要个人模型配置和部署管理员开启外部调用。离线断网时不能提交答题，恢复学习使用已保存的账号进度。
+
+新版词汇备份同时保存 FSRS 状态，恢复仍支持旧版备份。学习设置中的目标记忆率影响之后的调度，不重新改写已有到期日期。离线练习和每天的统计见[学习统计与离线使用](LEARNING_STATISTICS.md)。

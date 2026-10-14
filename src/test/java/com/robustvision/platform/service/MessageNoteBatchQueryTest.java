@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 })
 @Import({MessageService.class, ModerationGuard.class, NoteService.class, NoteHistoryService.class, NoteLinkService.class, LiveUpdateService.class})
 class MessageNoteBatchQueryTest {
+    @org.springframework.boot.test.mock.mockito.MockBean LearningStatisticsService learningStatistics;
     @Autowired EntityManager em;
     @Autowired EntityManagerFactory factory;
     @Autowired MessageService messages;

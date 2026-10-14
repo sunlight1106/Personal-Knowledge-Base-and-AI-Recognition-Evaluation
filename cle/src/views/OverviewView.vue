@@ -8,6 +8,7 @@ import type { DashboardSummary } from '@/types/api'
 import AppIcon from '@/components/AppIcon.vue'
 import AmbientWaves from '@/components/AmbientWaves.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
+import TodayLearning from '@/components/TodayLearning.vue'
 import { authStore } from '@/stores/auth'
 import { workspaceNavigation } from '@/stores/workspaceNavigation'
 import { createRequestGuard } from '@/lib/requestGuard'
@@ -73,6 +74,7 @@ const date = (value: string) => Number.isFinite(Date.parse(value)) ? new Intl.Da
     <nav v-if="actions.length" class="workspace-action-grid" :style="{ '--action-count': actions.length }" aria-label="快速开始">
       <RouterLink v-for="(item, index) in actions" :key="item.to" :to="item.to"><span class="workspace-action-top"><AppIcon :name="item.icon" :size="21" /><small>0{{ index + 1 }}</small></span><strong>{{ item.title }}</strong><span>{{ item.detail }}<AppIcon name="arrow" :size="16" /></span></RouterLink>
     </nav>
+    <TodayLearning />
     <div class="workspace-home-columns">
       <section class="workspace-notes" aria-labelledby="recent-notes-title">
         <header class="workspace-section-head"><div><p class="page-kicker">CONTINUE WRITING</p><h2 id="recent-notes-title">接着上次的思路</h2></div><RouterLink v-if="authStore.has('note:read')" to="/app/notes" class="text-arrow">全部笔记 <AppIcon name="arrow" :size="14" /></RouterLink></header>

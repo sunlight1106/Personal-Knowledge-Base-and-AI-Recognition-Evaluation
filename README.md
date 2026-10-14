@@ -33,7 +33,8 @@
 | **笔记与知识库** | Markdown / HTML 边写边预览，分类整理、历史版本与回收站；导出 MD、PDF、Word、HTML、TXT | [笔记与资料整理](docs/LEARNING_WORKSPACE.md) |
 | **背单词** | 场景、搭配和拼写练习，美音自动听读；跨词书接续进度，熟词 Skip，导入与备份 | [词书与学习](docs/VOCABULARY.md) |
 | **AI 与图片理解** | 上传图片提问，解释代码，辅助笔记与词汇学习；配置自己的模型和共享记忆 | [个人 AI](docs/PERSONAL_AI.md) |
-| **学习资料** | 搜索、收藏、复习卡、表格、看板与月历，整理实验评测记录 | [学习中心](docs/LEARNING_WORKSPACE.md) |
+| **学习资料** | 导入 PDF / Word，按页或段落阅读与检索；收藏、复习卡、表格、看板与月历 | [学习中心](docs/LEARNING_WORKSPACE.md) |
+| **学习统计与离线** | 每日与累计学习记录、七日回顾、管理员按用户查看；加密离线笔记与词汇练习 | [学习统计与离线使用](docs/LEARNING_STATISTICS.md) |
 | **交流与协作** | 按唯一身份码找人，聊天、站内信、建群、发资料；公告、置顶与免打扰 | [群组与站内信](docs/GROUPS.md) |
 | **账户与管理** | 邮箱验证、登录记录、双重验证；用户权限、统计折线图与举报审核 | [账户安全](docs/ACCOUNT_AND_RECOVERY.md) · [平台管理](docs/ADMINISTRATION.md) |
 

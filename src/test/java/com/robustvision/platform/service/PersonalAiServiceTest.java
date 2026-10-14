@@ -41,6 +41,21 @@ class PersonalAiServiceTest {
         service = new PersonalAiService(users, settings, persistence, encryption, policy, transport, new PersonalAiRateLimiter(), sources, memories, true);
     }
     private PreviewRequest request() { return new PreviewRequest(AiProvider.OPENAI, "draft", "title", "approved body", List.of()); }
+    @Test void streamingRequiresOwnFreshPreviewAndPersistsOnlyOneInvocation() {
+        var input=new PreviewRequest(AiProvider.OPENAI,"draft","title","approved body",List.of(),null,null,true);
+        var preview=service.preview(input);assertThat(preview.streaming()).isTrue();
+        var streams=new PersonalAiStreams();var running=streams.begin(11,preview.previewToken());
+        doAnswer(call->{java.util.function.Consumer<String> delta=call.getArgument(3);delta.accept("part ");delta.accept("two");return new PersonalAiTransport.Completion("part two",4,2);})
+                .when(transport).executeStreaming(any(),any(),anyString(),any(),any());
+        when(users.requireCurrent()).thenReturn(b);
+        assertThatThrownBy(()->service.executeStream(new ExecuteRequest(preview.previewToken(),true),s->{},running)).isInstanceOf(BusinessException.class);
+        when(users.requireCurrent()).thenReturn(a);var text=new StringBuilder();
+        var result=service.executeStream(new ExecuteRequest(preview.previewToken(),true),text::append,running);
+        assertThat(text.toString()).isEqualTo("part two");assertThat(result.result()).isEqualTo("part two");
+        assertThatThrownBy(()->service.executeStream(new ExecuteRequest(preview.previewToken(),true),text::append,running)).isInstanceOf(BusinessException.class);
+        verify(transport,times(1)).executeStreaming(eq(AiProvider.OPENAI),any(),eq(KEY),any(),any());
+        verify(transport,never()).execute(any(),any(),any());
+    }
     @Test void vocabularyAssistanceNeedsOwnModuleAndRechecksPermissionBeforeSending() {
         when(users.hasPermission(a,"note:write")).thenReturn(false);
         var request=new PreviewRequest(AiProvider.OPENAI,"word-explain","work","term: work",List.of());

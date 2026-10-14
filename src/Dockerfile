@@ -24,6 +24,7 @@ RUN apt-get update \
     && mkdir -p /app/data/uploads /app/data/media-tmp \
     && chown -R appuser:appuser /app
 COPY --from=build /workspace/application/ /app/
+COPY docs/licenses/ /app/licenses/
 USER appuser
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]

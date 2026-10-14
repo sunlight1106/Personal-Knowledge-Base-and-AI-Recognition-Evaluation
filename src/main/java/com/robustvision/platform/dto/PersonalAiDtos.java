@@ -20,14 +20,15 @@ public final class PersonalAiDtos {
     public record PreviewRequest(@NotNull AiProvider provider, @NotBlank @Size(max = 20) String action,
             @Size(max = 180) String title, @Size(max = 24000) String body,
             @Size(max = 20) List<@NotBlank @Size(max = 38) String> selectedTaskIds,
-            @Size(max = 20) String codeLanguage, @Size(max = 10) String commentStyle) {
+            @Size(max = 20) String codeLanguage, @Size(max = 10) String commentStyle, Boolean streaming) {
+        public PreviewRequest(AiProvider provider,String action,String title,String body,List<String> tasks,String codeLanguage,String commentStyle){this(provider,action,title,body,tasks,codeLanguage,commentStyle,false);}
         public PreviewRequest(AiProvider provider, String action, String title, String body, List<String> selectedTaskIds) {
-            this(provider, action, title, body, selectedTaskIds, null, null);
+            this(provider, action, title, body, selectedTaskIds, null, null, false);
         }
         @Override public String toString() { return "PreviewRequest[REDACTED]"; }
     }
     public record PreviewView(String previewToken, Instant expiresAt, AiProvider provider, String model,
-                              String endpoint, String action, String context, String systemPrompt, int outboundBytes) {}
+                              String endpoint, String action, String context, String systemPrompt, int outboundBytes, boolean streaming) { public PreviewView(String previewToken,Instant expiresAt,AiProvider provider,String model,String endpoint,String action,String context,String systemPrompt,int outboundBytes){this(previewToken,expiresAt,provider,model,endpoint,action,context,systemPrompt,outboundBytes,false);} }
     public record ExecuteRequest(@NotBlank @Size(max = 100) String previewToken, @AssertTrue boolean confirmed) {
         @Override public String toString() { return "ExecuteRequest[REDACTED]"; }
     }

@@ -27,6 +27,11 @@ import java.util.Locale;
  */
 @Service
 public class NoteService {
+    @org.springframework.beans.factory.annotation.Autowired private LearningStatisticsService statistics;
+    private void recordStudy(NoteEntity note) {
+        var now=Instant.now();var day=now.atZone(statistics.zone(note.getOwner().getId())).toLocalDate();
+        statistics.record(note.getOwner().getId(),"note:"+note.getId()+":"+day,"NOTE",note.getId(),null,now,day);
+    }
     @org.springframework.beans.factory.annotation.Autowired private NoteLinkService links;
 
     @org.springframework.beans.factory.annotation.Autowired private NoteHistoryService history;
@@ -90,7 +95,7 @@ public class NoteService {
         assignParent(note, request.parentId(), user);
         note.setLibrary(normalizeLibrary(request.library()));
         if (request.contentFormat() != null) note.setContentFormat(request.contentFormat());
-        noteRepository.flush(); links.sync(note);
+        noteRepository.flush(); links.sync(note); recordStudy(note);
         return toView(note);
     }
 
@@ -111,7 +116,7 @@ public class NoteService {
         if (request.tags() != null) note.setTags(trimToNull(request.tags()));
         if (request.status() != null && !request.status().isBlank()) note.setStatus(parseStatus(request.status()));
         note.setUpdatedAt(Instant.now());
-        noteRepository.saveAndFlush(note); links.sync(note); return toView(note);
+        noteRepository.saveAndFlush(note); links.sync(note); recordStudy(note); return toView(note);
     }
 
     @Transactional
