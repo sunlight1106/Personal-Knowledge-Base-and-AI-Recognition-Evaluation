@@ -8,6 +8,29 @@ import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
 class PersonalAiDiagnosticsTest {
+ @Test void localRejectionsNeverCreateUsageOrSuggestBilling(){
+  for(String mode:List.of("MODELS","CONNECTION"))for(String code:List.of("PERSONAL_AI_ENDPOINT_REJECTED","PERSONAL_AI_DNS_FAKE_IP","PERSONAL_AI_DNS_FAILED")){
+   setup();var error=new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,code,"Synthetic local rejection");
+   when(transport.models(any(),any(),any())).thenThrow(error);when(transport.execute(any(),any(),any())).thenThrow(error);
+   var result=service.execute(service.preview(AiProvider.DEEPSEEK,mode).token(),true);
+   assertThat(result.success()).isFalse();assertThat(result.usageStatus()).isEqualTo("NOT_SENT");verify(persistence,never()).recordUsage(any());
+  }
+ }
+ @Test void failedModelCatalogDoesNotPretendUsageWasLost(){
+  when(transport.models(any(),any(),any())).thenThrow(PersonalAiTransport.upstreamFailure(401));
+  var result=service.execute(service.preview(AiProvider.DEEPSEEK,"MODELS").token(),true);
+  assertThat(result.usageStatus()).isEqualTo("NOT_APPLICABLE");verify(persistence,never()).recordUsage(any());
+  doThrow(PersonalAiEndpointPolicy.unavailable()).when(transport).models(any(),any(),any());
+  var timeout=service.execute(service.preview(AiProvider.DEEPSEEK,"MODELS").token(),true);
+  assertThat(timeout.usageStatus()).isEqualTo("NOT_APPLICABLE");
+  assertThat(timeout.message()).contains("未发起模型生成请求").doesNotContain("产生费用","账单");
+ }
+ @Test void failedConnectionReportsWhetherItsUsageRecordWasSaved(){
+  when(transport.execute(any(),any(),any())).thenThrow(PersonalAiTransport.upstreamFailure(401));
+  assertThat(service.execute(service.preview(AiProvider.DEEPSEEK,"CONNECTION").token(),true).usageStatus()).isEqualTo("SAVED");
+  doThrow(new IllegalStateException("synthetic storage failure")).when(persistence).recordUsage(any());
+  assertThat(service.execute(service.preview(AiProvider.DEEPSEEK,"CONNECTION").token(),true).usageStatus()).isEqualTo("UNCONFIRMED");
+ }
  CurrentUserService current;PersonalAiSettingRepository rows;PersonalAiTransport transport;PersonalAiPersistenceService persistence;PersonalAiDiagnosticsService service;UserEntity user;PersonalAiSettingEntity setting;
  @BeforeEach void setup(){current=mock(CurrentUserService.class);rows=mock(PersonalAiSettingRepository.class);transport=mock(PersonalAiTransport.class);persistence=mock(PersonalAiPersistenceService.class);var encryption=mock(SecretEncryptionService.class);var endpoints=mock(PersonalAiEndpointPolicy.class);user=new UserEntity("synthetic","synthetic","Synthetic","synthetic@example.invalid",null);ReflectionTestUtils.setField(user,"id",Long.valueOf(513));setting=new PersonalAiSettingEntity(Long.valueOf(513),AiProvider.DEEPSEEK);setting.update("synthetic-model","https://api.deepseek.com","synthetic-cipher",true);when(current.requireCurrent()).thenReturn(user);when(rows.findByOwnerIdAndProvider(513L,AiProvider.DEEPSEEK)).thenReturn(Optional.of(setting));when(rows.findById(setting.getId())).thenReturn(Optional.of(setting));when(encryption.decrypt("synthetic-cipher")).thenReturn("synthetic-key");when(endpoints.validateBase(any(),any())).thenReturn("https://api.deepseek.com");when(transport.prepareDiagnostic(any(),any(),any())).thenReturn(new PersonalAiTransport.Payload("https://api.deepseek.com/chat/completions","synthetic-fixed-payload"));when(transport.execute(any(),any(),any())).thenReturn(new PersonalAiTransport.Completion("OK",3L,1L));service=new PersonalAiDiagnosticsService(current,rows,transport,encryption,endpoints,new PersonalAiRateLimiter(),persistence,true);}
  @Test void noNetworkBeforeConsentAndOneUseToken(){var preview=service.preview(AiProvider.DEEPSEEK,"CONNECTION");verifyNoInteractions(transport);assertThatThrownBy(()->service.execute(preview.token(),false)).isInstanceOf(BusinessException.class);verifyNoInteractions(transport);assertThat(service.execute(preview.token(),true).success()).isTrue();verify(transport,times(1)).execute(any(),any(),eq("synthetic-key"));assertThatThrownBy(()->service.execute(preview.token(),true)).isInstanceOf(BusinessException.class);verify(transport,times(1)).execute(any(),any(),any());}

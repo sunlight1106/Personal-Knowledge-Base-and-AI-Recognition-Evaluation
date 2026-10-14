@@ -4,10 +4,47 @@ import com.robustvision.platform.common.BusinessException;
 import com.robustvision.platform.domain.AiProvider;
 import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
+import java.net.Proxy;
+import java.net.UnknownHostException;
 import java.util.List;
+import okhttp3.Dns;
+import okhttp3.dnsoverhttps.DnsOverHttps;
 import static org.assertj.core.api.Assertions.*;
 
 class PersonalAiEndpointPolicyTest {
+    @Test void encryptedDnsUsesFixedBootstrapAndKeepsTlsAndRedirectChecks() throws Exception {
+        assertThat(PersonalAiEndpointPolicy.createResolver("system")).isSameAs(Dns.SYSTEM);
+        var resolver = (DnsOverHttps) PersonalAiEndpointPolicy.createResolver("cloudflare");
+        assertThat(resolver.url().toString()).isEqualTo("https://cloudflare-dns.com/dns-query");
+        assertThat(resolver.client().dns().lookup("cloudflare-dns.com"))
+                .extracting(InetAddress::getHostAddress).containsExactly("1.1.1.1", "1.0.0.1");
+        assertThatThrownBy(() -> resolver.client().dns().lookup("evil.test")).isInstanceOf(UnknownHostException.class);
+        assertThat(resolver.client().proxy()).isEqualTo(Proxy.NO_PROXY);
+        assertThat(resolver.client().followRedirects()).isFalse();
+        assertThat(resolver.client().followSslRedirects()).isFalse();
+        assertThat(resolver.client().retryOnConnectionFailure()).isFalse();
+        assertThat(resolver.client().callTimeoutMillis()).isEqualTo(4000);
+        assertThat(resolver.client().hostnameVerifier()).isSameAs(new okhttp3.OkHttpClient().hostnameVerifier());
+        assertThatThrownBy(() -> PersonalAiEndpointPolicy.createResolver("typo")).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test void everyResolverStillRejectsUnsafeAnswersAndExplainsFakeIps() throws Exception {
+        for (String ip : List.of("198.18.0.69", "198.19.255.255", "127.0.0.1", "169.254.169.254")) {
+            var policy = new PersonalAiEndpointPolicy("", host -> List.of(InetAddress.getByName(ip)));
+            assertThatThrownBy(() -> policy.resolvePublic("api.moonshot.ai")).isInstanceOfSatisfying(BusinessException.class, e -> {
+                assertThat(PersonalAiEndpointPolicy.requestNotSent(e.getCode())).isTrue();
+                assertThat(e.getCode()).isEqualTo(ip.startsWith("198.") ? "PERSONAL_AI_DNS_FAKE_IP" : "PERSONAL_AI_ENDPOINT_REJECTED");
+            });
+        }
+        var policy = new PersonalAiEndpointPolicy("", host -> List.of(InetAddress.getByName("8.8.8.8")));
+        assertThat(policy.resolvePublic("api.moonshot.ai")).extracting(InetAddress::getHostAddress).containsExactly("8.8.8.8");
+    }
+    @Test void failedDnsNeverClaimsARequestMayHaveBeenSent() {
+        var policy = new PersonalAiEndpointPolicy("", host -> { throw new UnknownHostException("synthetic"); });
+        assertThatThrownBy(() -> policy.resolvePublic("api.moonshot.ai")).isInstanceOfSatisfying(BusinessException.class, e -> {
+            assertThat(e.getCode()).isEqualTo("PERSONAL_AI_DNS_FAILED");
+            assertThat(e.getMessage()).contains("尚未").doesNotContain("可能已发送");
+        });
+    }
     @Test void strictHttpsExactAllowlistAndCanonicalUrls() {
         var policy = new PersonalAiEndpointPolicy("https://private-ai.example/v1");
         assertThat(policy.validateBase(AiProvider.CUSTOM, "https://private-ai.example:443/v1/")).isEqualTo("https://private-ai.example/v1");

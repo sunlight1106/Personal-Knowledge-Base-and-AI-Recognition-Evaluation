@@ -15,6 +15,10 @@ Each authenticated user manages their own encrypted provider settings. No admini
 
 All paths are under `/api/v1/personal-ai` and require authentication. Preview and execution also require `note:write`.
 
+Diagnostic results distinguish `usageStatus`: `NOT_SENT` means endpoint/DNS validation stopped execution before a provider request; `NOT_APPLICABLE` is a model-directory query; `SAVED` means a model-call record was saved (including a failed call); `UNCONFIRMED` means saving that record failed. `SAVED` does not imply the provider request succeeded or was free. Local validation failures create no usage row. DNS errors use `PERSONAL_AI_DNS_FAKE_IP` or `PERSONAL_AI_DNS_FAILED` rather than a generic upstream billing warning.
+
+`PERSONAL_AI_DNS_MODE` defaults to `system`. Deployment operators may select `cloudflare` for HTTPS DNS with fixed public bootstrap addresses and IPv4 answers. All returned addresses still pass the same public-address policy and are pinned for the provider connection. There is no fallback to system DNS, private addresses, redirects, or disabled TLS verification.
+
 - `GET /providers`: provider, displayName, protocol, known baseUrls, customEndpointAllowed, remoteEnabled. Model IDs are user supplied; no model is silently selected.
 - `GET /settings`, `PUT /settings/{provider}`, `DELETE /settings/{provider}`: current user's profiles only. PUT accepts `{model, baseUrl, apiKey, enabled}`. A new profile requires a key. No owner ID is accepted.
 - `GET /usage`: current user's most recent 100 calls, with status, provider/model/action, token counts when returned, sanitized error code, and timestamp. No prompts, generated content, keys, or estimated costs are stored.

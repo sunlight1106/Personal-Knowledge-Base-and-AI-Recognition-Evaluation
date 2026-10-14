@@ -128,6 +128,7 @@ app:
   personal-ai:
     remote-enabled: ${PERSONAL_AI_REMOTE_ENABLED:false}
     allowed-base-urls: ${PERSONAL_AI_ALLOWED_BASE_URLS:}
+    dns-mode: ${PERSONAL_AI_DNS_MODE:system}
   credentials:
     master-key: ${CREDENTIAL_MASTER_KEY}
   payment:

@@ -36,7 +36,18 @@ public class PersonalAiDiagnosticsService {
     var result=transport.execute(setting.getProvider(),transport.prepareDiagnostic(setting.getProvider(),setting.getBaseUrl(),setting.getModel()),key);String status="SAVED";
     try{persistence.recordUsage(new PersonalAiUsageEntity(owner,setting.getProvider(),setting.getModel(),"diagnostic","SUCCEEDED",result.inputTokens(),result.outputTokens(),null));}catch(RuntimeException ignored){status="UNCONFIRMED";}
     return new Result(true,"CONNECTED","当前模型已返回文本，可用于文字调用。图片能力需单独验证。",(System.nanoTime()-start)/1000000,List.of(),result.inputTokens(),result.outputTokens(),status);
-   }catch(BusinessException e){if(approved.mode().equals("CONNECTION"))try{persistence.recordUsage(new PersonalAiUsageEntity(owner,setting.getProvider(),setting.getModel(),"diagnostic","FAILED",null,null,e.getCode()));}catch(RuntimeException ignored){}return new Result(false,e.getCode(),e.getMessage(),(System.nanoTime()-start)/1000000,List.of(),null,null,"UNCONFIRMED");}
+   }catch(BusinessException e){
+    String status="NOT_APPLICABLE";
+    if(PersonalAiEndpointPolicy.requestNotSent(e.getCode()))status="NOT_SENT";
+    else if(approved.mode().equals("CONNECTION")){
+     status="SAVED";
+     try{persistence.recordUsage(new PersonalAiUsageEntity(owner,setting.getProvider(),setting.getModel(),"diagnostic","FAILED",null,null,e.getCode()));}
+     catch(RuntimeException ignored){status="UNCONFIRMED";}
+    }
+    String message=approved.mode().equals("MODELS")&&e.getCode().equals("PERSONAL_AI_UPSTREAM_FAILED")
+      ?"未能取得模型目录，请检查供应商地址与网络连接；本次未发起模型生成请求。":e.getMessage();
+    return new Result(false,e.getCode(),message,(System.nanoTime()-start)/1000000,List.of(),null,null,status);
+   }
   }
  }
 }

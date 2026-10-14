@@ -2,11 +2,17 @@ package com.robustvision.platform.service;
 
 import com.robustvision.platform.common.BusinessException;
 import com.robustvision.platform.domain.AiProvider;
+import okhttp3.Dns;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.dnsoverhttps.DnsOverHttps;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
+import java.net.Proxy;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.*;
@@ -19,10 +25,32 @@ public class PersonalAiEndpointPolicy {
             new ArrayBlockingQueue<>(32), runnable -> { Thread thread = new Thread(runnable, "personal-ai-dns"); thread.setDaemon(true); return thread; },
             new ThreadPoolExecutor.AbortPolicy());
     private final Set<String> customBases;
-    public PersonalAiEndpointPolicy(@Value("${app.personal-ai.allowed-base-urls:}") String allowedBases) {
+    private final Dns resolver;
+    public PersonalAiEndpointPolicy(String allowedBases) { this(allowedBases, Dns.SYSTEM); }
+    @Autowired
+    public PersonalAiEndpointPolicy(@Value("${app.personal-ai.allowed-base-urls:}") String allowedBases,
+                                   @Value("${app.personal-ai.dns-mode:system}") String dnsMode) {
+        this(allowedBases, createResolver(dnsMode));
+    }
+    PersonalAiEndpointPolicy(String allowedBases, Dns resolver) {
+        this.resolver = resolver;
         Set<String> bases = new HashSet<>();
         for (String value : allowedBases.split(",")) if (!value.isBlank()) bases.add(canonical(value.trim()));
         customBases = Set.copyOf(bases);
+    }
+    static Dns createResolver(String mode) {
+        if ("system".equals(mode)) return Dns.SYSTEM;
+        if (!"cloudflare".equals(mode)) throw new IllegalArgumentException("PERSONAL_AI_DNS_MODE must be system or cloudflare");
+        // Explicit deployment opt-in. Only DNS questions go to this fixed resolver, never API keys or prompts.
+        var client = new OkHttpClient.Builder().proxy(Proxy.NO_PROXY).followRedirects(false)
+                .followSslRedirects(false).retryOnConnectionFailure(false)
+                .connectTimeout(3, TimeUnit.SECONDS).callTimeout(4, TimeUnit.SECONDS).build();
+        try {
+            return new DnsOverHttps.Builder().client(client).url(HttpUrl.get("https://cloudflare-dns.com/dns-query"))
+                    .bootstrapDnsHosts(InetAddress.getByAddress(new byte[]{1, 1, 1, 1}),
+                            InetAddress.getByAddress(new byte[]{1, 0, 0, 1}))
+                    .includeIPv6(false).build();
+        } catch (UnknownHostException impossible) { throw new IllegalStateException(impossible); }
     }
     public boolean customEndpointAllowed() { return !customBases.isEmpty(); }
     public String validateBase(AiProvider provider, String supplied) {
@@ -36,18 +64,29 @@ public class PersonalAiEndpointPolicy {
     public List<InetAddress> resolvePublic(String host) {
         Future<List<InetAddress>> lookup = null;
         try {
-            lookup = DNS.submit(() -> Arrays.asList(InetAddress.getAllByName(host)));
+            lookup = DNS.submit(() -> resolver.lookup(host));
             return validateAddresses(lookup.get(5, TimeUnit.SECONDS));
         } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt(); throw unavailable();
+            Thread.currentThread().interrupt(); throw dnsFailed();
         } catch (ExecutionException | TimeoutException | RejectedExecutionException exception) {
-            throw unavailable();
+            throw dnsFailed();
         } finally { if (lookup != null && !lookup.isDone()) lookup.cancel(true); }
     }
     static List<InetAddress> validateAddresses(List<InetAddress> addresses) {
+        if (addresses.stream().anyMatch(PersonalAiEndpointPolicy::isFakeIp)) throw new BusinessException(HttpStatus.BAD_GATEWAY,
+                "PERSONAL_AI_DNS_FAKE_IP", "当前网络将供应商域名解析为虚拟 IP，请在代理中排除此域名的 Fake-IP 解析，或由部署者启用加密 DNS");
         if (addresses.isEmpty() || addresses.stream().anyMatch(address -> !isPublic(address))) throw invalid();
         return List.copyOf(addresses);
     }
+    private static boolean isFakeIp(InetAddress address) {
+        byte[] bytes = address.getAddress();
+        return bytes.length == 4 && (bytes[0] & 255) == 198 && ((bytes[1] & 255) == 18 || (bytes[1] & 255) == 19);
+    }
+    static boolean requestNotSent(String code) {
+        return Set.of("PERSONAL_AI_ENDPOINT_REJECTED", "PERSONAL_AI_DNS_FAKE_IP", "PERSONAL_AI_DNS_FAILED").contains(code);
+    }
+    private static BusinessException dnsFailed() { return new BusinessException(HttpStatus.BAD_GATEWAY,
+            "PERSONAL_AI_DNS_FAILED", "无法解析供应商域名，请检查网络或部署的 DNS 设置；尚未向供应商发送请求"); }
     static boolean isPublic(InetAddress address) {
         if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
                 || address.isSiteLocalAddress() || address.isMulticastAddress()) return false;
