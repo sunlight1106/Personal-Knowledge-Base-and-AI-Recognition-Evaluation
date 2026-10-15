@@ -262,7 +262,7 @@ npm run build --prefix cle
 
 后端测试：Windows 运行 `.\mvnw.cmd -B verify`，Linux / macOS 运行 `./mvnw -B verify`。H2 仅用于测试，MySQL 检查见 [数据库说明](database/README.md)。
 
-自动交互检查使用模拟资料，不发送真实消息或收费 AI 请求。已完成的检查及范围记录在 [验证记录](docs/VALIDATION.md)。
+自动交互检查使用模拟资料，不发送真实消息或收费 AI 请求。完整范围和复跑方法见 [功能验收](docs/FUNCTIONAL_TESTS.md)，实际执行结果见 [验证记录](docs/VALIDATION.md)。
 
 </details>
 

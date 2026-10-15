@@ -125,8 +125,14 @@ class MySqlBackupRestoreTest {
                 assertThat(scalar(c, "SELECT body FROM chat_message WHERE contact_id=301")).isEqualTo("恢复后仍可读取的私聊");
                 assertThat(scalar(c, "SELECT status FROM contact_link WHERE id=301")).isEqualTo("ACCEPTED");
                 assertThat(scalar(c, "SELECT revision FROM note WHERE id='note-1'")).isEqualTo("7");
-                assertThat(scalar(c, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()")).isEqualTo("35");
-                assertThat(scalar(c, "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE()")).isEqualTo("49");
+                try (Connection original = DriverManager.getConnection(server + source + options, username, password)) {
+                    for (String query : List.of(
+                            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()",
+                            "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE()")) {
+                        assertThat(scalar(c, query)).as("Restored schema preserves the source inventory")
+                                .isEqualTo(scalar(original, query));
+                    }
+                }
                 assertThat(scalar(c, "SELECT workspace_id FROM internal_message WHERE id='group-reply'")).isEqualTo("201");
                 assertThat(scalar(c, "SELECT reply_to_id FROM internal_message WHERE id='group-reply'")).isEqualTo("message-1");
                 assertThat(scalar(c, "SELECT parent_id FROM note WHERE id='note-child'")).isEqualTo("note-1");

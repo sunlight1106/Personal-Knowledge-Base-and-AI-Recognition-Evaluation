@@ -8,7 +8,7 @@ This is a **bounded local/development recovery tool**, not a production backup s
 
 A private ZIP contains:
 
-- A complete application-schema SQL dump: tables, indexes, constraints, every row, and the original `flyway_schema_history`. Current schema: 34 application tables plus Flyway, V1–V18, 49 foreign keys.
+- A complete application-schema SQL dump: tables, indexes, constraints, every row, and the original `flyway_schema_history`. Current schema: 66 application tables plus Flyway, V1–V39, 95 foreign keys.
 - All regular files under the explicitly selected **filesystem storage root**, including files not referenced by current metadata. Each relative path has a size and SHA-256 manifest entry; every `file_asset.storage_path`, size and SHA must match the actual bytes.
 - A table/engine/collation inventory, exact row counts, foreign-key inventory and migration versions/checksums.
 
@@ -72,7 +72,7 @@ python3 scripts/backup/local_backup.py --local-dev \
   --files-target "$PWD/.runtime/backups/restored-files"
 ```
 
-Validation finishes before creating the database. `CREATE DATABASE` intentionally has no `IF NOT EXISTS`; existing schemas and existing filesystem targets are refused. Restoration rechecks the table/FK/Flyway inventories and row counts, re-dumps the whole database and compares its deterministic SQL SHA-256, verifies every file hash and its `file_asset` metadata, then writes the new filesystem target. Success prints only a small verified-count summary. No data or credential values are printed.
+Validation finishes before creating the database. `CREATE DATABASE` intentionally has no `IF NOT EXISTS`; existing schemas and existing filesystem targets are refused. Restoration rechecks the table/FK/Flyway inventories and row counts, re-dumps the whole database and compares its SQL content hash (normalizing only redundant utf8mb4 column charset declarations), verifies every file hash and its `file_asset` metadata, then writes the new filesystem target. Success prints only a small verified-count summary. No data or credential values are printed.
 
 On failure the command exits nonzero. It never drops a database; a fresh partial restore schema may remain for inspection. Fix the cause and choose another **new** schema/target. Deleting a failed/successful rehearsal is a separate, intentional operator action after verifying ownership and the exact isolated name. Do not rename a restore over the live schema or switch the running app automatically. Before considering a real cutover, separately validate Flyway, application startup, authorization, health, content downloads, secret decryption and every required dependency; this tool performs no production cutover.
 
@@ -95,7 +95,7 @@ export MYSQL_BACKUP_TESTS=true
 ./mvnw -B -Dtest=MySqlBackupRestoreTest test
 ```
 
-Without both enabling variables the test is **skipped**, not passed. Require `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`. The test creates fresh random source/restore schemas, runs real Flyway V1→latest, adds synthetic rows in every application domain, backs up and restores binary/Unicode files, checks exact SQL digest/row counts/40 FKs, Flyway validation and no-op migrate, FK/unique enforcement, Unicode notes and decimal precision. It encrypts a synthetic token with a synthetic master key, verifies ciphertext survived and decrypts with that same key; neither plaintext is packaged. It checks actual overwrite refusals. It drops only the source it created and the restore confirmed successfully created by this run; failed partial restores are not adopted/dropped. No app/customer data or real AI key is used. The temporary test archive and client file are removed on exit.
+Without both enabling variables the test is **skipped**, not passed. Require `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`. The test creates fresh random source/restore schemas, runs real Flyway V1→latest, adds synthetic rows in every application domain, backs up and restores binary/Unicode files, checks SQL content hash, row counts and the complete foreign-key inventory, Flyway validation and no-op migrate, FK/unique enforcement, Unicode notes and decimal precision. It encrypts a synthetic token with a synthetic master key, verifies ciphertext survived and decrypts with that same key; neither plaintext is packaged. It checks actual overwrite refusals. It drops only the source it created and the restore confirmed successfully created by this run; failed partial restores are not adopted/dropped. No app/customer data or real AI key is used. The temporary test archive and client file are removed on exit.
 
 `.github/workflows/recovery.yml` repeats the fast and MySQL tests using a disposable MySQL 8.4 service and SHA-256-pinned official 8.4.6 clients. It publishes no database, backup, credentials or test runtime artifacts.
 

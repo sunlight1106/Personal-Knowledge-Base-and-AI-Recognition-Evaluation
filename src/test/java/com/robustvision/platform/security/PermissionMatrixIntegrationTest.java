@@ -39,6 +39,8 @@ class PermissionMatrixIntegrationTest {
         endpoint("/dashboard/summary","dashboard:read"),
         endpoint("/knowledge/topics","knowledge:read"), endpoint("/knowledge/domains","knowledge:read"), endpoint("/knowledge/entries","knowledge:read"),
         endpoint("/notes","note:read"), endpoint("/notes/trash","note:read"), endpoint("/notes/reminders","note:read"),
+        endpoint("/research/search","research:use"), endpoint("/research/documents","research:use"),
+        endpoint("/notifications"), endpoint("/learning/statistics"), endpoint("/learning/today"), endpoint("/workspace-jobs"),
         endpoint("/files","file:read,file:read:any"), endpoint("/inference/tasks","experiment:read,experiment:read:any"),
         endpoint("/models","model:read"), endpoint("/models/runtime","model:read"),
         endpoint("/billing/summary","billing:read"), endpoint("/billing/providers","billing:read:any"),
@@ -78,6 +80,13 @@ class PermissionMatrixIntegrationTest {
             var response = mvc.perform(get(endpoint.path()).header("Authorization","Bearer "+token)).andReturn().getResponse();
             assertThat(response.getStatus()).as("%s with %s: %s",endpoint.path(),permissions,response.getContentAsString())
                     .isEqualTo(endpoint.allowed(required)?200:403);
+        }
+    }
+    @Test void anonymousAndMalformedTokensNeverReachProtectedModules() throws Exception {
+        for (Endpoint endpoint : ENDPOINTS) {
+            mvc.perform(get(endpoint.path())).andExpect(status().isUnauthorized());
+            mvc.perform(get(endpoint.path()).header("Authorization", "Bearer synthetic.invalid.token"))
+                    .andExpect(status().isUnauthorized());
         }
     }
     @Test void eachIndividualDenyOverridesAnOtherwiseFullyEnabledRole() throws Exception {

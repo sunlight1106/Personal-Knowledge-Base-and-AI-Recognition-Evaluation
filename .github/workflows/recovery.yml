@@ -42,7 +42,7 @@ jobs:
       - name: Synthetic full-schema and filesystem restore on real MySQL
         run: ./mvnw -B -Dtest=MySqlBackupRestoreTest test
         env:
-          MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+          MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&rewriteBatchedStatements=true
           MYSQL_TEST_USERNAME: root
           MYSQL_TEST_PASSWORD: isolated-ci-recovery-only
           MYSQL_BACKUP_TESTS: 'true'

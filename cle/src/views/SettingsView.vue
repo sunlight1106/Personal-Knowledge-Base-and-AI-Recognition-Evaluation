@@ -123,7 +123,7 @@ onBeforeUnmount(() => { active = false; loadVersion++; clearSecrets() })
         <nav aria-label="个人设置分类"><button v-for="tab in tabs" :key="tab.id" :aria-current="section === tab.id ? 'page' : undefined" :class="{ active: section === tab.id }" :disabled="!!busy" @click="select(tab.id)"><AppIcon :name="tab.icon" :size="17" />{{ tab.label }}</button></nav>
         <p class="settings-nav-foot">{{ authStore.state.user?.roleName }}</p>
       </aside>
-      <main class="settings-content" :aria-busy="loading || !!busy">
+      <section class="settings-content" aria-label="设置内容" :aria-busy="loading || !!busy">
         <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ error }} <button class="table-action" :disabled="!!busy" @click="loadSection">重新加载</button></p>
         <article v-if="section === 'profile'" class="panel settings-card">
           <header><div><h3>个人资料</h3><p>用于笔记署名、工作空间和站内交流。</p></div><AppIcon name="users" :size="22" /></header>
@@ -180,7 +180,7 @@ onBeforeUnmount(() => { active = false; loadVersion++; clearSecrets() })
         <WorkspaceSettingsPanel v-else-if="section === 'workspace'" />
         <WorkflowPreferences v-else-if="section === 'workflow'" />
         <template v-else-if="section === 'account'"><AccountBindings /><AccountClosure /></template>
-      </main>
+      </section>
     </div>
   </div>
 </template>

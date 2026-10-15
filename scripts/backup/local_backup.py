@@ -19,6 +19,28 @@ import tempfile
 import zipfile
 
 FORMAT = "personal-platform-local-backup-v1"
+
+
+def sql_content_digest(path):
+    """Hash the dump, normalizing only redundant utf8mb4 column charset syntax.
+
+    MySQL 8.4 may spell a column's charset explicitly after restoring its COLLATE
+    clause. COLLATE utf8mb4_* already determines that charset. INSERT contents,
+    collation names, types, defaults and all other DDL remain byte-sensitive.
+    """
+    result = hashlib.sha256()
+    in_table = False
+    column = re.compile(rb"^(  `(?:[^`]|``)+` (?:varchar\([0-9]+\)|char\([0-9]+\)|(?:tiny|medium|long)?text)) CHARACTER SET utf8mb4( COLLATE utf8mb4_[a-z0-9_]+ )")
+    with Path(path).open("rb") as source:
+        for line in source:
+            if line.startswith(b"CREATE TABLE `"):
+                in_table = True
+            elif in_table and line.startswith(b")"):
+                in_table = False
+            if in_table:
+                line = column.sub(rb"\1\2", line, count=1)
+            result.update(line)
+    return result.hexdigest()
 MAX_BYTES = 512 * 1024 * 1024
 MAX_ENTRIES = 10000
 IDENTIFIER = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}\Z")
@@ -277,13 +299,20 @@ def restore(db, archive, schema, files_target):
         require(schema != manifest["source_schema"], "Source and restore schema must differ")
         db.query("CREATE DATABASE " + identifier(schema) + " CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
         # Never automatically DROP, even on failure. Partial fresh schemas are left for inspection.
-        with (staging / "database.sql").open("rb") as source:
-            db.run(db.options(db.mysql) + ["--binary-mode=1", "--batch", "--database=" + schema], source=source)
+        # Commit data per table (DDL commits implicitly), instead of syncing each
+        # INSERT separately. Keep the canonical dump unchanged for old archives.
+        with (staging / "database.sql").open("rb") as source, tempfile.TemporaryFile() as transaction:
+            transaction.write(b"SET SESSION autocommit=0;\n")
+            shutil.copyfileobj(source, transaction)
+            transaction.write(b"\nCOMMIT;\n")
+            transaction.seek(0)
+            db.run(db.options(db.mysql) + ["--binary-mode=1", "--batch", "--database=" + schema], source=transaction)
         require(db.snapshot(schema) == manifest["database"], "Restored table/count/FK/Flyway inventory differs")
         db.check_assets(schema, manifest["files"])
         restored_sql = staging / "redump.sql"
         db.dump(schema, restored_sql)
-        require(digest(restored_sql) == manifest["sql"]["sha256"], "Restored SQL content/schema digest differs")
+        require(sql_content_digest(restored_sql) == sql_content_digest(staging / "database.sql"),
+                "Restored SQL content/schema digest differs")
         require(file_manifest(staging / "files") == manifest["files"], "Restored file content differs")
         # Exclusive creation preserves any existing/concurrently created destination.
         target.mkdir(mode=0o700)

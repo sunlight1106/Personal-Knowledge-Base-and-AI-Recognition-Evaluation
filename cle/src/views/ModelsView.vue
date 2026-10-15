@@ -47,7 +47,7 @@ const providerName = (model: ModelView) => model.provider === 'DEEPSEEK' ? 'Deep
 <template>
   <div :class="{ 'models-public-shell': isPublic }">
     <header v-if="isPublic" class="docs-public-nav"><RouterLink to="/"><AppLogo /></RouterLink><nav><RouterLink to="/">首页</RouterLink><a href="#catalog">模型</a><RouterLink to="/docs">文档</RouterLink></nav><div><span v-if="authStore.state.user" class="pp-current-user"><i>{{ authStore.state.user.displayName.slice(0, 1) }}</i>{{ authStore.state.user.displayName }}</span><RouterLink v-else to="/login">登录</RouterLink><RouterLink :to="authStore.state.user ? '/app/home' : '/login'" class="pp-enter-button">进入平台 <AppIcon name="arrow" :size="15" /></RouterLink></div></header>
-  <div id="catalog" class="page-stack models-page" :class="{ 'models-page--public': isPublic }">
+  <div id="catalog" class="page-stack models-page" :role="isPublic ? 'main' : undefined" :class="{ 'models-page--public': isPublic }">
     <section class="page-intro page-intro--split">
       <div><p class="page-kicker">MODEL CATALOG</p><h2>Models</h2><p>查看平台演示模型与数据准备能力。真实笔记整理和图片识别使用你自己的个人 AI 配置。</p></div>
       <span class="runtime-pill" :class="{ ready: runtime?.credentialConfigured || !authStore.state.user }"><i />{{ runtime?.mode === 'demo' ? '平台演示模式' : '真实调用使用个人 AI' }}</span>

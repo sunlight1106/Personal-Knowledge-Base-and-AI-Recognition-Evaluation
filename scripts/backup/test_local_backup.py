@@ -16,6 +16,30 @@ backup = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(backup)
 
 
+class SqlContentDigestTest(unittest.TestCase):
+    def digest(self, sql):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "dump.sql"
+            path.write_bytes(sql)
+            return backup.sql_content_digest(path)
+
+    def test_equivalent_explicit_column_charset_after_restore(self):
+        implicit = b"CREATE TABLE `note` (\n  `title` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL\n) ENGINE=InnoDB;\n"
+        explicit = implicit.replace(b" COLLATE", b" CHARACTER SET utf8mb4 COLLATE")
+        self.assertEqual(self.digest(implicit), self.digest(explicit))
+
+    def test_data_collation_length_and_default_changes_remain_detectable(self):
+        original = b"CREATE TABLE `note` (\n  `title` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT 'original'\n) ENGINE=InnoDB;\nINSERT INTO `note` VALUES ('private data');\n"
+        for before, after in [(b"unicode_ci", b"0900_ai_ci"), (b"varchar(200)", b"varchar(201)"), (b"original", b"changed"), (b"private data", b"changed data")]:
+            with self.subTest(change=before):
+                self.assertNotEqual(self.digest(original), self.digest(original.replace(before, after)))
+
+    def test_charset_text_in_insert_or_comment_is_never_normalized(self):
+        for text in [b"INSERT INTO `note` VALUES (' CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ');\n",
+                     b"--  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL\n"]:
+            self.assertNotEqual(self.digest(text), self.digest(text.replace(b" CHARACTER SET utf8mb4", b"")))
+
+
 class FakeDB:
     def __init__(self):
         self.created = []
@@ -50,8 +74,12 @@ class FakeDB:
         return b""
 
 
+@unittest.skipIf(os.name == "nt", "POSIX filesystem backup; run these checks in Linux")
 class RecoverySafetyTest(unittest.TestCase):
     def setUp(self):
+        # unittest discovery does not execute this module's __main__ block.
+        previous_umask = os.umask(0o077)
+        self.addCleanup(os.umask, previous_umask)
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.files = self.root / "source"
