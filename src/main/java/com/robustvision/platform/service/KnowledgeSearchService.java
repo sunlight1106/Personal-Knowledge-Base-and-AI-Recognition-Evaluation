@@ -26,7 +26,7 @@ public class KnowledgeSearchService {
         String type=input.type()==null||input.type().isBlank()?"ALL":input.type().toUpperCase(Locale.ROOT);
         String tag=input.tag()==null?"":input.tag().trim();
         String sort=input.sort()==null||input.sort().isBlank()?"relevance":input.sort();
-        if(q.length()>160||tag.length()>80||!KINDS.contains(type)||!Set.of("relevance","recent","natural").contains(sort)
+        if(q.length()>160||tag.length()>80||!KINDS.contains(type)||!Set.of("relevance","recent","natural","semantic").contains(sort)
                 ||(!q.isEmpty()&&q.split(" ").length>10)||input.group()!=null&&input.group()<1)
             throw new BusinessException(HttpStatus.BAD_REQUEST,"SEARCH_INVALID","搜索最多 10 个关键词，请检查资料类型、排序或群组编号");
         return new Filters(q,type,tag,input.since(),input.group(),sort);
@@ -66,6 +66,7 @@ public class KnowledgeSearchService {
     @Transactional(readOnly=true)
     public Page search(Filters input,int page) {
         Filters f=validate(input);validPage(page);Scope s=scope(f.type(),f.group());
+        if(f.sort().equals("semantic")&&!f.q().isBlank())return semantic(f,s,page);
         if(f.sort().equals("natural")&&!f.q().isBlank())return natural(f,s,page);
         List<String> terms=f.q().isEmpty()?List.of():Arrays.stream(f.q().toLowerCase(Locale.ROOT).split(" ")).distinct().toList();
         List<Object> args=new ArrayList<>();String score="0";
@@ -119,6 +120,22 @@ public class KnowledgeSearchService {
         if(!KINDS.contains(kind)||kind.equals("ALL")) throw missing();
         Scope s=scope(kind,null);List<Object> args=new ArrayList<>(s.args());args.add(id);
         return jdbc.query("SELECT * FROM ("+s.sql()+") scoped WHERE id=?",(r,i)->new Source(id,kind,r.getString("title"),plain(r.getString("body")),url(kind,id),r.getTimestamp("updated_at").toInstant()),args.toArray()).stream().findFirst().orElseThrow(this::missing);
+    }
+    private final java.util.concurrent.Semaphore semanticSlots=new java.util.concurrent.Semaphore(2);
+    private Page semantic(Filters f,Scope scope,int page){
+        if(!semanticSlots.tryAcquire())throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,"SEARCH_BUSY","关联检索正在处理，请稍后重试或使用关键词搜索");
+        try{
+            var terms=NaturalQuery.terms(f.q());List<Object> args=new ArrayList<>();List<String> score=new ArrayList<>();
+            for(String term:terms){score.add("CASE WHEN LOWER(title) LIKE ? ESCAPE '!' THEN 12 ELSE 0 END + CASE WHEN LOWER(body) LIKE ? ESCAPE '!' THEN 3 ELSE 0 END");args.add(like(term));args.add(like(term));}
+            String sql="SELECT id,kind,title,updated_at,SUBSTRING(body,1,6000) body,"+(score.isEmpty()?"0":String.join(" + ",score))+" score FROM ("+scope.sql()+") scoped WHERE 1=1";args.addAll(scope.args());
+            if(!f.tag().isBlank()){sql+=" AND LOWER(tags) LIKE ? ESCAPE '!'";args.add(like(f.tag()));}
+            if(f.since()!=null){sql+=" AND updated_at>=?";args.add(java.sql.Timestamp.from(f.since()));}
+            sql+=" ORDER BY score DESC,updated_at DESC,kind,id LIMIT 160";
+            var candidates=jdbc.query(sql,(r,i)->new Source(r.getString("id"),r.getString("kind"),r.getString("title"),plain(r.getString("body")),url(r.getString("kind"),r.getString("id")),r.getTimestamp("updated_at").toInstant()),args.toArray());
+            var ranked=LocalSemanticRanker.rank(f.q(),candidates.stream().map(d->d.title()+" "+d.title()+" "+d.body()).toList());
+            var hits=ranked.stream().skip((long)page*30).limit(30).map(match->{var d=candidates.get(match.index());var parts=PassageSelection.select(d.body(),f.q(),240);return new Hit(d.id(),d.kind(),d.title(),parts.stream().map(PassageSelection.Passage::text).collect(java.util.stream.Collectors.joining(" … ")),d.url(),d.updatedAt());}).toList();
+            return new Page(hits,ranked.size()>(page+1)*30,page);
+        }finally{semanticSlots.release();}
     }
     private BusinessException missing(){return new BusinessException(HttpStatus.NOT_FOUND,"SOURCE_UNAVAILABLE","资料不存在或当前无权访问");}
     static String plain(String body){return body==null?"":body;}

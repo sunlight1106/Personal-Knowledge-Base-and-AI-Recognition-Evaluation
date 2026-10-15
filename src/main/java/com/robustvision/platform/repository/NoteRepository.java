@@ -67,4 +67,22 @@ public interface NoteRepository extends JpaRepository<NoteEntity, String> {
     void detachChildren(@Param("id") String id, @Param("ownerId") Long ownerId);
 
     long countByOwnerId(Long ownerId);
+
+
+    @Query("""
+        select n.id as id,n.title as title,substring(n.body,1,2048) as previewBody,
+        n.tags as tags,n.status as status,n.createdAt as createdAt,n.updatedAt as updatedAt,
+        n.library as library,n.contentFormat as contentFormat,n.parentId as parentId,n.revision as revision
+        from NoteEntity n where n.owner.id=:owner and (:status is null or n.status=:status)
+        and (:library='' or n.library=:library)
+        and (:keyword='' or locate(lower(:keyword),lower(n.title))>0
+        or locate(lower(:keyword),lower(n.body))>0 or locate(lower(:keyword),lower(n.tags))>0)
+        """)
+    org.springframework.data.domain.Page<ListRow> pageRows(@Param("owner") Long owner,
+        @Param("status") NoteStatus status,@Param("library") String library,@Param("keyword") String keyword,
+        org.springframework.data.domain.Pageable pageable);
+    interface Facet { String getLibrary(); NoteStatus getStatus(); long getCount(); }
+    @Query("select n.library as library,n.status as status,count(n) as count from NoteEntity n where n.owner.id=:owner group by n.library,n.status")
+    List<Facet> facets(@Param("owner") Long owner);
+
 }

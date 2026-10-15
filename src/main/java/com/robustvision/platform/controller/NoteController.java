@@ -165,4 +165,12 @@ public class NoteController {
     public ApiResponse<ApiDtos.SharedNoteView> shared(@PathVariable String token) {
         return ApiResponse.ok(shareService.readByToken(token));
     }
+
+
+    @GetMapping("/page") @PreAuthorize("hasAuthority('note:read')")
+    public ApiResponse<NoteService.NotePage> page(@RequestParam(defaultValue="ALL") String status,
+        @RequestParam(defaultValue="") String keyword,@RequestParam(defaultValue="") String library,
+        @RequestParam(defaultValue="updated") String sort,@RequestParam(defaultValue="0") int page,
+        @RequestParam(defaultValue="50") int size) {return ApiResponse.ok(noteService.page(status,keyword,library,sort,page,size));}
+
 }

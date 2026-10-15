@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import OperationsPanel from '@/components/OperationsPanel.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
@@ -27,6 +28,7 @@ onMounted(load); onBeforeUnmount(() => { active = false; version++ })
 </script>
 <template>
   <div class="page-stack administration-page">
+    <OperationsPanel v-if="authStore.state.user?.roleCode==='ADMIN'" />
     <section class="page-intro page-intro--split"><div><p class="page-kicker">{{ uiText('系统管理') }}</p><h2>{{ uiText('平台总览') }}</h2><p>{{ uiText('查看平台使用情况，管理账号和权限。') }}</p></div><button class="button button--ghost" :disabled="loading" @click="load">{{ loading ? uiText('更新中…') : uiText('刷新数据') }}</button></section>
     <nav class="admin-shortcuts" :aria-label="uiText('管理入口')"><RouterLink v-if="authStore.has('user:read')" to="/app/users">{{ uiText('用户与使用权限') }} <span>→</span></RouterLink><RouterLink v-if="authStore.has('role:read')" to="/app/roles">{{ uiText('角色权限') }} <span>→</span></RouterLink><RouterLink v-if="authStore.has('billing:manage')" to="/app/billing">{{ uiText('额度与预算') }} <span>→</span></RouterLink></nav>
     <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }}</p>

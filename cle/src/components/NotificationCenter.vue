@@ -10,6 +10,7 @@ import AppIcon from './AppIcon.vue'
 const router = useRouter(), menu = ref<HTMLDetailsElement | null>(null)
 const { unreadItems, actions, actionTotal, popups, total, dismiss, pause, resume, refresh } = useNotifications()
 function notificationTitle(item: NotificationItem) {
+  if (item.id.startsWith('operation-')) return uiText(item.title)
   if (['mail-older', 'note-reviews', 'backup-warning', 'group-invites'].includes(item.id)) return uiText(item.title)
   // Translate only server-authored suffixes; group names, people and message subjects are content.
   if (item.id.startsWith('announcement-') && item.title.endsWith(' · 群公告')) return item.title.slice(0, -6) + ' · ' + uiText('群公告')

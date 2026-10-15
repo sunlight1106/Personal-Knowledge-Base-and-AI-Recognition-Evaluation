@@ -14,6 +14,7 @@ import { toastStore } from '@/stores/toast'
 import { authStore } from '@/stores/auth'
 
 const route = useRoute()
+const page=ref(0), total=ref(0), unreadTotal=ref(0)
 const tab = ref<'inbox' | 'sent'>('inbox')
 const messages = ref<MessageView[]>([]), directory = ref<MessageContactView[]>([])
 const selected = ref<MessageView | null>(null), composing = ref(false)
@@ -54,22 +55,22 @@ watch(composing, async opened => {
     composeOpener = null
   }
 }, { flush: 'post' })
-let epoch = 0, detailEpoch = 0
-const unread = computed(() => tab.value === 'inbox' ? messages.value.filter(item => !item.read).length : 0)
+let epoch = 0, detailEpoch = 0, readEpoch = 0
+const unread = computed(() => tab.value === 'inbox' ? unreadTotal.value : 0)
 const reasonText = (reason: unknown) => reason instanceof ApiClientError ? reason.message : '操作失败，请重试'
 function clearDraft() { selectedContacts.value = []; subject.value = ''; body.value = ''; files.value = []; replyToId.value = undefined; replyContact.value = undefined }
-function reset() { releaseComposer(); composeOpener = null; epoch++; detailEpoch++; messages.value = []; directory.value = []; selected.value = null; composing.value = false; clearDraft(); error.value = ''; busy.value = false; loading.value = false }
+function reset() { page.value=0;total.value=0;unreadTotal.value=0;releaseComposer(); composeOpener = null; epoch++; detailEpoch++; messages.value = []; directory.value = []; selected.value = null; composing.value = false; clearDraft(); error.value = ''; busy.value = false; loading.value = false }
 async function load() {
   const version = ++epoch
   loading.value = true; error.value = ''
   try {
-    const [items, users] = await Promise.all([tab.value === 'inbox' ? api.inbox() : api.sent(), api.messageDirectory()])
+    const [items, users] = await Promise.all([api.mailPage(tab.value,page.value), api.messageDirectory()])
     if (version !== epoch) return
-    messages.value = items; directory.value = users
+    messages.value = items.results.items; total.value=items.results.total; unreadTotal.value=items.unread; directory.value = users
   } catch (reason) { if (version === epoch) { error.value = reasonText(reason); messages.value = []; directory.value = [] } }
   finally { if (version === epoch) loading.value = false }
 }
-async function switchTab(next: 'inbox' | 'sent') { if (busy.value) return; detailEpoch++; tab.value = next; selected.value = null; await load() }
+async function switchTab(next: 'inbox' | 'sent') { if (busy.value) return; detailEpoch++; tab.value = next; page.value=0; selected.value = null; await load() }
 async function openNotification() {
   const id = route.query.message
   if (typeof id !== 'string' || composing.value || busy.value) return
@@ -78,9 +79,10 @@ async function openNotification() {
   try {
     const message = await api.message(id)
     if (version === epoch && selection === detailEpoch) {
-      selected.value = message
+      selected.value = message;readEpoch++
       const item = messages.value.find(m => m.id === id)
-      if (item) item.read = true
+      if (item && !item.read) {item.read = true;unreadTotal.value=Math.max(0,unreadTotal.value-1)}
+      if (!item) void liveRefresh()
     }
   } catch (reason) { if (version === epoch && selection === detailEpoch) error.value = reasonText(reason) }
 }
@@ -88,7 +90,7 @@ watch(() => route.query.message, openNotification)
 async function open(item: MessageView) {
   const version = epoch, selection = ++detailEpoch
   selected.value = null
-  try { const message = await api.message(item.id); if (version === epoch && selection === detailEpoch) { selected.value = message; item.read = true } }
+  try { const message = await api.message(item.id); if (version === epoch && selection === detailEpoch) { selected.value = message; readEpoch++; if(!item.read){item.read=true;unreadTotal.value=Math.max(0,unreadTotal.value-1)} } }
   catch (reason) { if (version === epoch && selection === detailEpoch) error.value = reasonText(reason) }
 }
 async function compose(to?: number, original?: MessageView) {
@@ -139,13 +141,14 @@ async function download(file: MessageView['attachments'][number]) {
   catch (reason) { if (version === epoch) error.value = reasonText(reason) }
 }
 watch(() => authStore.state.user?.id, () => { reset(); if (authStore.state.user) void load() }, { flush: 'sync' })
-let refreshing = false
+let refreshing = false, refreshAgain = false
 async function liveRefresh(){
-  if(busy.value||composing.value||loading.value||refreshing)return
-  const version=epoch, currentTab=tab.value; refreshing=true
-  try{const rows=await(currentTab==='inbox'?api.inbox():api.sent());if(version===epoch&&currentTab===tab.value)messages.value=rows}
+  if(refreshing){refreshAgain=true;return}
+  if(busy.value||composing.value||loading.value)return
+  const version=epoch, currentTab=tab.value, currentPage=page.value, reading=readEpoch; refreshing=true
+  try{const rows=await api.mailPage(currentTab,currentPage);if(version===epoch&&reading===readEpoch&&currentTab===tab.value&&currentPage===page.value){messages.value=rows.results.items;total.value=rows.results.total;unreadTotal.value=rows.unread}}
   catch{/* Keep the current letter readable while the connection recovers. */}
-  finally{refreshing=false}
+  finally{refreshing=false;if(refreshAgain||reading!==readEpoch){refreshAgain=false;if(version===epoch)void liveRefresh()}}
 }
 onMounted(()=>window.addEventListener("pkb:live-update",liveRefresh))
 onBeforeUnmount(()=>window.removeEventListener("pkb:live-update",liveRefresh))
@@ -166,6 +169,7 @@ onBeforeUnmount(reset)
           <span>{{ item.senderName.slice(0, 1) }}</span><div><strong>{{ item.subject }}</strong><small>{{ tab === 'inbox' ? item.senderName : (uiText('发送给 ') + (item.recipients.map(r => r.displayName).join('、'))) }}</small></div><time>{{ new Date(item.createdAt).toLocaleDateString(uiLocale()) }}</time>
         </button>
         <p v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</p>
+      <nav class="research-pagination" :aria-label="uiText('消息分页')"><button class="button button--ghost" :disabled="!page||loading" @click="page--;load()">{{uiText('上一页')}}</button><span>{{page+1}} / {{Math.max(1,Math.ceil(total/30))}}</span><button class="button button--ghost" :disabled="(page+1)*30>=total||loading" @click="page++;load()">{{uiText('下一页')}}</button></nav>
       </aside>
       <article class="mail-reader">
         <template v-if="selected"><p class="page-kicker">{{ tab === 'inbox' ? 'INBOX' : 'SENT' }}</p><h3>{{ selected.subject }}</h3><div class="mail-meta"><b>{{ selected.senderName }}</b><span>{{ uiText('发送给') }} {{ selected.recipients.map(r => r.displayName).join('、') }}</span><time>{{ new Date(selected.createdAt).toLocaleString(uiLocale()) }}</time></div><button v-if="tab === 'inbox' && selected.senderId !== authStore.state.user?.id" class="button button--ghost" :disabled="busy || loading" @click="compose(selected.senderId, selected)">{{ uiText('回复这封信') }}</button><p class="mail-body">{{ selected.body }}</p><ReportButton v-if="selected.senderId !== authStore.state.user?.id" type="MESSAGE" :source-id="selected.id" /><div v-if="selected.attachments.length" class="mail-attachments"><button v-for="file in selected.attachments" :key="file.id" @click="download(file)"><AppIcon name="file" :size="18" /><span>{{ file.fileName }}<small>{{ Math.ceil(file.sizeBytes / 1024) }} KB</small></span><AppIcon name="download" :size="16" /></button></div></template>

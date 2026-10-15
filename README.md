@@ -6,6 +6,7 @@
 <p align="center">写下所学，记住新词，留住每一次探索。</p>
 <p align="center">
   <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/archive/refs/heads/main.zip"><strong>下载项目</strong></a>
+  &nbsp; · &nbsp; <a href="docs/RELEASE_INSTALL.md">免编译安装</a>
   &nbsp; · &nbsp; <a href="#首次启动">开始使用</a>
   &nbsp; · &nbsp; <a href="docs/README.md">使用文档</a>
   &nbsp; · &nbsp; <a href="#常见问题">常见问题</a>
@@ -45,6 +46,8 @@
 | **交流与协作** | 按唯一身份码找人，聊天、站内信、建群、发资料；公告、置顶与免打扰 | [群组与站内信](docs/GROUPS.md) |
 | **账户与管理** | 邮箱验证、登录记录、双重验证；用户权限、统计折线图与举报审核 | [账户安全](docs/ACCOUNT_AND_RECOVERY.md) · [平台管理](docs/ADMINISTRATION.md) |
 
+工作台的「开始使用」会按账号显示实际完成的步骤，可以随时收起。资料多时，笔记、素材和站内信分批加载；学习中心支持本地关联搜索、保存搜索与失败任务筛选。具体用法见 [搜索、任务与运行状态](docs/DISCOVERY_AND_OPERATIONS.md)。
+
 ## 下载项目
 
 **直接下载：** [下载 ZIP](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/archive/refs/heads/main.zip)，完整解压到固定目录，例如 `D:\KnowledgeAI`。确认目录里有 `compose.yaml`、`deploy.ps1` 和 `cle` 文件夹。
@@ -66,6 +69,8 @@ cd Personal-Knowledge-Base-and-AI-Recognition-Evaluation
 Windows / macOS 安装并打开 [Docker Desktop](https://docs.docker.com/desktop/)，等待引擎就绪。Windows 使用 WSL 2 和 Linux 容器。Linux 安装 Docker Engine 和 Compose 插件。
 
 Compose 至少为 **2.20.2**，建议给 Docker 分配 **8 GB 内存**。首次安装需要联网下载镜像、依赖和病毒库，比日常启动慢。当前对象存储使用 `linux/amd64`，ARM 电脑需要相应仿真支持。
+
+已有完整 Release 时，也可使用 [预构建安装包](docs/RELEASE_INSTALL.md)，省去本机编译。需要安装 Python；仍需联网下载镜像。没有完整附件的版本继续按下面的源码方式安装。
 
 ### 02 · 在项目目录启动
 
@@ -137,7 +142,7 @@ docker compose up -d --no-deps frontend
 
 ## 更新版本
 
-**先备份，再更新源码，最后构建新版。** 只运行 `start.cmd` 不会安装新代码。
+**先备份，再更新源码，最后构建新版。** 只运行 `start.cmd` 不会安装新代码。使用预构建包的用户按 [镜像更新步骤](docs/RELEASE_INSTALL.md#更新已有安装) 操作，安装器会先完成加密备份和校验。
 
 Git 下载的用户，在原项目目录运行：
 

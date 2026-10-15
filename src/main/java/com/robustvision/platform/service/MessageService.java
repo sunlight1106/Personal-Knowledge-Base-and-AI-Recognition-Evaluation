@@ -206,4 +206,16 @@ public class MessageService {
     }
 
     public record AttachmentDownload(Resource resource, String fileName, String contentType) {}
+
+
+    public record MailPage(com.robustvision.platform.dto.LibraryPage<ApiDtos.MessageView> results,long unread) {}
+    @Transactional(readOnly=true)
+    public MailPage page(boolean sent,int page,int size) {
+        var paging=com.robustvision.platform.dto.LibraryPage.request(page,size);
+        var user=currentUserService.requireCurrent();
+        var rows=sent?messageRepository.pageSent(user.getId(),paging):messageRepository.pageInbox(user.getId(),paging);
+        long unread=jdbc.queryForObject("SELECT COUNT(*) FROM message_recipient r JOIN internal_message m ON m.id=r.message_id WHERE r.recipient_id=? AND r.read_at IS NULL AND m.workspace_id IS NULL",Long.class,user.getId());
+        return new MailPage(new com.robustvision.platform.dto.LibraryPage<>(toViews(rows.getContent(),user),page,size,rows.getTotalElements()),unread);
+    }
+
 }

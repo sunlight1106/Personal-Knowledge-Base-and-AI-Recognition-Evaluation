@@ -8,6 +8,15 @@ COPY scripts/components/minio-build.sh /tmp/minio-build.sh
 ENV MINIO_TOOLING=/opt/minio-build
 RUN bash /tmp/minio-build.sh
 
+FROM build AS source-build
+# Include the exact dependency sources used by the redistributed binary.
+RUN cd /opt/minio-build/minio-RELEASE.2025-10-15T17-29-55Z \
+ && PATH=/opt/minio-build/go/bin:$PATH GOPATH=/opt/minio-build/gopath GOTOOLCHAIN=local /opt/minio-build/go/bin/go mod vendor \
+ && cp /tmp/minio-build.sh ./pkb-build.sh \
+ && tar -czf /opt/minio-build/minio-sources.tar.gz -C /opt/minio-build minio-RELEASE.2025-10-15T17-29-55Z
+FROM scratch AS source-export
+COPY --from=source-build /opt/minio-build/minio-sources.tar.gz /
+
 FROM debian:trixie-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl \

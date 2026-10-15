@@ -43,8 +43,8 @@ window.fetch = async (url, init = {}) => {
     if (path.includes('/groups/1') && delayAlpha) return new Promise(resolve => { deferredList = () => resolve(envelope([message('late-alpha')])) })
     return envelope([message(path.includes('/groups/1') ? 'alpha' : 'beta', path.includes('/groups/1') ? 1 : 2)])
   }
-  if (path.endsWith('/messages/inbox')) return envelope([message('private', null)])
-  if (path.endsWith('/messages/sent')) return envelope([])
+  if (path.includes('/messages/inbox/page')) return envelope({results:{items:[message('private',null)],total:1},unread:1})
+  if (path.includes('/messages/sent/page')) return envelope({results:{items:[],total:0},unread:1})
   if (path.endsWith('/messages/private')) return envelope(message('private', null))
   if (path.endsWith('/messages') && init.method === 'POST') {
     sends.push({ path, body: init.body }); return new Promise(resolve => { deferredSend = () => { deferredSend = null; resolve(envelope(message('reply', null))) } })

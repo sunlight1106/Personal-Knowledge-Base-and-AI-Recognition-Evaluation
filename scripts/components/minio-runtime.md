@@ -70,21 +70,18 @@ image is therefore not necessary when the application uses that initialization
 path. Do not publish the MinIO ports externally without reviewing deployment
 security and the unsupported-upstream warning above.
 
-## Verification limit in the dot cloud sandbox
+## Corresponding source in image releases
 
-Compilation completed successfully and all downloaded Go modules verified.
-However, this environment denies netlink interface discovery. Unmodified MinIO
-enumerates interfaces in package initialization, before CLI arguments are read,
-and exits with `route ip+net: netlinkrib: operation not permitted`. Even
-`minio --version` hits this upstream initialization path. Explicit loopback
-addresses do not avoid that requirement.
+Each public image release includes `minio-sources.tar.gz`. It contains the pinned
+MinIO source tree, LICENSE, vendored Go module sources and `pkb-build.sh` showing
+the exact version, toolchain checksum and build flags. Extract it, install the
+Go toolchain version specified in that script, then build from the extracted
+source directory using the same `go build` flags with `-mod=vendor`. The vendor
+directory permits rebuilding dependencies without downloading them again.
 
-No sandbox restriction was weakened, no fake network-interface implementation
-was added, and a running MinIO service or successful S3 test must not be claimed
-until startup succeeds in a permitted execution environment. The Dockerfile is
-provided for an environment that supports standard container networking; no
-Docker command is available in this sandbox to build or test it.
+The image is an unmodified community build. Source packaging does not change the
+server binary. To produce the companion archive locally:
 
-The supported tool-level escalated retry was also attempted once and returned
-the identical netlink denial. Build and runtime evidence are recorded in the
-tooling directory's `provision-verification.log` and `runtime-check.json`.
+```sh
+docker buildx build -f scripts/components/Minio.Dockerfile --target source-export --output type=local,dest=./minio-source-release .
+```

@@ -14,14 +14,14 @@ import static org.mockito.Mockito.*;
 
 class NotificationControllerTest {
     private final CurrentUserService current = mock(CurrentUserService.class);
-    private final BackupStatusService backup = mock(BackupStatusService.class);
+    private final RuntimeHealthService health = mock(RuntimeHealthService.class);
     private final PersonalWorkflowService workflows = mock(PersonalWorkflowService.class);
     private final UserEntity user = mock(UserEntity.class);
     private final NotificationController controller = new NotificationController(current,
             mock(LiveUpdateService.class), mock(SocialService.class), mock(JdbcTemplate.class), mock(GroupConversationService.class));
 
     @BeforeEach void setUp() {
-        ReflectionTestUtils.setField(controller, "backupStatus", backup);
+        ReflectionTestUtils.setField(controller, "runtimeHealth", health);
         ReflectionTestUtils.setField(controller, "workflows", workflows);
         when(current.requireCurrent()).thenReturn(user);
         when(user.getId()).thenReturn(7L);
@@ -35,20 +35,20 @@ class NotificationControllerTest {
 
     @Test void backupWarningIsAnActionWithAWorkingDestination() {
         when(current.isSuperAdmin(user)).thenReturn(true);
-        when(backup.read()).thenReturn(Map.of("warning", "Synthetic overdue backup"));
+        when(health.snapshot()).thenReturn(new RuntimeHealthService.Snapshot(java.time.Instant.now(),0,0,0,0,100,100,0, List.of(new RuntimeHealthService.Alert("backup-warning","danger","备份需要处理","检查备份","/app/research?tab=trash"))));
         assertThat(items()).singleElement().satisfies(item -> {
-            assertThat(item.id()).isEqualTo("backup-warning");
+            assertThat(item.id()).isEqualTo("operation-backup-warning");
             assertThat(item.kind()).isEqualTo(NotificationController.Kind.ACTION);
             assertThat(item.url()).isEqualTo("/app/research?tab=trash");
             assertThat(item.popup()).isFalse();
         });
-        when(backup.read()).thenReturn(Map.of());
+        when(health.snapshot()).thenReturn(new RuntimeHealthService.Snapshot(java.time.Instant.now(),0,0,0,0,100,100,0,List.of()));
         assertThat(items()).isEmpty();
     }
 
     @Test void regularUsersDoNotReceivePlatformBackupWarnings() {
         assertThat(items()).isEmpty();
-        verifyNoInteractions(backup);
+        verifyNoInteractions(health);
     }
 
     @Test void reviewTasksAreKeptWithoutBecomingUnreadMessages() {

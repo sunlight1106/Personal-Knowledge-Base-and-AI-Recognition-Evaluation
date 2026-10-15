@@ -1,0 +1,113 @@
+name: Release images
+on:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-images
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            context: .
+            file: src/Dockerfile
+          - name: frontend
+            context: cle
+            file: cle/Dockerfile
+          - name: training
+            context: ai/training
+            file: ai/training/Dockerfile
+          - name: minio
+            context: .
+            file: scripts/components/Minio.Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: version
+        run: echo "tag=sha-$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          load: true
+          tags: pkb-${{ matrix.name }}:${{ steps.version.outputs.tag }}
+          cache-from: type=gha,scope=release-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.name }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Export image and checksum
+        env:
+          COMPONENT: ${{ matrix.name }}
+          VERSION: ${{ steps.version.outputs.tag }}
+        run: |
+          mkdir -p release
+          docker save "pkb-$COMPONENT:$VERSION" | gzip -1 > "release/$COMPONENT.tar.gz"
+          cd release
+          sha256sum "$COMPONENT.tar.gz" > "$COMPONENT.sha256"
+      - name: Export corresponding MinIO source and vendored dependencies
+        if: matrix.name == 'minio'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: scripts/components/Minio.Dockerfile
+          target: source-export
+          outputs: type=local,dest=release
+          cache-from: type=gha,scope=release-minio
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.name }}
+          path: release/*
+          retention-days: 3
+          compression-level: 0
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: release
+      - name: Publish complete immutable build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(git rev-parse HEAD)
+          TAG="sha-$SHA"
+          cat release/*.sha256 > release/SHA256SUMS
+          python scripts/release/source_manifest.py > release/SOURCE.json
+          cp docs/RELEASE_INSTALL.md release/INSTALL.md
+          cp scripts/components/minio-runtime.md release/MINIO-SOURCE.md
+          printf 'Prebuilt Linux amd64 images for commit %s. Installation and recovery steps are in INSTALL.md.\n' "$SHA" > release/NOTES.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = false ]; then
+              echo 'This immutable release already exists; leaving its assets unchanged.'
+              exit 0
+            fi
+          else
+            gh release create "$TAG" --draft --target "$SHA" --title "Build ${SHA:0:8}" --notes-file release/NOTES.md
+          fi
+          gh release upload "$TAG" release/*.tar.gz release/SHA256SUMS release/SOURCE.json release/INSTALL.md release/MINIO-SOURCE.md --clobber
+          gh release view "$TAG" --json assets --jq '.assets | map(select(.size > 0) | .name)' > release/uploaded.json
+          python -c 'import json; names=set(json.load(open("release/uploaded.json"))); expected={"backend.tar.gz","frontend.tar.gz","training.tar.gz","minio.tar.gz","minio-sources.tar.gz","SHA256SUMS","SOURCE.json","INSTALL.md","MINIO-SOURCE.md"}; assert expected <= names, "Release assets incomplete"'
+          gh release edit "$TAG" --draft=false --latest

@@ -20,6 +20,7 @@ const route = useRoute(), router = useRouter()
 const selectedIds = ref(new Set<string>()), page = ref(0), sort = ref('updated'), batchBusy = ref(false)
 const selectedNotes = computed(() => notes.value.filter(n => selectedIds.value.has(n.id)))
 const notes = ref<NoteSummaryView[]>([])
+const total = ref(0), facets = ref<{library:string;status:string;count:number}[]>([])
 const knownLibraries = ref<string[]>([...noteLibraries])
 const loading = ref(true), error = ref(''), keyword = ref('')
 const status = ref<NoteStatusCode | 'ALL'>('ALL')
@@ -32,32 +33,34 @@ const folded = ref(new Set<string>())
 const deleting = ref(new Set<string>())
 const arranged = computed(() => [...filteredNotes.value].sort((a,b) => sort.value === 'title' ? a.title.localeCompare(b.title,'zh-CN') : sort.value === 'oldest' ? Date.parse(a.updatedAt)-Date.parse(b.updatedAt) : Date.parse(b.updatedAt)-Date.parse(a.updatedAt)))
 const tree = computed(() => noteTree(arranged.value,folded.value,!!keyword.value))
-const treeRows = computed(() => tree.value.rows.slice(page.value*50,(page.value+1)*50))
-const pages = computed(() => Math.max(1,Math.ceil(tree.value.rows.length/50)))
+const treeRows = computed(() => tree.value.rows)
+const pages = computed(() => Math.max(1,Math.ceil(total.value/50)))
 function toggleSelected(id:string) { const next=new Set(selectedIds.value);if(next.has(id))next.delete(id);else if(next.size<50)next.add(id);else toastStore.error('一次最多选择 50 篇笔记');selectedIds.value=next }
 function selectPage(){selectedIds.value=new Set(treeRows.value.map(r=>r.note.id))}
 function clearSelection(){selectedIds.value=new Set()}
 function chooseTemplate(id:string,target:string){void router.push({name:'note-create',query:{library:library.value||target,template:id}})}
 async function organized(count:number){clearSelection();toastStore.success(`已整理 ${count} 篇笔记`);await load()}
-watch([status,library,sort],()=>{page.value=0;clearSelection()})
+watch([status,library,sort],()=>{page.value=0;clearSelection();void load()})
+watch(page,()=>{clearSelection();void load()})
 function togglePage(id: string) { const next = new Set(folded.value); next.has(id) ? next.delete(id) : next.add(id); folded.value = next }
 const hasChildren = (id: string) => tree.value.parents.has(id)
 const libraries = computed(() => [...new Set([...knownLibraries.value, ...(library.value ? [library.value] : [])])])
-const libraryCount = (name: string) => notes.value.filter(note => (note.library || '综合学习') === name).length
-const tabCount = (code: string) => libraryNotes.value.filter(note => code === 'ALL' || note.status.code === code).length
+const libraryCount = (name: string) => facets.value.filter(f => (f.library || '综合学习') === name).reduce((n,f)=>n+f.count,0)
+const tabCount = (code: string) => facets.value.filter(f=>(!library.value||f.library===library.value)&&(code==='ALL'||f.status===code)).reduce((n,f)=>n+f.count,0)
 let active = true, version = 0, timer: ReturnType<typeof setTimeout> | undefined
 async function load() {
   const current = ++version
   loading.value = true; error.value = ''
   try {
-    const result = await api.notes({ keyword: keyword.value.trim() || undefined })
+    const result = await api.notePage({keyword:keyword.value.trim(),status:status.value,library:library.value,sort:sort.value,page:String(page.value),size:'50'})
     if (!active || current !== version) return
-    notes.value = result; page.value = 0; clearSelection()
-    knownLibraries.value = [...new Set([...knownLibraries.value, ...result.map(note => note.library || '综合学习')])]
+    notes.value = result.results.items; total.value = result.results.total; facets.value = result.facets; clearSelection()
+    if(page.value>0&&page.value>=pages.value){page.value=pages.value-1;return}
+    knownLibraries.value = [...new Set([...knownLibraries.value, ...result.facets.map(note => note.library || '综合学习')])]
   } catch (reason) { if (active && current === version) { notes.value = []; clearSelection(); error.value = reason instanceof ApiClientError ? reason.message : '笔记加载失败' } }
   finally { if (active && current === version) loading.value = false }
 }
-watch(keyword, () => { version++; clearTimeout(timer); timer = setTimeout(load, 250) })
+watch(keyword, () => { version++; clearTimeout(timer); timer = setTimeout(()=>{if(page.value)page.value=0;else void load()}, 250) })
 watch(library, () => { status.value = 'ALL' })
 async function remove(note: NoteSummaryView) {
   if (deleting.value.has(note.id) || !active) return
@@ -84,7 +87,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
     <div class="learning-layout">
       <aside class="learning-sidebar">
         <p class="page-kicker learning-sidebar-title"><AppIcon name="book" :size="15" /> {{ uiText('我的学习库') }}</p>
-        <RouterLink :to="{ name: 'notes' }" :class="{ selected: !library }"><span>{{ uiText('全部笔记') }}</span><small>{{ notes.length }}</small></RouterLink>
+        <RouterLink :to="{ name: 'notes' }" :class="{ selected: !library }"><span>{{ uiText('全部笔记') }}</span><small>{{ facets.reduce((n,f)=>n+f.count,0) }}</small></RouterLink>
         <RouterLink v-for="name in libraries" :key="name" :to="{ name: 'notes', query: { library: name } }" :class="{ selected: library === name }"><span>{{ name }}</span><small>{{ libraryCount(name) }}</small></RouterLink>
         <p class="learning-aside-hint">{{ uiText('新建笔记时可输入新的学习库名称。保存后会自动加入此列表。') }}</p>
         <RouterLink v-if="library === '英语学习'" to="/app/vocabulary" class="learning-related"><span>{{ uiText('词汇复习') }}</span><span>↗</span></RouterLink>
@@ -107,13 +110,13 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
         <article v-for="row in treeRows" v-else :key="row.note.id" class="learning-note-row" :style="{ paddingLeft: `${row.depth * 22 + 8}px` }">
           <div><label v-if="canWrite" class="note-row-selection"><input type="checkbox" :checked="selectedIds.has(row.note.id)" :disabled="batchBusy" :aria-label="(uiText('选择 ') + (row.note.title))" @change="toggleSelected(row.note.id)" /></label><span class="learning-note-meta">{{ row.note.library || uiText('综合学习') }} <span> / </span> {{ uiText(row.note.status.label) }} <span> / </span> {{ row.note.contentFormat === 'HTML' ? 'HTML' : 'Markdown' }}</span>
             <h3><button v-if="hasChildren(row.note.id)" class="page-tree-toggle" :aria-expanded="!folded.has(row.note.id)" :aria-label="folded.has(row.note.id) ? uiText('展开子页面') : uiText('收起子页面')" @click="togglePage(row.note.id)">{{ folded.has(row.note.id) ? "▸" : "▾" }}</button><RouterLink :to="{ name: 'note-edit', params: { id: row.note.id } }">{{ row.note.title }}</RouterLink></h3>
-            <p>{{ row.note.excerpt || uiText('暂无正文') }}</p>
+            <RouterLink v-if="row.note.parentId&&!notes.some(n=>n.id===row.note.parentId)" :to="{name:'note-edit',params:{id:row.note.parentId}}" class="page-child-link">{{uiText('返回父页面')}}</RouterLink><p>{{ row.note.excerpt || uiText('暂无正文') }}</p>
             <div class="learning-note-tags"><button v-for="tag in row.note.tags" :key="tag" @click="keyword = tag">{{ tag }}</button></div>
           </div>
           <div class="learning-note-end"><RouterLink v-if="canWrite" :to="{ name: 'note-create', query: { library: row.note.library, parent: row.note.id } }" class="page-child-link">{{ uiText('＋ 子页面') }}</RouterLink><time>{{ new Date(row.note.updatedAt).toLocaleDateString(uiLocale()) }}</time><button v-if="canWrite" class="icon-button" :aria-label="(uiText('删除 ') + (row.note.title))" :disabled="deleting.has(row.note.id)" @click="remove(row.note)"><AppIcon name="trash" :size="15" /></button></div>
         </article>
-        <nav v-if="pages>1" class="note-pagination" :aria-label="uiText('笔记分页')"><button class="button button--ghost" :disabled="page===0||batchBusy" @click="page--">{{ uiText('上一页') }}</button><span>{{ page+1 }} / {{ pages }}</span><button class="button button--ghost" :disabled="page+1>=pages||batchBusy" @click="page++">{{ uiText('下一页') }}</button></nav>
-        <footer class="learning-list-footer">{{ keyword ? uiText('搜索结果') : uiText('当前列表') }} · {{ filteredNotes.length }} {{ uiText('篇笔记') }} <span>{{ uiText('Markdown / HTML 编写 · MD / PDF / Word / HTML / TXT 导出') }}</span></footer>
+        <nav v-if="pages>1" class="note-pagination" :aria-label="uiText('笔记分页')"><button class="button button--ghost" :disabled="page===0||batchBusy||loading" @click="page--">{{ uiText('上一页') }}</button><span>{{ page+1 }} / {{ pages }}</span><button class="button button--ghost" :disabled="page+1>=pages||batchBusy||loading" @click="page++">{{ uiText('下一页') }}</button></nav>
+        <footer class="learning-list-footer">{{ keyword ? uiText('搜索结果') : uiText('当前列表') }} · {{ total }} {{ uiText('篇笔记') }} <span>{{ uiText('Markdown / HTML 编写 · MD / PDF / Word / HTML / TXT 导出') }}</span></footer>
       </section>
     </div>
   </div>

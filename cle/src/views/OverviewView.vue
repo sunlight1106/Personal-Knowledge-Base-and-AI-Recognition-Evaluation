@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GettingStarted from '@/components/GettingStarted.vue'
 import { uiText } from '@/i18n'
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -76,6 +77,7 @@ const date = (value: string) => Number.isFinite(Date.parse(value)) ? new Intl.Da
     <nav v-if="actions.length" class="workspace-action-grid" :style="{ '--action-count': actions.length }" :aria-label="uiText('快速开始')">
       <RouterLink v-for="(item, index) in actions" :key="item.to" :to="item.to"><span class="workspace-action-top"><AppIcon :name="item.icon" :size="21" /><small>0{{ index + 1 }}</small></span><strong>{{ uiText(item.title) }}</strong><span>{{ uiText(item.detail) }}<AppIcon name="arrow" :size="16" /></span></RouterLink>
     </nav>
+    <GettingStarted />
     <TodayLearning />
     <div class="workspace-home-columns">
       <section class="workspace-notes" aria-labelledby="recent-notes-title">

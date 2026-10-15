@@ -16,6 +16,7 @@ const account = id => ({ id, displayName: 'Test', permissions: [...permissions] 
 const dashboard = { totalTasks: 4, completedTasks: 3, failedTasks: 1, recentTasks: [] }
 const learning = { books: [{ id: 'book', title: 'My words' }], settings: { selectedBookId: 'book' }, today: { learned: 2 }, dueTotal: 3, streak: 4 }
 const hit = { id: 'private-note', title: 'Continue this note', excerpt: 'Small steps', updatedAt: '2026-10-13T00:00:00Z' }
+window.fetch=async url=>new Response(JSON.stringify({success:true,data:String(url).includes('/workspace/getting-started')?[]:{dueWords:0,unfinishedWords:0,dueCards:0,notes:[]}}),{headers:{'Content-Type':'application/json'}})
 let app, searchCalls = 0, vocabularyCalls = 0, providerCalls = 0
 try {
   localStorage.setItem('pkb:navigation:801', JSON.stringify({ version: 1, pins: ['/app/admin', '/app/admin', 'https://untrusted.test', '/app/notes/secret/edit'], recent: ['/app/notes/secret/edit', '/app/vocabulary'] }))

@@ -207,6 +207,9 @@ export const api = {
     request<UserView>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<UserView>('/auth/me'),
   dashboard: (signal?: AbortSignal) => request<DashboardSummary>('/dashboard/summary', { signal }),
+  filePage: (params: Record<string,string>, signal?: AbortSignal) => request<{items:FileView[];total:number}>('/files/page?'+new URLSearchParams(params),{signal}),
+  notePage: (params: Record<string,string>, signal?: AbortSignal) => request<{results:{items:NoteSummaryView[];total:number};facets:{library:string;status:string;count:number}[]}>('/notes/page?'+new URLSearchParams(params),{signal}),
+  mailPage: (tab:'inbox'|'sent',page:number,signal?:AbortSignal) => request<{results:{items:MessageView[];total:number};unread:number}>(`/messages/${tab}/page?page=${page}`,{signal}),
   files: () => request<FileView[]>('/files'),
   upload: (file: File, signal?: AbortSignal) => {
     const body = new FormData()

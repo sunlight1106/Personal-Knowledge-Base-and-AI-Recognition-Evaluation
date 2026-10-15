@@ -366,4 +366,26 @@ class GroupCommunicationIntegrationTest {
     @TestConfiguration static class FastPasswords {
         @Bean @Primary PasswordEncoder groupTestEncoder() { return new BCryptPasswordEncoder(4); }
     }
+
+    @Autowired FileAssetRepository pageFiles;
+    @Autowired MessageRecipientRepository pageRecipients;
+    @Test void pagedMailCountsUnreadAndLoadsOnlyTheSelectedPage()throws Exception {
+        for(int n=0;n<61;n++){var message=messages.save(new MessageEntity(admin,"Page "+n,"x".repeat(1000)));pageRecipients.save(new MessageRecipientEntity(message,member));}
+        var page=data(mvc.perform(auth(get("/api/v1/messages/inbox/page?page=1"),memberToken)).andExpect(status().isOk()).andReturn());
+        assertThat(page.path("results").path("total").asInt()).isEqualTo(61);assertThat(page.path("results").path("items").size()).isEqualTo(30);assertThat(page.path("unread").asInt()).isEqualTo(61);
+        String id=page.path("results").path("items").get(0).path("id").asText();
+        assertThat(page.path("results").path("items").get(0).path("body").asText().length()).isEqualTo(240);
+        var detail=data(mvc.perform(auth(get("/api/v1/messages/"+id),memberToken)).andExpect(status().isOk()).andReturn());assertThat(detail.path("body").asText().length()).isEqualTo(1000);
+        assertThat(data(mvc.perform(auth(get("/api/v1/messages/inbox/page"),memberToken)).andExpect(status().isOk()).andReturn()).path("unread").asInt()).isEqualTo(60);
+        assertThat(data(mvc.perform(auth(get("/api/v1/messages/inbox/page"),outsiderToken)).andExpect(status().isOk()).andReturn()).path("results").path("total").asInt()).isZero();
+    }
+    @Test void pagedFilesApplyOwnerAndAttachmentExclusionsBeforeCounting()throws Exception {
+        String label="paged-"+UUID.randomUUID();
+        for(var person:List.of(member,outsider))pageFiles.save(new FileAssetEntity(label+".png",UUID.randomUUID()+".png","image/png",42,"a".repeat(64),"test/fixture",person,FileSource.UPLOAD,FileScanStatus.CLEAN,"synthetic"));
+        pageFiles.save(new FileAssetEntity(label+"-private.png",UUID.randomUUID()+".png","image/png",42,"b".repeat(64),"test/private",member,FileSource.MESSAGE_ATTACHMENT,FileScanStatus.CLEAN,"synthetic"));
+        assertThat(data(mvc.perform(auth(get("/api/v1/files/page").param("q",label),memberToken)).andExpect(status().isOk()).andReturn()).path("total").asInt()).isEqualTo(1);
+        assertThat(data(mvc.perform(auth(get("/api/v1/files/page").param("q",label),adminToken)).andExpect(status().isOk()).andReturn()).path("total").asInt()).isEqualTo(2);
+        mvc.perform(auth(get("/api/v1/files/page?source=MESSAGE_ATTACHMENT"),memberToken)).andExpect(status().isBadRequest());
+        mvc.perform(auth(get("/api/v1/files/page"),ownerToken)).andExpect(status().isForbidden());
+    }
 }

@@ -268,4 +268,17 @@ public class FileService {
     }
 
     private String stripExtension(String filename) { int dot = filename.lastIndexOf('.'); return dot > 0 ? filename.substring(0, dot) : filename; }
+
+
+    @Transactional(readOnly=true)
+    public com.robustvision.platform.dto.LibraryPage<ApiDtos.FileView> page(String query,String source,int page,int size) {
+        var paging=com.robustvision.platform.dto.LibraryPage.request(page,size);
+        var q=com.robustvision.platform.dto.LibraryPage.query(query);
+        if(!List.of("ALL","UPLOAD","ENHANCED").contains(source))throw new BusinessException(HttpStatus.BAD_REQUEST,"PAGE_INVALID","文件类型无效");
+        var user=currentUserService.requireCurrent();
+        var result=fileRepository.pageRows(user.getId(),currentUserService.hasPermission(user,"file:read:any"),q,
+            source.equals("ALL")?null:FileSource.valueOf(source),paging);
+        return new com.robustvision.platform.dto.LibraryPage<>(result.stream().map(this::toView).toList(),page,size,result.getTotalElements());
+    }
+
 }

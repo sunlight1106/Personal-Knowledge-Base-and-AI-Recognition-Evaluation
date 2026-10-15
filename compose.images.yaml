@@ -1,0 +1,12 @@
+# Used with compose.yaml; install.py verifies and imports these release images.
+services:
+  backend:
+    image: pkb-backend:${PKB_RELEASE_TAG:?Select a verified release}
+  model-worker:
+    image: pkb-backend:${PKB_RELEASE_TAG:?Select a verified release}
+  frontend:
+    image: pkb-frontend:${PKB_RELEASE_TAG:?Select a verified release}
+  training:
+    image: pkb-training:${PKB_RELEASE_TAG:?Select a verified release}
+  minio:
+    image: pkb-minio:${PKB_RELEASE_TAG:?Select a verified release}

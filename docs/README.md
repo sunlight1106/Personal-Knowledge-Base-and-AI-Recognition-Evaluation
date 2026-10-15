@@ -12,6 +12,7 @@
 | [词书与背单词](VOCABULARY.md) | 选词书、练搭配、听读、Skip、导入、去重和备份 |
 | [学习统计、文档与离线](LEARNING_STATISTICS.md) | 每日和累计记录、PDF / Word 导入、AI 复习卡、离线准备与同步 |
 | [学习安排与阅读摘录](STUDY_WORKFLOWS.md) | 时间计划、隔日练习、划词、扫描页识别、任务进度和自然语句检索 |
+| [搜索、任务与运行状态](DISCOVERY_AND_OPERATIONS.md) | 大量资料分页、本地关联搜索、新手引导和运行提醒 |
 | [学习中心与资料整理](LEARNING_WORKSPACE.md) | 搜索、收藏、复习卡、看板、月历和评测报告 |
 | [个人流程与笔记整理](PERSONAL_WORKFLOWS.md) | 学习计划、笔记批量操作、账户与群资料 |
 | [听写、笔记合并与附件](LEARNING_AND_GROUPS.md) | 使用听写、易混词、笔记合并和图片附件 |
@@ -37,6 +38,7 @@
 
 | 文档 | 解决什么问题 |
 | :--- | :--- |
+| [预构建安装与更新](RELEASE_INSTALL.md) | 下载已构建镜像、校验、升级前备份和失败恢复 |
 | [启动与耗时排查](STARTUP.md) | 日常启动、更新构建、启动失败和耗时检查 |
 | [完整备份与恢复](COMPOSE_BACKUP.md) | 备份整套数据，恢复或迁移部署 |
 | [公网部署](PUBLIC_DEPLOYMENT.md) | 准备服务器、域名、HTTPS 与多人访问 |

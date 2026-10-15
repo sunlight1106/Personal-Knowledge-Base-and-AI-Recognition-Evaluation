@@ -98,7 +98,7 @@ try {
   app.unmount()
 
   const note = { id: 'synthetic-note', title: 'Synthetic note', excerpt: 'Fixture', library: '综合学习', status: { code: 'DRAFT', label: '草稿' }, tags: [], updatedAt: '2026-10-10T00:00:00Z' }
-  api.notes = async () => [note]; workflowApi.due = async () => []
+  api.notePage = async () => ({results:{items:[note],total:1},facets:[{library:note.library,status:note.status.code,count:1}]}); workflowApi.due = async () => []
   let confirmations = 0, deletes = 0, notices = 0, removal = deferred()
   window.confirm = () => { confirmations++; return true }
   toastStore.success = () => { notices++ }; toastStore.error = () => {}
@@ -111,17 +111,17 @@ try {
   assert(fixture.querySelector('.learning-note-row'), 'Failed deletion leaves the note available for retry')
   removal = deferred(); deleteButton.click(); await nextTick(); app.unmount(); removal.resolve(); await nextTick(); await nextTick()
   assert(notices === 0, 'Deletion finishing after navigation cannot display a stale success or reload')
-  api.notes = async () => [note]
+  api.notePage = async () => ({results:{items:[note],total:1},facets:[{library:note.library,status:note.status.code,count:1}]})
   await mountRoute(NotesView); await wait(() => fixture.querySelector('.learning-note-row'))
-  api.notes = async () => { throw new ApiClientError('TEMPORARY', 'Search unavailable', 503) }
+  api.notePage = async () => { throw new ApiClientError('TEMPORARY', 'Search unavailable', 503) }
   await set(fixture.querySelector('[aria-label=搜索笔记]'), 'different-query'); await wait(() => fixture.textContent.includes('Search unavailable'))
   assert(!fixture.querySelector('.learning-note-row'), 'Failed search clears results from the previous query')
-  api.notes = async () => [note]; button('重试').click(); await wait(() => fixture.querySelector('.learning-note-row'))
+  api.notePage = async () => ({results:{items:[note],total:1},facets:[{library:note.library,status:note.status.code,count:1}]}); button('重试').click(); await wait(() => fixture.querySelector('.learning-note-row'))
   assert(fixture.querySelector('[aria-label=搜索笔记]').value === 'different-query', 'Retry keeps the search text')
   app.unmount()
 
   const contact = { id: 302, displayName: 'Synthetic admin', username: 'synthetic-admin', identityCode: 'PKB-SYNTHETIC', relationship: 'ADMIN' }
-  api.inbox = async () => []; api.sent = async () => []; api.messageDirectory = async () => [contact]
+  api.mailPage = async () => ({results:{items:[],total:0},unread:0}); api.messageDirectory = async () => [contact]
   let sends = 0, sendResult = deferred(), allowLeave = false
   api.sendMessage = () => { sends++; return sendResult.promise }
   window.confirm = () => allowLeave

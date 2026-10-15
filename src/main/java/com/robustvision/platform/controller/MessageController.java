@@ -44,4 +44,9 @@ public class MessageController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(item.fileName(), StandardCharsets.UTF_8).build().toString())
                 .body(item.resource());
     }
+
+
+    @GetMapping("/inbox/page") public ApiResponse<MessageService.MailPage> inboxPage(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="30") int size) {return ApiResponse.ok(service.page(false,page,size));}
+    @GetMapping("/sent/page") public ApiResponse<MessageService.MailPage> sentPage(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="30") int size) {return ApiResponse.ok(service.page(true,page,size));}
+
 }

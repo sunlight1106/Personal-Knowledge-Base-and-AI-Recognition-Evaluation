@@ -1,7 +1,8 @@
 FROM node:22-alpine AS build
 WORKDIR /workspace
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund --prefer-offline --fetch-retries=4
 COPY . .
 RUN npm run build
 

@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class WorkspaceJobController {
  private final WorkspaceJobService service;
  public WorkspaceJobController(WorkspaceJobService service){this.service=service;}
- @GetMapping public Object list(@RequestParam(defaultValue="0") int page){return ApiResponse.ok(service.list(page));}
+ @GetMapping public Object list(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="ALL") String status){return ApiResponse.ok(service.list(page,status));}
  @GetMapping("/{id}") public Object get(@PathVariable String id){return ApiResponse.ok(service.get(id));}
  @DeleteMapping("/{id}") public Object delete(@PathVariable String id){service.delete(id);return ApiResponse.ok(null);}
  @PostMapping("/{id}/{action}") public Object action(@PathVariable String id,@PathVariable String action){return ApiResponse.ok(service.action(id,action));}

@@ -15,6 +15,7 @@ const notes = [sample('english', '英语学习'), sample('computer', '计算机�
 const saves = [], exports = []
 window.fetch = async (url, init = {}) => {
   const path = String(url)
+  if(path.startsWith('/api/v1/notes/page?')){const q=new URL(path,'http://test').searchParams;const items=notes.filter(n=>(!q.get('library')||n.library===q.get('library'))&&(!q.get('status')||q.get('status')==='ALL'||n.status.code===q.get('status')));return envelope({results:{items,total:items.length},facets:notes.map(n=>({library:n.library,status:n.status.code,count:1}))})}
   if (path === '/api/v1/notes') return envelope(notes)
   if (path.endsWith('/shares')) return envelope([])
   if (path === '/api/v1/notes/english') {
@@ -45,7 +46,7 @@ try {
   assert(fixture.querySelectorAll('.learning-note-row').length === 1 && fixture.textContent.includes('Learning english'), 'English library has a separate filtered list')
   assert(fixture.querySelector('.learning-sidebar').textContent.includes('天文学'), 'Saved custom library is included in the index')
   assert([...fixture.querySelectorAll('a')].some(link => link.getAttribute('href') === '/app/vocabulary'), 'English notes link to vocabulary practice')
-  await router.push('/notes?library=计算机学习'); await nextTick()
+  await router.push('/notes?library=计算机学习'); await wait(()=>fixture.querySelector('.learning-note-row')?.textContent.includes('Learning computer'))
   assert(fixture.querySelector('.learning-note-row').textContent.includes('Learning computer'), 'Changing library updates the visible list')
   await router.push('/notes/english/edit')
   await wait(() => fixture.querySelector('textarea')?.value.includes('<h2>Reading') && !fixture.querySelector('textarea').disabled)

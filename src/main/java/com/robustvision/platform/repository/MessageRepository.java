@@ -47,4 +47,22 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
             from MessageEntity m where m.workspaceId = :workspaceId order by m.createdAt desc, m.id desc
             """)
     List<MessageRow> findGroupRows(@Param("workspaceId") Long workspaceId, org.springframework.data.domain.Pageable pageable);
+
+    @Query("""
+            select m.id as id, m.sender.id as senderId, m.sender.displayName as senderName,
+                   m.subject as subject, substring(m.body,1,240) as body, m.createdAt as createdAt,
+                   m.workspaceId as workspaceId, m.replyToId as replyToId
+            from MessageEntity m where m.sender.id = :userId and m.workspaceId is null
+            order by m.createdAt desc, m.id asc
+            """)
+    org.springframework.data.domain.Page<MessageRow> pageSent(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+
+    @Query("""
+            select m.id as id, m.sender.id as senderId, m.sender.displayName as senderName,
+                   m.subject as subject, substring(m.body,1,240) as body, m.createdAt as createdAt,
+                   m.workspaceId as workspaceId, m.replyToId as replyToId
+            from MessageRecipientEntity r join r.message m where r.recipient.id = :userId and m.workspaceId is null
+            order by m.createdAt desc, m.id asc
+            """)
+    org.springframework.data.domain.Page<MessageRow> pageInbox(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
 }

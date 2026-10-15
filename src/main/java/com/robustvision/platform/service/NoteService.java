@@ -266,4 +266,26 @@ public class NoteService {
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
+
+
+    public record NotePage(com.robustvision.platform.dto.LibraryPage<ApiDtos.NoteSummaryView> results,List<NoteFacet> facets) {}
+    public record NoteFacet(String library,String status,long count) {}
+    @Transactional(readOnly=true)
+    public NotePage page(String status,String keyword,String library,String order,int page,int size) {
+        com.robustvision.platform.dto.LibraryPage.request(page,size);
+        var q=com.robustvision.platform.dto.LibraryPage.query(keyword);
+        var lib=com.robustvision.platform.dto.LibraryPage.query(library);
+        if(!List.of("updated","oldest","title").contains(order))throw new BusinessException(HttpStatus.BAD_REQUEST,"PAGE_INVALID","排序无效");
+        var sort=order.equals("title")?org.springframework.data.domain.Sort.by("title").ascending():
+            org.springframework.data.domain.Sort.by(order.equals("oldest")?org.springframework.data.domain.Sort.Direction.ASC:org.springframework.data.domain.Sort.Direction.DESC,"updatedAt");
+        var owner=currentUserService.requireCurrent().getId();
+        var rows=noteRepository.pageRows(owner,status==null||status.isBlank()||status.equals("ALL")?null:parseStatus(status),lib,q,
+            org.springframework.data.domain.PageRequest.of(page,size,sort.and(org.springframework.data.domain.Sort.by("id"))));
+        Map<String,Integer> counts=new HashMap<>();
+        var ids=rows.stream().map(NoteRepository.ListRow::getId).toList();
+        if(!ids.isEmpty())for(var c:noteRepository.countSharesByNoteIds(ids))counts.put(c.getNoteId(),Math.toIntExact(c.getShareCount()));
+        return new NotePage(new com.robustvision.platform.dto.LibraryPage<>(rows.stream().map(n->toSummaryView(n,counts.getOrDefault(n.getId(),0))).toList(),page,size,rows.getTotalElements()),
+            noteRepository.facets(owner).stream().map(f->new NoteFacet(f.getLibrary(),f.getStatus().name(),f.getCount())).toList());
+    }
+
 }

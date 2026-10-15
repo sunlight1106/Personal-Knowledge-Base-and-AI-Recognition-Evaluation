@@ -193,4 +193,37 @@ class ResearchWorkspaceIntegrationTest {
         long count=jdbc.queryForObject("SELECT COUNT(*) FROM file_asset WHERE owner_id=?",Long.class,owner().getId());mvc.perform(multipart("/api/v1/research/documents").file(file).header("Authorization","Bearer "+token)).andExpect(status().isConflict());assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM file_asset WHERE owner_id=?",Long.class,owner().getId())).isEqualTo(count);
         ok(delete("/api/v1/research/documents/"+id),null);call(get("/api/v1/research/sources/DOCUMENT/"+part),token,null).andExpect(status().isNotFound());
     }
+
+    @Test void pagedNotesStayBoundedSortedFilteredAndPrivateAtScale()throws Exception {
+        var now=java.sql.Timestamp.from(java.time.Instant.now());long ownerId=owner().getId();List<Object[]> rows=new ArrayList<>();
+        for(int i=0;i<2000;i++)rows.add(new Object[]{UUID.randomUUID().toString(),ownerId,String.format("scale-%04d",i),"body "+i,"DRAFT",i%2==0?"English":"Computer","MARKDOWN",now,now});
+        jdbc.batchUpdate("INSERT INTO note(id,owner_id,title,body,status,library,content_format,created_at,updated_at,revision) VALUES (?,?,?,?,?,?,?,?,?,0)",rows);
+        var first=ok(get("/api/v1/notes/page?sort=title&size=50"),null).path("results");
+        var second=ok(get("/api/v1/notes/page?sort=title&size=50&page=1"),null).path("results");
+        assertThat(first.path("total").asInt()).isEqualTo(2000);assertThat(first.path("items").size()).isEqualTo(50);
+        Set<String> ids=new HashSet<>();first.path("items").forEach(n->ids.add(n.path("id").asText()));
+        second.path("items").forEach(n->assertThat(ids).doesNotContain(n.path("id").asText()));
+        assertThat(ok(get("/api/v1/notes/page?library=English"),null).path("results").path("total").asInt()).isEqualTo(1000);
+        assertThat(ok(get("/api/v1/notes/page?keyword=scale-1999"),null).path("results").path("total").asInt()).isEqualTo(1);
+        for(String actor:List.of(other,admin))assertThat(json.readTree(call(get("/api/v1/notes/page"),actor,null).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).path("data").path("results").path("total").asInt()).isZero();
+        call(get("/api/v1/notes/page?size=1000"),token,null).andExpect(status().isBadRequest());
+        call(get("/api/v1/notes/page?page=-1"),token,null).andExpect(status().isBadRequest());
+    }
+    @Test void semanticCandidatesAndGuideNeverIncludeAnotherUsersContent()throws Exception {
+        String id=ok(post("/api/v1/notes"),Map.of("title","Dropout","body","Neural network dropout reduces overfitting")).path("id").asText();
+        assertThat(ok(get("/api/v1/research/search?sort=semantic&type=NOTE&q=overfitting"),null).path("items").size()).isEqualTo(1);
+        for(String actor:List.of(other,admin))assertThat(json.readTree(call(get("/api/v1/research/search?sort=semantic&type=NOTE&q=overfitting"),actor,null).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).path("data").path("items").size()).isZero();
+        var guide=ok(get("/api/v1/workspace/getting-started"),null);assertThat(guide).anyMatch(step->step.path("id").asText().equals("note")&&step.path("completed").asBoolean());
+        ok(delete("/api/v1/notes/"+id),null);
+        assertThat(ok(get("/api/v1/research/search?sort=semantic&type=NOTE&q=overfitting"),null).path("items").size()).isZero();
+    }
+    @Test void operationsRequireSuperAdminAndTaskFiltersAreValidated()throws Exception {
+        call(get("/api/v1/operations"),token,null).andExpect(status().isForbidden());
+        call(get("/api/v1/operations"),admin,null).andExpect(status().isOk());
+        call(get("/api/v1/workspace-jobs?status=unknown"),token,null).andExpect(status().isBadRequest());
+        call(get("/api/v1/workspace-jobs?status=FAILED"),token,null).andExpect(status().isOk());
+        call(get("/api/v1/messages/inbox/page?size=51"),token,null).andExpect(status().isBadRequest());
+        assertThat(ok(get("/api/v1/messages/inbox/page"),null).path("results").path("items").size()).isZero();
+        mvc.perform(get("/api/v1/workspace/getting-started")).andExpect(status().isUnauthorized());
+    }
 }

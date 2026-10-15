@@ -9,7 +9,7 @@ import java.util.*;
 
 @RestController @RequestMapping("/api/v1/notifications") @PreAuthorize("isAuthenticated()")
 public class NotificationController {
-    @org.springframework.beans.factory.annotation.Autowired private com.robustvision.platform.service.BackupStatusService backupStatus;
+    @org.springframework.beans.factory.annotation.Autowired private RuntimeHealthService runtimeHealth;
     @org.springframework.beans.factory.annotation.Autowired private PersonalWorkflowService workflows;
     private final CurrentUserService current;private final LiveUpdateService live;private final SocialService social;private final JdbcTemplate jdbc;private final GroupConversationService groups;
     public NotificationController(CurrentUserService current,LiveUpdateService live,SocialService social,JdbcTemplate jdbc,GroupConversationService groups){this.current=current;this.live=live;this.social=social;this.jdbc=jdbc;this.groups=groups;}
@@ -44,7 +44,7 @@ public class NotificationController {
             if(total>30)items.add(new Item("mail-older","更早的未读站内信","/app/mail",total-30,"",false));
         }
         if(preferences.study()&&current.hasPermission(user,"note:read")){var due=workflows.due(owner);if(!due.isEmpty())items.add(new Item("note-reviews","笔记待复习","/app/notes",due.size(),"",false,Kind.ACTION));}
-        if(current.isSuperAdmin(user)){var backup=backupStatus.read();if(backup.containsKey("lastError")||backup.containsKey("warning"))items.add(new Item("backup-warning","备份需要处理","/app/research?tab=trash",1,"",false,Kind.ACTION));}
+        if(current.isSuperAdmin(user))for(var alert:runtimeHealth.snapshot().alerts())items.add(new Item("operation-"+alert.id(),alert.title(),alert.url(),1,"",false,Kind.ACTION));
         if(preferences.groups()&&current.hasPermission(user,"group:use")) {long invitations=jdbc.queryForObject("SELECT COUNT(*) FROM group_invitation WHERE target_id=? AND kind='INVITE' AND status='PENDING' AND expires_at>CURRENT_TIMESTAMP",Long.class,owner);if(invitations>0)items.add(new Item("group-invites","待确认的群组邀请","/app/groups",invitations,"group-invites",true,Kind.ACTION));}
         return ApiResponse.ok(items);
     }

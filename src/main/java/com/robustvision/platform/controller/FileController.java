@@ -65,5 +65,15 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(fileService.asResource(asset));
     }
-}
 
+
+    @GetMapping("/page") @PreAuthorize("hasAuthority('file:read') or hasAuthority('file:read:any')")
+    public ApiResponse<com.robustvision.platform.dto.LibraryPage<ApiDtos.FileView>> page(
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue="") String q,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue="ALL") String source,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue="0") int page,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue="24") int size) {
+        return ApiResponse.ok(fileService.page(q,source,page,size));
+    }
+
+}
