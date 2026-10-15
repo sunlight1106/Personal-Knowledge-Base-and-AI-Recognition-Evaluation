@@ -26,7 +26,14 @@ public class DocumentTextExtractor {
                 try(var pdf=Loader.loadPDF(bytes)){
                     if(pdf.isEncrypted()||!pdf.getCurrentAccessPermission().canExtractContent())throw invalid("文档已加密或不允许提取文字");
                     if(pdf.getNumberOfPages()>300)throw invalid("一次最多导入 300 页，请先拆分文档");
-                    PDFTextStripper reader=new PDFTextStripper();reader.setSortByPosition(true);int total=0;
+                    PDFTextStripper reader=new PDFTextStripper(){
+                        private int characters;
+                        @Override protected void processTextPosition(org.apache.pdfbox.text.TextPosition position){
+                            characters+=position.getUnicode().length();
+                            if(characters>MAX_CHARS)throw invalid("文字超过 50 万字，请先拆分文档");
+                            super.processTextPosition(position);
+                        }
+                    };reader.setSortByPosition(true);int total=0;
                     int scanned=0;
                     for(int page=1;page<=pdf.getNumberOfPages();page++){
                         final int percent=5+80*page/Math.max(1,pdf.getNumberOfPages());progress.accept(percent);
@@ -38,7 +45,20 @@ public class DocumentTextExtractor {
             }else if(lower.endsWith(".docx")){
                 byte[] xml=null;int expanded=0;
                 try(ZipInputStream zip=new ZipInputStream(new ByteArrayInputStream(bytes))){ZipEntry entry;int entries=0;
-                    while((entry=zip.getNextEntry())!=null){if(++entries>2000)throw invalid("文档包含过多内部文件");byte[] data=zip.readNBytes(20*1024*1024+1);expanded+=data.length;if(data.length>20*1024*1024||expanded>50*1024*1024)throw invalid("文档解压后过大");if(entry.getName().equals("word/document.xml"))xml=data;}
+                    byte[] buffer=new byte[8192];
+                    while((entry=zip.getNextEntry())!=null){
+                        if(++entries>2000)throw invalid("文档包含过多内部文件");
+                        boolean main=entry.getName().equals("word/document.xml");
+                        if(main&&xml!=null)throw invalid("文档包含重复的正文文件");
+                        ByteArrayOutputStream data=main?new ByteArrayOutputStream():null;int size=0,read;
+                        while((read=zip.read(buffer))!=-1){
+                            size+=read;expanded+=read;
+                            if(size>20*1024*1024||expanded>50*1024*1024)throw invalid("文档解压后过大");
+                            if(data!=null)data.write(buffer,0,read);
+                            if((size/8192)%64==0)progress.accept(10);
+                        }
+                        if(main)xml=data.toByteArray();progress.accept(15);
+                    }
                 }
                 if(xml==null)throw invalid("不是有效的 Word .docx 文档");
                 XMLInputFactory factory=XMLInputFactory.newFactory();factory.setProperty(XMLInputFactory.SUPPORT_DTD,false);factory.setProperty("javax.xml.stream.isSupportingExternalEntities",false);factory.setXMLResolver((publicId,systemId,base,namespace)->{throw new XMLStreamException("External entities disabled");});

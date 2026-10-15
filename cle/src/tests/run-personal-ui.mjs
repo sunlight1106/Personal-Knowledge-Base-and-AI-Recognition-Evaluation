@@ -16,7 +16,7 @@ const { JSDOM } = process.env.JSDOM_MODULE
   ? await import(pathToFileURL(process.env.JSDOM_MODULE).href)
   : await import('jsdom')
 const { window } = new JSDOM('', { url: 'http://synthetic.test/', pretendToBeVisual: true })
-for (const name of ['window','document','navigator','localStorage','history','location','File','FormData','Element','HTMLElement','HTMLInputElement','SVGElement','Node','Event','StorageEvent','CustomEvent','MutationObserver']) {
+for (const name of ['window','document','navigator','localStorage','history','location','File','FormData','Element','Document','ShadowRoot','HTMLElement','HTMLInputElement','SVGElement','Node','Event','StorageEvent','CustomEvent','MutationObserver']) {
   Object.defineProperty(globalThis, name, { value: name === 'window' ? window : window[name], configurable: true })
 }
 globalThis.fetch = (...args) => window.fetch(...args)

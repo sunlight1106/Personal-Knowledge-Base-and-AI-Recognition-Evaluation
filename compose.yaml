@@ -60,6 +60,10 @@ services:
       start_interval: 2s
 
   backend:
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: ${APP_MEMORY_LIMIT:-2g}
+    pids_limit: 512
     volumes: ["./.runtime/backups:/app/backup-status:ro"]
     image: robust-vision-backend:local
     build:
@@ -149,6 +153,10 @@ services:
         condition: service_started
 
   model-worker:
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: ${APP_MEMORY_LIMIT:-2g}
+    pids_limit: 512
     restart: unless-stopped
     image: robust-vision-backend:local
     healthcheck:

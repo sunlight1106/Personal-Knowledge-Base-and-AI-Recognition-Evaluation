@@ -17,7 +17,8 @@ public class LocalOcrService {
    check.run();temp=Files.createTempDirectory("pkb-ocr-");var box=document.getPage(page).getCropBox();
    double points=Math.max(1,(double)box.getWidth()*box.getHeight());float dpi=(float)Math.min(180,72*Math.sqrt(8_000_000/points));
    if(dpi<20)throw invalid("页面尺寸过大，请缩小后重试");
-   var image=new PDFRenderer(document).renderImageWithDPI(page,dpi,org.apache.pdfbox.rendering.ImageType.RGB);
+   var renderer=new PDFRenderer(document);renderer.setSubsamplingAllowed(true);
+   var image=renderer.renderImageWithDPI(page,dpi,org.apache.pdfbox.rendering.ImageType.RGB);
    Path png=temp.resolve("page.png"),text=temp.resolve("text.txt"),log=temp.resolve("error.log");ImageIO.write(image,"png",png.toFile());image.flush();
    process=new ProcessBuilder("tesseract",png.toString(),"stdout","-l","eng+chi_sim","--psm","3").redirectOutput(text.toFile()).redirectError(log.toFile()).start();
    long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(60);

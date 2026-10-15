@@ -1,5 +1,18 @@
 # Security boundaries and verification
 
+## 2026-10-15 更新
+
+- API 写入的 JSON 请求在解析前检查大小，包括分块发送的请求；笔记、词书和学习卡导入保留各自的上限。图片和文档使用独立的上传处理，不会再被 JSON 过滤器提前读取。
+- 笔记图片、文档、后台导入、站内信附件和词汇备份恢复共用上传频率限制；AI 流式回答和资料问答计入识别调用限制。不能通过更换入口获得新的额度。
+- 页面、静态资源和错误响应都带有浏览器安全策略。脚本只允许本站资源，禁止内联脚本和外部页面嵌入；链接不发送来源地址，API 响应禁止缓存。主题和动效需要的内联样式仍然允许。
+- Word 文档逐块解压，单个内部文件最多 20 MiB、全部内部文件累计最多 50 MiB；不把无关图片全部读进内存。PDF 在收集文字时检查 50 万字上限，扫描页启用图像降采样。
+- API 和后台 worker 以普通用户运行，移除 Linux capabilities、禁止提权，每个容器默认限制为 2 GiB 内存和 512 个进程/线程。大资料处理需要更多内存时，可在 `.env` 调整 `APP_MEMORY_LIMIT`，更新后重建容器。
+- 每次请求仍查询真实会话状态；只有最后活跃时间超过五分钟才写入更新。权限或会话撤销不依赖五分钟缓存。后台进度最多每秒写一次，租约清理每 30 秒检查一次。
+
+依赖基线更新为 Spring Boot 3.5.16、Springdoc 2.8.17 和 Vue 3.5.44，保留 Java 17。前端 CI 执行 `npm audit --audit-level=high`；结果反映查询时的已知告警，不代表全部代码和依赖没有风险。后端按实际使用的组件和兼容性测试升级。版本依据见 [Spring Boot 发布说明](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/) 和 [Vue 上游公告](https://github.com/vuejs/core/security/advisories/GHSA-g2v6-rqmx-r4w6)。
+
+浏览器头在各个 Nginx location 显式包含，避免缓存配置覆盖继承规则。CI 同时检查普通页面、缺失资源和上游失败的响应；规则依据见 [Nginx 文档](https://nginx.org/en/docs/http/ngx_http_headers_module.html) 和 [CSP 文档](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy)。
+
 The platform has account ownership checks, not a separately modeled multi-tenant database or a guarantee against every attack. Production TLS, proxy topology, backups, host hardening, upstream-provider security, and complete deployment penetration testing remain operator responsibilities.
 
 ## Notebook and shared knowledge

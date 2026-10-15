@@ -55,7 +55,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        String path = path(request);
         return !enabled || path.startsWith("/actuator/") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs");
     }
 
@@ -126,14 +126,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
         catch (Exception invalid) { throw new IllegalArgumentException("Invalid literal IP address"); }
     }
 
+    private String path(HttpServletRequest request) {
+        return request.getServletPath().isEmpty() ? request.getRequestURI() : request.getServletPath();
+    }
     private String category(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        String path = path(request);
         boolean mutation = !Set.of("GET", "HEAD", "OPTIONS").contains(request.getMethod());
         if (mutation && (path.contains("/auth/") || path.startsWith("/api/v1/account/"))) return "auth";
         if ("POST".equals(request.getMethod()) && (path.equals("/api/v1/inference/tasks")
                 || path.matches("/api/v1/inference/tasks/[^/]+/recover")
-                || path.equals("/api/v1/personal-ai/execute") || path.equals("/api/v1/personal-ai/recognition/execute"))) return "inference";
-        if ("POST".equals(request.getMethod()) && path.equals("/api/v1/files")) return "files";
+                || path.equals("/api/v1/personal-ai/execute") || path.equals("/api/v1/personal-ai/recognition/execute")
+                || path.equals("/api/v1/personal-ai/stream") || path.equals("/api/v1/research/answers/execute"))) return "inference";
+        if ("POST".equals(request.getMethod()) && (path.equals("/api/v1/files")
+                || path.equals("/api/v1/research/documents") || path.equals("/api/v1/workspace-jobs/documents")
+                || path.matches("/api/v1/notes/[^/]+/attachments")
+                || path.equals("/api/v1/messages") || path.matches("/api/v1/messages/groups/[0-9]+")
+                || path.equals("/api/v1/vocabulary/backup/restore"))) return "files";
         if ("POST".equals(request.getMethod()) && path.equals("/api/v1/social/contacts")) return "contacts";
         if ("POST".equals(request.getMethod()) && path.matches("/api/v1/social/contacts/[0-9]+/messages")) return "chat";
         return "general";

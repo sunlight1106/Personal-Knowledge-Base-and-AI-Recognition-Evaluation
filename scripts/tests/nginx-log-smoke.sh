@@ -3,8 +3,11 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 IMAGE=nginx:1.27-alpine
-docker run --rm --add-host backend:127.0.0.1 -v "$ROOT/cle/nginx.conf:/etc/nginx/conf.d/default.conf:ro" "$IMAGE" nginx -t
-container=$(docker run --rm -d --add-host backend:127.0.0.1 -p 127.0.0.1::80 -v "$ROOT/cle/nginx.conf:/etc/nginx/conf.d/default.conf:ro" "$IMAGE")
+headers="$ROOT/cle/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro"
+for config in cle/nginx.conf scripts/public/nginx.conf; do
+    docker run --rm --add-host backend:127.0.0.1 -v "$ROOT/$config:/etc/nginx/conf.d/default.conf:ro" -v "$headers" "$IMAGE" nginx -t
+done
+container=$(docker run --rm -d --add-host backend:127.0.0.1 -p 127.0.0.1::80 -v "$ROOT/cle/nginx.conf:/etc/nginx/conf.d/default.conf:ro" -v "$headers" "$IMAGE")
 cleanup() { docker rm -f "$container" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 binding=$(docker port "$container" 80/tcp)
@@ -18,4 +21,12 @@ if grep -q 'SYNTHETIC_PROXY_PRIVATE_TOKEN' <<<"$logs"; then
     exit 1
 fi
 grep -q '"GET" 502 ' <<<"$logs"
-echo 'PASS: Nginx syntax valid and failed upstream request logged without private path/query'
+for path in / /index.html /app/notes /assets/missing.js /api/v1/private; do
+    response=$(curl -sS -D - -o /dev/null "http://127.0.0.1:$port$path")
+    grep -qi "^Content-Security-Policy: .*script-src 'self'" <<<"$response"
+    grep -qi '^X-Content-Type-Options: nosniff' <<<"$response"
+    grep -qi '^X-Frame-Options: DENY' <<<"$response"
+    grep -qi '^Referrer-Policy: no-referrer' <<<"$response"
+done
+grep -qi '^Cache-Control: no-store' <<<"$response"
+echo 'PASS: privacy logs, security headers on pages/assets/errors, and private API cache policy'

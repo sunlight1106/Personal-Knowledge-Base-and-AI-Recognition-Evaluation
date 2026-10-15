@@ -17,6 +17,8 @@
 
 项目运行在你自己的电脑或服务器上。**普通笔记、背单词和交流不需要 AI 密钥；使用 Docker 部署，不需要另外安装 Java、Node.js 或 Maven。**
 
+上传有大小、频率和病毒扫描检查；个人资料按账号隔离。页面增加了脚本加载限制，后台任务也有资源上限。部署前可查看 [安全设置](docs/SECURITY.md) 和 [备份恢复](docs/COMPOSE_BACKUP.md)。
+
 <details>
 <summary><strong>看看界面</strong> · 首页与工作入口</summary>
 

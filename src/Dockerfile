@@ -2,9 +2,10 @@ FROM maven:3.9.9-eclipse-temurin-17 AS build
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
 COPY pom.xml .
+COPY .mvn/docker-settings.xml /root/.m2/settings.xml
 ARG MVN_OPTS=-B -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
 RUN --mount=type=cache,target=/root/.m2/repository \
-    mvn $MVN_OPTS -DskipTests dependency:go-offline
+    mvn $MVN_OPTS -DskipTests dependency:resolve
 COPY src/main ./src/main
 COPY src/test ./src/test
 COPY ai/src/main/java ./ai/src/main/java

@@ -1,5 +1,15 @@
 # Performance work and reproducible checks
 
+## 2026-10-15：减少重复写入与构建下载
+
+登录会话每次都读取当前状态，五分钟内的请求不再发送无效的活跃时间 UPDATE。任务进度合并为最多每秒一次数据库检查，OCR 仍可在等待过程中取消；取消完成时间还受当前 PDF 渲染步骤影响。过期租约每 30 秒检查一次，不再跟随每三秒的队列轮询重复扫描。
+
+V39 为任务列表的账号/时间排序和队列的状态/时间排序增加索引。Word 文档使用 8 KiB 缓冲区跳过无关资源，仅保留需要解析的正文 XML。
+
+Docker 构建只从 Maven Central 解析当前依赖，保留依赖缓存，不再预下载没有使用的全部 Maven 插件。第一次升级框架仍需下载新版本；这些改动不能用来承诺固定启动秒数。
+
+本次框架升级后的空闲样本：八路并发 48 次请求，全部成功，P50 95 ms、P95 137 ms、最慢 160 ms。升级刚完成、其他验收还在运行时，同样的样本为 161 / 235 / 266 ms。与下方旧版本测试的机器负载不一致，不能直接作为提速比例；会话和任务进度减少写入的行为另有单元测试验证。
+
 ## What changed
 
 - Dashboard: permission-scoped SQL aggregates plus a `LIMIT 5` latest-task fetch. Only five task JSON payload pairs are decoded instead of every historical result. One read-only transaction preserves a coherent database view; no cross-request summary or authorization cache is used.

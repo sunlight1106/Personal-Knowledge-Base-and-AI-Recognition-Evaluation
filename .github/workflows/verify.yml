@@ -27,10 +27,11 @@ jobs:
           cache: npm
           cache-dependency-path: cle/package-lock.json
       - run: npm ci --prefix cle
+      - run: npm audit --prefix cle --audit-level=high
       - run: npm run test:unit --prefix cle
       - run: npm run test:ui --prefix cle
       - run: npm run build --prefix cle
-      - name: Validate Nginx syntax and secret-free request logs
+      - name: Validate browser security headers and private request logs
         run: bash scripts/tests/nginx-log-smoke.sh
   backend:
     runs-on: ubuntu-latest

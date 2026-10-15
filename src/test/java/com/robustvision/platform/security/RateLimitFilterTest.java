@@ -63,4 +63,15 @@ class RateLimitFilterTest {
         assertThat(filter.sourceAddress(request("203.0.113.7", "198.51.100.1"))).isEqualTo("203.0.113.7");
         assertThat(filter.sourceAddress(request("10.0.0.2", "attacker.invalid"))).isEqualTo("10.0.0.2");
     }
+    @Test void documentAndNoteUploadsShareFileBudgetAcrossRoutesAndContextPaths() throws Exception {
+        var filter=filter("");
+        String[] paths={"/api/v1/files","/api/v1/notes/a/attachments","/api/v1/research/documents",
+                "/api/v1/workspace-jobs/documents","/api/v1/messages/groups/1"};
+        for(int i=0;i<11;i++){
+            var req=request("203.0.113.10",null);String path=paths[i%paths.length];
+            req.setRequestURI("/context"+path);req.setServletPath(path);
+            var res=new MockHttpServletResponse();filter.doFilter(req,res,(r,s)->{});
+            assertThat(res.getStatus()).isEqualTo(i<10?200:429);
+        }
+    }
 }

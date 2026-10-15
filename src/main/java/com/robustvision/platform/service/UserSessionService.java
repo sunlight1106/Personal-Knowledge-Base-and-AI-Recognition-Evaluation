@@ -32,7 +32,9 @@ public class UserSessionService {
         Instant now = Instant.now();
         var session = sessions.findActive(sessionId, username, now);
         if (session.isEmpty() || !session.get().getUser().hasActiveAccess(now)) return false;
-        sessions.touch(sessionId, now, now.minus(5, ChronoUnit.MINUTES));
+        Instant before = now.minus(5, ChronoUnit.MINUTES);
+        // Keep revocation/access checks live, but do not issue a no-op UPDATE on every request.
+        if (session.get().getLastSeenAt().isBefore(before)) sessions.touch(sessionId, now, before);
         return true;
     }
 
