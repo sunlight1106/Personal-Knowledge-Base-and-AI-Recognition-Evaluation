@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HelpHint from '@/components/HelpHint.vue'
 import { uiText } from '@/i18n'
 
 import { useRoute } from 'vue-router'
@@ -214,7 +215,7 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
 <template>
   <div class="page-stack vocabulary-page">
     <section class="page-intro page-intro--split">
-      <div><p class="page-kicker">WORDS, EVERY DAY</p><h2>{{ uiText('把单词，慢慢记住。') }}</h2><p>{{ uiText('用场景理解，用搭配串联，再遮住答案回忆。同一个词，在每本词书里接着学。') }}</p></div>
+      <div><p class="page-kicker">WORDS, EVERY DAY</p><h2>{{ uiText('把单词，慢慢记住。') }}<HelpHint label="词汇学习" text="先在「我的词书」选书，再到「今日学习」开始练习。同一个单词跨词书共享进度；熟词可 Skip，之后在单词本恢复。" /></h2><p>{{ uiText('用场景理解，用搭配串联，再遮住答案回忆。同一个词，在每本词书里接着学。') }}</p></div>
       <div class="vocab-toolbar"><button class="button button--light" :disabled="!!busy" @click="showBackup = !showBackup">{{ uiText('备份与恢复') }}</button><button class="button button--light" :disabled="!!busy" @click="showSettings = !showSettings"><AppIcon name="settings" :size="16" />{{ uiText('学习设置') }}</button></div>
     </section>
     <p v-if="error" role="alert" class="inline-alert inline-alert--error">{{ uiText(error) }} <button v-if="!dashboard" class="button button--light" @click="run('refresh', refresh)">{{ uiText('重新加载') }}</button><button v-else-if="question && !answer" class="button button--light" :disabled="!!busy" @click="next">{{ uiText('恢复当前题目') }}</button></p>
@@ -227,7 +228,7 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
         <form @submit.prevent="restoreBackup"><label>{{ uiText('选择备份文件') }}<input type="file" accept=".json,.gz,application/gzip,application/json" :disabled="!!busy" @change="selectBackup" /></label><label class="vocab-rights"><input v-model="restoreConfirmed" type="checkbox" :disabled="!!busy" />{{ uiText('我确认将此备份合并到当前账号；相同单词共享进度，不删除现有词书。') }}</label><button class="button button--light" :disabled="!!busy || !backupFile || !restoreConfirmed">{{ uiText('合并恢复') }}</button></form>
       </section>
       <dialog v-if="showSettings" ref="settingsDialog" class="vocab-settings vocab-settings-dialog" aria-labelledby="vocab-settings-title" @cancel.prevent="closeSettings">
-        <div><h3 id="vocab-settings-title">{{ uiText('你的学习节奏') }}</h3><p>{{ uiText('按所选时区的日历日期安排复习。学会的词从当地次日开始到期，不是固定等待 24 小时。') }}</p></div>
+        <div><h3 id="vocab-settings-title">{{ uiText('你的学习节奏') }}<HelpHint label="学习设置" text="第一次可以保留默认值。每日目标决定学习量；学习时区决定哪一天算作今天，目标记忆率越高通常需要越频繁地复习。" /></h3><p>{{ uiText('按所选时区的日历日期安排复习。学会的词从当地次日开始到期，不是固定等待 24 小时。') }}</p></div>
         <form @submit.prevent="saveSettings">
           <label>{{ uiText('每日初步掌握目标') }}<input v-model.number="settings.dailyGoal" class="field-input" type="number" min="1" max="100" required :disabled="!!busy" /></label>
           <label>{{ uiText('学习时区') }}<input v-model="settings.zoneId" class="field-input" list="vocab-timezones" placeholder="Asia/Shanghai" required maxlength="80" :disabled="!!busy" /><datalist id="vocab-timezones"><option v-for="zone in commonZones" :key="zone" :value="zone" /></datalist></label>
@@ -239,8 +240,8 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
       <nav class="vocab-tabs" :aria-label="uiText('背单词功能')"><button v-for="item in [{ id: 'study', text: '今日学习' }, { id: 'books', text: '我的词书' }, { id: 'words', text: '单词本' }, { id: 'stats', text: '学习记录' }]" :key="item.id" :class="{ active: tab === item.id }" :aria-current="tab === item.id ? 'page' : undefined" :disabled="!!busy" @click="selectTab(item.id as typeof tab)">{{ uiText(item.text) }}</button></nav>
       <div v-if="tab === 'study' || tab === 'stats'" class="vocab-overview">
       <section class="vocab-metrics" :aria-label="uiText('今日学习统计')">
-        <article class="panel"><span>{{ uiText('今日初步掌握') }}</span><strong>{{ dashboard.today.learned }}<small> / {{ dashboard.settings.dailyGoal }} {{ uiText('词') }}</small></strong><div class="vocab-progress"><i :style="{ width: `${goalProgress}%` }" /></div></article>
-        <article class="panel"><span>{{ uiText('等待复习') }}</span><strong>{{ dashboard.dueTotal }}<small> {{ uiText('词') }}</small></strong><small>{{ uiText('全部词书的到期单词') }}</small></article>
+        <article class="panel"><span>{{ uiText('今日初步掌握') }}<HelpHint label="今日初步掌握" text="新词累计答对 4 次后进入复习。这是学习进度，不代表永久记住；之后仍需按计划回忆。" /></span><strong>{{ dashboard.today.learned }}<small> / {{ dashboard.settings.dailyGoal }} {{ uiText('词') }}</small></strong><div class="vocab-progress"><i :style="{ width: `${goalProgress}%` }" /></div></article>
+        <article class="panel"><span>{{ uiText('等待复习') }}<HelpHint label="等待复习" text="统计所有词书里已到复习日期的单词。点击「到期复习」开始；今天没有到期词时，可以继续学新词。" /></span><strong>{{ dashboard.dueTotal }}<small> {{ uiText('词') }}</small></strong><small>{{ uiText('全部词书的到期单词') }}</small></article>
         <article class="panel"><span>{{ uiText('今日答题正确率') }}</span><strong>{{ accuracy }}<small> %</small></strong><small>{{ dashboard.today.correct }} / {{ dashboard.today.answers }} {{ uiText('次答对') }}</small></article>
         <article class="panel"><span>{{ uiText('连续学习') }}</span><strong>{{ dashboard.streak }}<small> {{ uiText('天') }}</small></strong><small>{{ uiText('完成任意一次答题即可记一天') }}</small></article>
       </section>

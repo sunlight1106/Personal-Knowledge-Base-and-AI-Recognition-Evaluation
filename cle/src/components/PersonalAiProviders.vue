@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HelpHint from '@/components/HelpHint.vue'
 import { uiText } from '@/i18n'
 
 import PersonalAiDiagnostics from './PersonalAiDiagnostics.vue'
@@ -84,22 +85,22 @@ onBeforeUnmount(() => { active = false; form.apiKey = '' })
 </script>
 <template>
   <article class="panel settings-card personal-ai-settings">
-    <header><div><h3>{{ uiText('个人 AI 服务') }}</h3><p>{{ uiText('使用你自己的 API 密钥。每个账户独立保存配置，费用由供应商向你的 API 账户结算。') }}</p></div><span class="settings-badge">{{ configuredCount }} {{ uiText('个已启用') }}</span></header>
+    <header><div><h3>{{ uiText('个人 AI 服务') }}<HelpHint label="个人 AI 服务" text="普通笔记和背单词不用配置 AI。需要 AI 帮助时，选择供应商并保存自己的模型、接口地址和密钥，再单独测试连接。" /></h3><p>{{ uiText('使用你自己的 API 密钥。每个账户独立保存配置，费用由供应商向你的 API 账户结算。') }}</p></div><span class="settings-badge">{{ configuredCount }} {{ uiText('个已启用') }}</span></header>
     <p class="settings-notice">{{ uiText('密钥仅用于你的请求，不会显示给其他用户。每次在笔记中调用模型前，你都可以审阅将发送的完整内容。平台余额与个人 AI 费用分开。') }}</p>
     <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }} <button v-if="!providers.length" class="table-action" @click="load">{{ uiText('重试') }}</button></p>
     <p v-if="loading" class="settings-empty" role="status">{{ uiText('正在加载供应商…') }}</p>
     <form v-else-if="providers.length" class="settings-form" autocomplete="off" @submit.prevent="save">
       <div class="settings-fields">
         <label class="field-label">{{ uiText('供应商') }}<select v-model="provider" class="field-input" :disabled="busy"><option v-for="item in providers" :key="item.provider" :value="item.provider">{{ uiText(item.displayName) }}</option></select></label>
-        <label class="field-label">{{ uiText('模型名称 / 模型 ID') }}<input v-model="form.model" class="field-input" maxlength="120" :placeholder="uiText('查询下方模型目录后选择，也可手动填写')" required :disabled="busy" :aria-invalid="!!modelError" aria-describedby="personal-ai-model-hint" /><small id="personal-ai-model-hint">{{ uiText('填写模型目录中的名称，不是密钥管理页的 ID，也不是你给密钥起的名字。') }}</small><small v-if="modelError" class="model-field-error" role="alert">{{ uiText(modelError) }}</small></label>
+        <div class="field-label"><span><label for="personal-ai-model">{{ uiText('模型名称 / 模型 ID') }}</label><HelpHint label="模型 ID" text="填写供应商模型目录里的名称，不是密钥的 ID 或备注。保存配置后，可在下方查询模型目录并选择。" /></span><input id="personal-ai-model" v-model="form.model" class="field-input" maxlength="120" :placeholder="uiText('查询下方模型目录后选择，也可手动填写')" required :disabled="busy" :aria-invalid="!!modelError" aria-describedby="personal-ai-model-hint" /><small id="personal-ai-model-hint">{{ uiText('填写模型目录中的名称，不是密钥管理页的 ID，也不是你给密钥起的名字。') }}</small><small v-if="modelError" class="model-field-error" role="alert">{{ uiText(modelError) }}</small></div>
       </div>
       <p v-if="selected && !selected.remoteEnabled" class="inline-alert">{{ uiText('此部署尚未开启外部模型调用。可以保存配置和预览内容；实际调用需部署管理员启用。') }}</p>
-      <label class="field-label">{{ uiText('API 端点') }}
-        <select v-if="selected?.baseUrls.length && !selected.customEndpointAllowed" v-model="form.baseUrl" class="field-input" :disabled="busy"><option v-for="url in selected.baseUrls" :key="url" :value="url">{{ uiText(endpointLabel(url)) }}</option></select>
-        <input v-else v-model="form.baseUrl" class="field-input" type="url" maxlength="300" :placeholder="uiText('https://…（必须在部署端允许列表中）')" :disabled="busy" required />
+      <div class="field-label"><span><label for="personal-ai-endpoint">{{ uiText('API 端点') }}</label><HelpHint label="API 端点" text="这是模型服务接收请求的地址，不是官网登录页。国内站、国际站可能使用不同地址；按创建密钥的平台选择。" /></span>
+        <select v-if="selected?.baseUrls.length && !selected.customEndpointAllowed" id="personal-ai-endpoint" v-model="form.baseUrl" class="field-input" :disabled="busy"><option v-for="url in selected.baseUrls" :key="url" :value="url">{{ uiText(endpointLabel(url)) }}</option></select>
+        <input v-else id="personal-ai-endpoint" v-model="form.baseUrl" class="field-input" type="url" maxlength="300" :placeholder="uiText('https://…（必须在部署端允许列表中）')" :disabled="busy" required />
         <small>{{ uiText('仅支持后端允许的 HTTPS 端点。模型名称与账户可用性以供应商为准；保存配置不会验证额度或发起模型调用。') }}</small>
         <small v-if="provider === 'MOONSHOT'">{{ uiText('请按创建密钥的平台选择：platform.moonshot.cn / platform.kimi.com 对应国内站；platform.moonshot.ai / platform.kimi.ai 对应国际站。Kimi Code 的密钥使用单独的接口。') }}</small>
-      </label>
+      </div>
       <label class="field-label">{{ existing?.configured ? uiText('更换 API 密钥（留空保留现有密钥）') : uiText('API 密钥') }}<input v-model="form.apiKey" type="password" class="field-input" autocomplete="new-password" name="personal-ai-key" maxlength="1000" :required="!existing?.configured" :disabled="busy" :placeholder="existing?.configured ? uiText('已配置 · 不回显密钥') : uiText('输入你自己的 API 密钥')" /></label>
       <label class="settings-check"><input v-model="form.enabled" type="checkbox" :disabled="busy" /> {{ uiText('启用此个人配置') }}</label>
       <p class="field-hint">{{ uiText('输入的密钥不会写入浏览器存储。保存尝试结束、切换供应商或关闭此页面后，输入框都会清空。') }}</p>

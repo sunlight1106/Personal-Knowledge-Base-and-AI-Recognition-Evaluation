@@ -116,6 +116,8 @@ try {
 
   app = createApp(PersonalAiSettings); app.mount(fixture)
   await wait(() => fixture.querySelector('input[type=password]'))
+  assert(fixture.querySelector('label[for="personal-ai-model"]').control === fixture.querySelector('#personal-ai-model'), 'Model field keeps its label beside contextual help')
+  assert(fixture.querySelector('label[for="personal-ai-endpoint"]').control === fixture.querySelector('select#personal-ai-endpoint'), 'Endpoint selector keeps its label beside contextual help')
   await setValue(fixture.querySelector('input[type=password]'),'SYNTHETIC-NOT-A-REAL-KEY')
   await setValue(fixture.querySelector('select'),'GEMINI')
   assert(fixture.querySelector('input[type=password]').value === '', 'Switching providers clears key input')

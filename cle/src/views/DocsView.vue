@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import HelpHint from '@/components/HelpHint.vue'
+import { firstSteps } from '@/lib/firstSteps'
 import LanguageToggle from '@/components/LanguageToggle.vue'
 import { uiText } from '@/i18n'
 
@@ -22,6 +24,7 @@ let copyTimer = 0
 let mounted = true
 
 const docLinks = [
+  { id: 'first-session', label: '第一次使用：跟着做', keywords: '新手 入门 开始 操作 步骤 beginner first steps help 问号 说明' },
   {id:'personal-workflows',label:'账号绑定、注销与学习计划',keywords:'注册 身份码 登录日志 邮箱 绑定 停用 注销 五秒 自动读 美音 英音 每周 计划 模板 批量 整理 复习 群资料 附件 日期筛选 通知'},
   { id:'learning-workspace',label:'学习中心与资料恢复',keywords:'搜索 Ctrl K 收藏 常用搜索 排序 回收站 历史版本 复习卡 资料表 看板 月历 备份 评测' },
   { id: 'quickstart', label: '快速开始', keywords: '登录 注册 first run' },
@@ -45,7 +48,7 @@ const docLinks = [
   { id: 'errors', label: '常见问题', keywords: '报错 失败 排查 error' },
 ]
 const docGroups = [
-  { label: '入门与部署', ids: ['quickstart', 'requirements', 'acceptance'] },
+  { label: '入门与部署', ids: ['quickstart', 'first-session', 'requirements', 'acceptance'] },
   { label: '个人 AI', ids: ['model-contract', 'ai-memory', 'first-request', 'quality-route'] },
   { label: '学习与笔记', ids: ['learning-workspace', 'knowledge-notes', 'code-notes', 'vocabulary'] },
   { label: '协作与账户', ids: ['online-platform', 'group-collaboration', 'account-switch', 'personal-workflows', 'permissions'] },
@@ -166,7 +169,27 @@ async function copyCode() {
   </header>
   <article role="main" :aria-label="uiText('个人知识库与 AI 识别评测使用指南')">
 
-        <DocRow id="quickstart" :title="uiText('使用指南')" intro><p>{{ uiText('从你现在想做的事情开始。') }}</p><p>{{ uiText('第一次使用？先') }}<RouterLink to="/register">{{ uiText('注册') }}</RouterLink>{{ uiText('或') }}<RouterLink to="/login">{{ uiText('登录') }}</RouterLink>{{ uiText('。普通笔记、词汇学习和 DEMO 实验不需要模型密钥。') }}</p><p>{{ uiText('登录后的工作台集中显示最近笔记和学习进度。在「目录与账户」点页面旁的 ＋ 固定常用入口，点 ✓ 取消，最多 5 个；「最近访问」可以清除。这些偏好按账号保存在当前浏览器，不会跨设备同步。') }}</p><template #detail><nav class="guide-start" :aria-label="uiText('选择操作')"><a href="#knowledge-notes"><span>01</span><strong>{{ uiText('记录与整理') }}</strong><small>{{ uiText('写笔记、导出文件') }}</small></a><a href="#quality-route"><span>02</span><strong>{{ uiText('识别与实验') }}</strong><small>{{ uiText('上传样本、查看结果') }}</small></a><a href="#vocabulary"><span>03</span><strong>{{ uiText('学习词汇') }}</strong><small>{{ uiText('选词书、练习与复习') }}</small></a></nav></template></DocRow>
+        <DocRow id="quickstart" :title="uiText('使用指南')" intro><p>{{ uiText('从你现在想做的事情开始。') }}</p><p><a class="beginner-entry" href="#first-session">{{ uiText('第一次使用？看分步指南 →') }}</a></p><p>{{ uiText('第一次使用？先') }}<RouterLink to="/register">{{ uiText('注册') }}</RouterLink>{{ uiText('或') }}<RouterLink to="/login">{{ uiText('登录') }}</RouterLink>{{ uiText('。普通笔记、词汇学习和 DEMO 实验不需要模型密钥。') }}</p><p>{{ uiText('登录后的工作台集中显示最近笔记和学习进度。在「目录与账户」点页面旁的 ＋ 固定常用入口，点 ✓ 取消，最多 5 个；「最近访问」可以清除。这些偏好按账号保存在当前浏览器，不会跨设备同步。') }}</p><template #detail><nav class="guide-start" :aria-label="uiText('选择操作')"><a href="#knowledge-notes"><span>01</span><strong>{{ uiText('记录与整理') }}</strong><small>{{ uiText('写笔记、导出文件') }}</small></a><a href="#quality-route"><span>02</span><strong>{{ uiText('识别与实验') }}</strong><small>{{ uiText('上传样本、查看结果') }}</small></a><a href="#vocabulary"><span>03</span><strong>{{ uiText('学习词汇') }}</strong><small>{{ uiText('选词书、练习与复习') }}</small></a></nav></template></DocRow>
+    <DocRow id="first-session" :title="uiText('第一次使用：跟着做')">
+      <p>{{ uiText('先完成一件小事，再慢慢熟悉其他功能。以下四项都不需要配置 AI。') }}</p>
+      <ol class="beginner-orientation">
+        <li>{{ uiText('登录后，右上角「目录与账户」可以找到有权限使用的页面。找不到入口时，也可以按 Ctrl K 搜索。') }}</li>
+        <li>{{ uiText('工作台的「从这里开始」提供快捷入口；展开「怎么操作」就能看到具体步骤。完成后点击「检查完成情况」。') }}</li>
+        <li>{{ uiText('标题旁的问号会解释这个功能。鼠标移上去，或按 Tab 聚焦问号即可查看；按 Esc 收起。') }}<HelpHint label="简易说明" text="这是一个说明按钮。它只展示帮助，不会改动数据或调用 AI；移开鼠标即可收起，也可以按 Esc。" /></li>
+      </ol>
+      <p class="guide-outcome">{{ uiText('看不到某个入口时，先确认登录的是哪个账号；不同账号的可用功能由管理员分配。不要反复刷新或重复注册。') }}</p>
+      <p><RouterLink to="/app/home">{{ uiText('回到工作台开始 →') }}</RouterLink></p>
+      <template #detail>
+        <div class="beginner-walkthrough">
+          <details v-for="(item, key, index) in firstSteps" :key="key" :open="index === 0">
+            <summary><span>{{ String(index + 1).padStart(2, '0') }}</span>{{ uiText(item.title) }}</summary>
+            <p>{{ uiText(item.purpose) }}</p><ol><li v-for="line in item.steps" :key="line">{{ uiText(line) }}</li></ol>
+            <p class="beginner-result"><strong>{{ uiText('完成后会看到') }}</strong>{{ uiText(item.outcome) }}</p>
+            <a :href="`#${item.help}`">{{ uiText('查看完整说明 →') }}</a>
+          </details>
+        </div>
+      </template>
+    </DocRow>
     <DocRow id="learning-workspace" :title="uiText('学习中心与资料恢复')"><p>{{ uiText('从「目录与账户 → 学习中心」进入，也可以按 Ctrl K 搜索资料。') }}</p><template #detail><ol><li>{{ uiText('输入关键词后搜索；多个词用空格分隔，所有词都会匹配。可选择「相关性优先」或「最近更新」，点击标题查看原文。') }}</li><li>{{ uiText('结果旁点「收藏」，以后在「我的收藏」打开。点「保存当前搜索」并填写名称，保存关键词和筛选条件；点击名称恢复，旁边的 × 删除。') }}</li><li>{{ uiText('Ctrl K 搜索框可用 ↑↓ 选择、Enter 打开、Esc 关闭。常用搜索也会显示在这里。勾选资料后，可在学习中心右侧提问并预览发送内容。') }}</li><li>{{ uiText('笔记编辑器可查看历史版本、对照恢复；删除的笔记先移入回收站，恢复后旧分享链接不会重新启用。') }}</li><li>{{ uiText('断网修改会按账号暂存在当前浏览器。重新联网打开笔记时选择「恢复草稿到编辑区」，再核对并保存。') }}</li><li>{{ uiText('笔记或搜索结果可制作复习卡，按回忆程度安排复习。资料表支持字段管理、表格、看板和月历，修改后点击保存。') }}</li><li>{{ uiText('模型评测导入同一批样本的标准答案和模型预测，计算并保存报告；它不会自动调用收费模型。') }}</li><li>{{ uiText('管理员可在回收站与备份页查看完整加密备份命令和最近成功记录。') }}</li></ol><RouterLink to="/app/research">{{ uiText('打开学习中心 →') }}</RouterLink></template></DocRow>
 <DocRow id="knowledge-notes" :title="uiText('学习库与在线笔记')"><p>{{ uiText('不用配置 AI，也能编辑、整理和导出笔记。') }}</p><template #detail><p>{{ uiText('冲突时点「对比并合并」，核对两份正文后保存；历史版本会标出新增和删除的区段。已保存的笔记可上传图片，或将图片粘贴到正文；「链接到本页」显示自己其他笔记的引用。') }}</p><div class="guide-instructions"><ol><li>{{ uiText('打开「我的笔记」，从左侧选择英语、计算机或其他学习库，点击「新建笔记」。') }}</li><li>{{ uiText('填写标题，选择 Markdown 或 HTML。左侧编写，右侧实时预览；也可插入学习模板。') }}</li><li>{{ uiText('点击「保存更改」，再选择 Markdown、PDF、Word、HTML 或 TXT 导出。刷新页面可检查保存结果。') }}</li></ol><RouterLink to="/app/notes/new">{{ uiText('新建笔记 →') }}</RouterLink></div><details class="guide-more"><summary>{{ uiText('更多说明与注意事项') }}</summary><div><p>{{ uiText('在') }}<RouterLink to="/app/notes">{{ uiText('笔记') }}</RouterLink>{{ uiText('中新建或打开文档，使用 Markdown / HTML 双栏编辑与预览；在') }}<RouterLink to="/app/knowledge">{{ uiText('知识库') }}</RouterLink>{{ uiText('中查看主题和知识卡。学习库可自由命名；保存第一篇笔记后新库出现在列表。旧笔记归入综合学习。笔记可导出 Markdown / PDF / Word / HTML / TXT，主动创建的只读分享可设置有效期并撤销；分享笔记不会自动开放底层文件或实验权限。') }}</p>
           <p>{{ uiText('HTML 用于内容排版，不执行脚本、不加载远程媒体。代码块仅展示示例；格式切换不转换源码。PDF / Word 保留常见结构，复杂 CSS 不会完整还原。知识卡中的「写成笔记 / 导出」会带入个人编辑器，保存后即可导出。') }}</p>
@@ -179,8 +202,8 @@ async function copyCode() {
           <div class="docs-callout docs-callout--warning"><AppIcon name="images" :size="20" /><div><strong>{{ uiText('真实视频调用暂未开放') }}</strong><p>{{ uiText('此入口只支持票据和车牌图片。DeepSeek 视觉兼容性尚未验证，当前拒绝该图片路径。下方 DEMO 视频流程仍可用于检查平台链路，不代表真实视频识别能力。') }}</p></div></div>
           <p>{{ uiText('识别输出是需人工核对的文本 / Markdown，不保证准确率、结构化字段或置信度。结果保存到本人账户，可点击「查看 / 刷新我的识别结果」，或在笔记选择器中插入。停止等待后仍可能完成保存，先刷新结果与使用记录，避免重复调用。') }}</p></div></details></template></DocRow>
 <DocRow id="vocabulary" :title="uiText('开始背单词')"><p>{{ uiText('先选一本词书，每次完成一个小目标。学习进度自动保存到当前账户。') }}</p><template #detail><p>{{ uiText('练习方式可以切换听音拼写、混合练习、易混词和分项释义。学习记录支持近 7、30、90 天，释义、听写、拼写与具体搭配分别记录；词汇备份也保留这些分项，重复恢复不会叠加次数。') }}</p><div class="guide-instructions"><ol><li>{{ uiText('打开「背单词」，确认学习时区和每日目标并保存。') }}</li><li>{{ uiText('选择词书，开始四选一练习。') }}</li><li>{{ uiText('单词累计答对 4 次后初步掌握，次日再复习。') }}</li></ol><RouterLink to="/app/vocabulary">{{ uiText('开始背单词 →') }}</RouterLink></div><details class="guide-more"><summary>{{ uiText('更多说明与注意事项') }}</summary><div><p>{{ uiText('打开') }}<RouterLink to="/app/vocabulary">{{ uiText('背单词') }}</RouterLink>{{ uiText('，先确认并保存学习时区（IANA）和每日目标，再选词书。现在有 17 本内置词书，涵盖考研、四六级、雅思、托福、GRE、中小学、学术、计算机与商务。新增词库包含 14,894 个不同单词；在「我的词书」按分类或关键词搜索，查看词量后选择。具体出版社与年份版本可自行私有导入。') }}</p>
-          <ol class="developer-flow"><li><span>01</span><div><strong>{{ uiText('四选一学习') }}</strong><p>{{ uiText('每个单词累计答对 4 次后标记「初步掌握」，答错不增加进度，也不清除已有正确次数。') }}</p></div></li><li><span>02</span><div><strong>{{ uiText('次日开始复习') }}</strong><p>{{ uiText('按已保存学习时区的下一个本地日历日期到期。后续答对间隔为 3、7、14、30、60 天；答错后次日重试。') }}</p></div></li><li><span>03</span><div><strong>{{ uiText('错词与收藏') }}</strong><p>{{ uiText('支持错词练习、星标、搜索、分页词表、学习目标、连续天数与 14 天记录。错词练习不增加学习次数或推进复习。') }}</p></div></li><li><span>04</span><div><strong>{{ uiText('导入自己的词书') }}</strong><p>{{ uiText('「我的词书 → 导入词书」接受 4–500 词的 JSON，每账户最多 20 本、文件最多 2 MiB。每词需 3–8 个明确错误释义，并由你确认内容使用权。') }}</p></div></li></ol>
-          <p>{{ uiText('导入词书和进度仅本人可见，管理员也不例外；更换词书保留进度。无需 AI 密钥。这里是独立学习功能，尚无真人录音、口语评分、离线同步或提醒，不承诺复刻其他应用或其专有复习算法。') }}</p></div></details></template></DocRow>
+          <ol class="developer-flow"><li><span>01</span><div><strong>{{ uiText('四选一学习') }}</strong><p>{{ uiText('每个单词累计答对 4 次后标记「初步掌握」，答错不增加进度，也不清除已有正确次数。') }}</p></div></li><li><span>02</span><div><strong>{{ uiText('次日开始复习') }}</strong><p>{{ uiText('按已保存学习时区的下一个本地日历日期到期。之后按回忆记录和目标记忆率动态安排复习，可在单词本查看实际到期日期。') }}</p></div></li><li><span>03</span><div><strong>{{ uiText('错词与收藏') }}</strong><p>{{ uiText('支持错词练习、星标、搜索、分页词表、学习目标、连续天数与 14 天记录。错词练习不增加学习次数或推进复习。') }}</p></div></li><li><span>04</span><div><strong>{{ uiText('导入自己的词书') }}</strong><p>{{ uiText('「我的词书 → 导入词书」接受 4–500 词的 JSON，每账户最多 20 本、文件最多 2 MiB。每词需 3–8 个明确错误释义，并由你确认内容使用权。') }}</p></div></li></ol>
+          <p>{{ uiText('导入词书和进度仅本人可见，管理员也不例外；更换词书保留进度。无需 AI 密钥。发音使用浏览器语音；学习中心可准备加密离线词汇包，联网后再合并进度。没有口语评分。') }}</p></div></details></template></DocRow>
 <DocRow id="model-contract" :title="uiText('配置自己的 AI')"><p>{{ uiText('只在需要模型整理文字或识别图片时设置。没有密钥不会影响普通笔记和背单词。') }}</p><template #detail><p>{{ uiText('保存个人配置后，可查询模型目录或测试当前模型。先看预览，再确认发送固定短句；不发送记忆、笔记和文件，供应商可能计费。没有开启远程调用时会明确提示。') }}</p><div class="guide-instructions"><ol><li>{{ uiText('打开「设置 → 个人 AI」，选择供应商。') }}</li><li>{{ uiText('填写供应商账户实际可用的模型 ID、API 地址和密钥。') }}</li><li>{{ uiText('启用并保存。返回笔记或实验台，刷新个人配置。') }}</li></ol><RouterLink to="/app/settings?section=ai">{{ uiText('打开个人 AI 设置 →') }}</RouterLink><p class="guide-outcome">{{ uiText('如果提示「此部署尚未开启外部模型调用」，需要部署者开启远程开关；再次保存密钥不能解决这个提示。') }}</p></div><details class="guide-more"><summary>{{ uiText('更多说明与注意事项') }}</summary><div><p>{{ uiText('在') }}<RouterLink to="/app/settings?section=ai">{{ uiText('个人 AI 设置') }}</RouterLink>{{ uiText('中，明确选择供应商、填写你账户可用的模型 ID、核对 API 地址，再输入自己的 API Key 并启用。不会自动替你选择模型；保存配置不代表已验证密钥、模型权限或计费状态。') }}</p>
           <p>{{ uiText('当前有 9 类适配器：OpenAI、Google Gemini、xAI / Grok、Anthropic Claude、DeepSeek、Moonshot / Kimi、Qwen、托管 Llama、自定义 OpenAI 兼容网关。实现了 OpenAI Chat、Anthropic Messages、Gemini generateContent 三类协议；验证使用模拟上游和合成数据，不代表真实账户均可用。') }}</p>
           <div class="docs-callout docs-callout--warning"><AppIcon name="shield" :size="20" /><div><strong>{{ uiText('保存个人配置不会打开部署开关') }}</strong><p><code>PERSONAL_AI_REMOTE_ENABLED=false</code> {{ uiText('是默认值。关闭时仍可保存配置、查看预览，不能执行远程调用。只有部署者准备好后才能启用该开关，并按正常运维流程重新创建后端容器；修改配置文件不会自动改变运行中的容器。') }}</p></div></div>

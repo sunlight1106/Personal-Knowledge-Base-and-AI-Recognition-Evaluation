@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HelpHint from '@/components/HelpHint.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import ReadingSelection from '@/components/ReadingSelection.vue'
@@ -546,7 +547,7 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
     <section class="page-intro page-intro--split">
       <div>
         <p class="page-kicker">NOTE EDITOR</p>
-        <h2>{{ isNew ? uiText('新建笔记') : uiText('编辑笔记') }}</h2>
+        <h2>{{ isNew ? uiText('新建笔记') : uiText('编辑笔记') }}<HelpHint label="笔记保存" text="填写标题和正文后，停止输入约 1.5 秒会自动保存。看到「已保存到服务器」再离开；保存失败时先保留或下载草稿。" /></h2>
         <p>{{ uiText('按学习库整理笔记。左侧编写 Markdown 或 HTML，右侧实时预览，支持代码块、表格和文档导出。') }}</p>
       </div>
       <div class="intro-actions note-editor-head">
@@ -688,7 +689,7 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
       <header class="panel-header">
         <div>
           <p class="page-kicker">SHARING</p>
-          <h3>{{ uiText('分享') }}</h3>
+          <h3>{{ uiText('分享') }}<HelpHint label="笔记分享" text="笔记默认仅自己可见。创建分享链接后，持有链接的人才能按分享设置阅读；不再分享时请撤销链接。" /></h3>
           <p>{{ uiText('生成平台内只读链接（需登录），可设有效期并随时撤销。') }}</p>
         </div>
         <span class="note-share-count">{{ shareCount }} {{ uiText('个链接') }}</span>

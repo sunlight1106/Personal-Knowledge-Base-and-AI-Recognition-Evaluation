@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HelpHint from '@/components/HelpHint.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -77,7 +78,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
 <template>
   <div class="page-stack learning-notes-page">
     <section class="page-intro page-intro--split">
-      <div><p class="page-kicker">KNOWLEDGE / NOTEBOOKS</p><h2>{{ library || uiText('我的学习库') }}</h2><p>{{ uiText('把理解写下来，把知识连接起来。笔记仅自己可见，主动分享后他人才能阅读。') }}</p></div>
+      <div><p class="page-kicker">KNOWLEDGE / NOTEBOOKS</p><h2>{{ library || uiText('我的学习库') }}<HelpHint label="学习库" text="学习库像文件夹，用来分类笔记。新建笔记时选择或输入库名，保存后就会出现在左侧；不会因此公开笔记。" /></h2><p>{{ uiText('把理解写下来，把知识连接起来。笔记仅自己可见，主动分享后他人才能阅读。') }}</p></div>
       <div class="intro-actions"><NoteTemplateGallery v-if="canWrite" @choose="chooseTemplate" />
         <RouterLink :to="{ name: 'knowledge' }" class="button button--ghost">{{ uiText('知识目录 ↗') }}</RouterLink>
         <RouterLink v-if="canWrite" :to="{ name: 'note-create', query: { library: library || '综合学习' } }" class="button button--dark"><AppIcon name="plus" :size="16" /> {{ uiText('新建笔记') }}</RouterLink>
