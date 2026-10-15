@@ -6,6 +6,7 @@ import AmbientWaves from '@/components/AmbientWaves.vue'
 import MotionToggle from '@/components/MotionToggle.vue'
 import CodeListing from '@/components/CodeListing.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import HomeWorkspacePreview from '@/components/HomeWorkspacePreview.vue'
 import { authStore } from '@/stores/auth'
 onMounted(() => { void authStore.ensureUser() })
 const enter = computed(() => authStore.state.user ? '/app/home' : '/login')
@@ -32,14 +33,7 @@ const chapters = [
           <p class="home-hero-footnote"><span>记录</span><i aria-hidden="true" /><span>学习</span><i aria-hidden="true" /><span>探索</span></p>
         </div>
         <div class="home-folio-wrap">
-          <nav class="home-folio" aria-label="工作目录">
-            <div class="home-folio-head"><span>THE WORKSPACE</span><span>01 — 03</span></div>
-            <p class="home-folio-title">你的下一页，<br />从这里开始。</p>
-            <RouterLink to="/app/notes"><span class="home-folio-number">01</span><div><strong>写下一个想法</strong><small>给零散的灵感，一个安放的地方。</small></div><AppIcon name="arrow" :size="18" /></RouterLink>
-            <RouterLink to="/app/vocabulary"><span class="home-folio-number">02</span><div><strong>学会一种表达</strong><small>从一个词，到自己的语言。</small></div><AppIcon name="arrow" :size="18" /></RouterLink>
-            <RouterLink to="/app/upload"><span class="home-folio-number">03</span><div><strong>开始一次探索</strong><small>借助 AI，理解眼前的图片与资料。</small></div><AppIcon name="arrow" :size="18" /></RouterLink>
-            <div class="home-folio-foot"><AppIcon name="book" :size="15" /><span>积累于日常，连接于思考。</span></div>
-          </nav>
+          <HomeWorkspacePreview />
           <span class="home-folio-caption" aria-hidden="true">A personal collection. Always growing.</span>
         </div>
       </section>

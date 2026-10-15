@@ -1,6 +1,9 @@
 /* Root palettes also reach teleported menus, dialogs and notification toasts.
    Preview cards use these same tokens; semantic error/success colors stay separate. */
 :root, .theme-preview {
+  --shadow-soft:0 2px 6px color-mix(in srgb,var(--ink) 3%,transparent),0 14px 38px color-mix(in srgb,var(--ink) 3%,transparent);
+  --shadow-raised:0 4px 12px color-mix(in srgb,var(--ink) 4%,transparent),0 24px 64px color-mix(in srgb,var(--ink) 7%,transparent);
+  --surface-sheen:linear-gradient(135deg,color-mix(in srgb,var(--paper) 88%,var(--green-soft)),var(--paper) 62%);
   --lime:var(--green-soft);
   --muted-light:var(--muted);
   --inverse-ink:#fbfaf7;

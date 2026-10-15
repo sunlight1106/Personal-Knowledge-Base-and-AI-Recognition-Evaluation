@@ -55,7 +55,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
     <header class="workspace-header">
       <nav class="workspace-breadcrumb" aria-label="当前位置"><RouterLink to="/" class="workspace-brand"><BrandMark /><span>个人知识库 <small>PERSONAL WORKSPACE</small></span></RouterLink><span>/</span><span>{{ title }}</span></nav>
       <nav class="workspace-quick" aria-label="常用页面">
-        <RouterLink v-for="item in quickItems" :key="item.to" :to="item.to">{{ item.label }}</RouterLink>
+        <RouterLink v-for="item in quickItems" :key="item.to" :to="item.to"><AppIcon :name="item.icon" :size="15" /><span>{{ item.label }}</span></RouterLink>
         <span v-if="!quickItems.length" class="workspace-quick-hint">在「目录与账户」中固定常用页面</span>
       </nav>
       <div class="workspace-tools"><WorkspaceTools v-if="authStore.state.user" :key="authStore.state.user.id" />

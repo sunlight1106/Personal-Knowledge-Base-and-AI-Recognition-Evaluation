@@ -1,25 +1,27 @@
 /* Authenticated pages share the same paper, spacing and interaction language. */
-.portal-app { --surface-shadow:0 5px 24px #203a2805; --surface-hover:0 8px 28px #203a280b; }
+.portal-app { --surface-shadow:var(--shadow-soft); --surface-hover:var(--shadow-raised); }
 .portal-app .app-content { position:relative;isolation:isolate; }
-.portal-app .app-content>.workspace-page-waves { top:28px;left:43%;right:40px;height:170px;bottom:auto;opacity:.16; }
-.portal-app .page-intro { padding:3px 0 24px;border-bottom:1px solid var(--line);gap:30px; }
-.portal-app .page-intro h2 { font-size:32px;font-weight:450;letter-spacing:-.035em;margin:10px 0 12px; }
+.portal-app .app-content>.workspace-page-waves { top:2px;left:55%;right:40px;height:150px;bottom:auto;opacity:.16; }
+.portal-app .page-intro { padding:2px 0 22px;border-bottom:1px solid var(--line);gap:30px; }
+.portal-app .page-intro h2 { font-size:32px;font-weight:500;letter-spacing:-.035em;margin:10px 0 12px; }
 .portal-app .page-intro p:last-child { max-width:700px;color:var(--muted);font-size:13px; }
 .portal-app .page-intro .page-kicker { display:flex;align-items:center;gap:12px; }
 .portal-app .page-intro .page-kicker::before { content:'';width:22px;height:1px;background:var(--green);flex:none; }
 .portal-app :is(.intro-actions,.vocab-toolbar) { flex-wrap:wrap;gap:9px; }
-.portal-app :is(.panel,.settings-card,.billing-card,.role-card,.download-card,.model-showcase-card) { background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--surface-shadow); }
+.portal-app :is(.panel,.settings-card,.billing-card,.role-card,.download-card,.model-showcase-card) { background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--surface-shadow); }
 .portal-app .panel-header { padding:22px 24px; }
-.portal-app .panel-header h3 { font-size:18px;font-weight:550; }
+.portal-app .panel-header h3 { font-size:18px;font-weight:500; }
 .portal-app .metric-grid { gap:14px;border:0; }
 .portal-app .metric-card { border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:22px; }
 .portal-app .metric-card:last-child { border-right:1px solid var(--line); }
 .portal-app .metric-value { font:36px/1.3 Georgia,serif;font-variant-numeric:tabular-nums; }
-.portal-app .data-table th { background:var(--code-paper);padding-block:14px; }
+.portal-app .data-table th { background:var(--code-paper);padding-block:14px;font-size:12px;font-weight:500;color:var(--muted); }
 .portal-app .data-table td { padding-block:16px; }
 .portal-app .filter-bar { gap:12px;padding:15px 20px;background:var(--paper);border:1px solid var(--line);border-radius:10px; }
 .portal-app .field-label { font-weight:500;color:var(--ink-soft); }
 .portal-app .field-input { font-weight:400; }
+.portal-app input[type=file]::file-selector-button { margin-right:12px;padding:7px 12px;border:1px solid var(--line);border-radius:6px;background:var(--green-soft);color:var(--green);font:inherit;font-size:12px;cursor:pointer; }
+.portal-app input[type=file]:disabled::file-selector-button { cursor:not-allowed;opacity:.6; }
 .portal-app .status-badge { border-radius:5px; }
 .portal-app .empty-state { padding:45px 24px; }
 .portal-app .empty-state>strong { font-size:19px;font-weight:500; }
@@ -29,10 +31,10 @@
 
 /* A notebook shelf, followed by an uninterrupted writing surface. */
 .portal-app .learning-layout { gap:28px;grid-template-columns:220px minmax(0,1fr); }
-.portal-app .learning-sidebar { padding:20px 12px;box-shadow:var(--surface-shadow); }
+.portal-app .learning-sidebar { padding:22px 14px;box-shadow:none;background:var(--code-paper);border-color:var(--line-soft); }
 .learning-sidebar-title { display:flex;gap:10px;align-items:center; }
 .portal-app .learning-sidebar>a small { font:11px ui-monospace,monospace;min-width:22px;text-align:center; }
-.portal-app .learning-list { min-width:0;padding:22px 26px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:var(--surface-shadow); }
+.portal-app .learning-list { min-width:0;padding:24px 28px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:var(--surface-shadow); }
 .portal-app .learning-toolbar { flex-wrap:wrap;gap:14px; }
 .portal-app .learning-toolbar nav { gap:6px; }
 .portal-app .learning-toolbar nav button { padding:8px 12px;border-radius:6px;transition:background-color .18s,color .18s; }
@@ -46,10 +48,10 @@
 .portal-app .learning-note-tags button { padding:3px 8px;border-radius:4px;background:var(--code-paper);font-size:11px; }
 .portal-app .learning-note-end { font-size:11px;gap:12px;padding-top:6px; }
 .portal-app .learning-list-footer { border-top:1px solid var(--line-soft);font-size:11px;flex-wrap:wrap; }
-.portal-app .note-editor-meta { padding:26px;gap:18px; }
+.portal-app .note-editor-meta { padding:28px;gap:18px; }
 .portal-app .note-title-input { border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:4px 0 18px;font-size:27px;font-weight:500; }
 .portal-app .note-editor-fields { gap:24px; }
-.portal-app .note-editor-layout { gap:22px; }
+.portal-app .note-editor-layout { gap:18px; }
 .portal-app .note-pane-head { padding:16px 22px;background:var(--code-paper);min-height:56px; }
 .portal-app .note-editor-textarea { padding:26px;line-height:2; }
 .portal-app .note-preview-pane .markdown-body { padding:26px; }
@@ -60,19 +62,19 @@
 .portal-app .markdown-body pre { border:1px solid var(--line-soft);border-radius:8px; }
 
 /* Study remains quiet while answering; the empty card carries the ambient water. */
-.portal-app .vocabulary-page .vocab-study-layout { grid-template-columns:280px minmax(0,1fr);gap:26px; }
-.portal-app .vocabulary-page .vocab-book-summary { padding:24px;border-radius:12px;background:var(--code-paper);border:1px solid var(--line);gap:14px; }
+.portal-app .vocabulary-page .vocab-study-layout { grid-template-columns:264px minmax(0,1fr);gap:24px; }
+.portal-app .vocabulary-page .vocab-book-summary { padding:24px;border-radius:14px;background:var(--surface-sheen);border:1px solid var(--line);gap:14px; }
 .portal-app .vocabulary-page .vocab-book-summary h3 { font-size:21px;font-weight:500;line-height:1.6; }
 .portal-app .vocabulary-page .vocab-book-summary>p:not(.page-kicker) { font-size:12px;line-height:1.9; }
 .portal-app .vocabulary-page .vocab-book-summary .field-input { font-size:12px;padding:10px; }
-.portal-app .vocabulary-page .vocab-study-card { position:relative;isolation:isolate;min-height:390px;padding:28px 34px;overflow:hidden;border:1px solid var(--line);border-radius:12px;box-shadow:var(--surface-shadow); }
+.portal-app .vocabulary-page .vocab-study-card { position:relative;isolation:isolate;min-height:406px;padding:32px 36px;overflow:hidden;border:1px solid var(--line);border-radius:14px;box-shadow:var(--surface-shadow); }
 .portal-app .vocabulary-page .vocab-study-card.is-studying { overflow:visible; }
 .portal-app .vocab-study-card>.vocab-welcome-waves { top:auto;height:160px;opacity:.2; }
 .portal-app .vocabulary-page .vocab-welcome { min-height:324px;max-width:460px;gap:17px;padding-bottom:15px; }
-.portal-app .vocabulary-page .vocab-welcome h3 { font-size:30px;font-weight:450;letter-spacing:-.025em; }
+.portal-app .vocabulary-page .vocab-welcome h3 { font-size:32px;font-weight:500;letter-spacing:-.025em; }
 .portal-app .vocabulary-page .vocab-welcome-icon { width:52px;height:52px;border-radius:13px;background:var(--green-soft);border:1px solid var(--line-soft); }
-.portal-app .vocabulary-page .vocab-tabs { gap:7px;padding-bottom:12px; }
-.portal-app .vocabulary-page .vocab-tabs button { border:1px solid transparent;border-radius:7px;padding:9px 18px;font-size:13px;transition:background-color .18s,color .18s; }
+.portal-app .vocabulary-page .vocab-tabs { gap:6px;padding:6px;width:fit-content;max-width:100%;border:1px solid var(--line);border-radius:11px;background:var(--code-paper); }
+.portal-app .vocabulary-page .vocab-tabs button { border:1px solid transparent;border-radius:7px;padding:9px 20px;font-size:13px;transition:background-color .18s,color .18s; }
 .portal-app .vocabulary-page .vocab-tabs button.active { background:var(--paper);border-color:var(--line);color:var(--green);box-shadow:0 2px 5px #203a2804; }
 .portal-app .vocabulary-page .vocab-tabs button:hover:not(:disabled) { background:var(--green-soft); }
 .portal-app .vocabulary-page .vocab-metrics article { box-shadow:none;border:0;border-right:1px solid var(--line-soft);border-radius:0; }
@@ -122,8 +124,8 @@
 
 /* Account, collaboration and management reuse the common surfaces. */
 .portal-app .personal-settings-layout { gap:28px;grid-template-columns:235px minmax(0,1fr); }
-.portal-app .settings-navigation { background:var(--paper);border:1px solid var(--line);border-radius:12px; }
-.portal-app .personal-settings .settings-card { padding:28px 32px; }
+.portal-app .settings-navigation { background:var(--code-paper);border:1px solid var(--line-soft);border-radius:14px; }
+.portal-app .personal-settings .settings-card { padding:30px 34px; }
 .portal-app .settings-navigation nav button { transition:background-color .18s,color .18s; }
 .portal-app .settings-card>header { border-bottom:1px solid var(--line-soft);padding-bottom:22px; }
 .portal-app .settings-form { gap:22px; }
@@ -131,7 +133,7 @@
 .portal-app .mail-list { background:var(--code-paper); }
 .portal-app .mail-list>header { padding:20px; }
 .portal-app .mail-reader { padding:30px; }
-.portal-app .app-content :is(.group-sidebar,.group-main,.research-card) { background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--surface-shadow); }
+.portal-app .app-content :is(.group-sidebar,.group-main,.research-card) { background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--surface-shadow); }
 .portal-app .groups-page .group-layout { gap:22px;border:0;grid-template-columns:245px minmax(0,1fr); }
 .portal-app .groups-page .group-sidebar { padding:22px 16px; }
 .portal-app .groups-page .group-sidebar>button { border-radius:6px; }
@@ -153,7 +155,7 @@
 .portal-app .experiment-page-intro .experiment-index { gap:9px;max-width:480px;justify-content:flex-end; }
 .portal-app .experiment-page-intro .experiment-index a { padding:6px 10px;border-radius:5px;background:var(--paper);border:1px solid var(--line);font-size:12px;line-height:1.7;text-decoration:none; }
 .portal-app .workspace-reader .reader-personal { max-width:1320px;width:calc(100% - 80px);padding:24px 0;border-bottom:0; }
-.portal-app .workspace-reader .dropzone { border-radius:9px;background:var(--canvas); }
+.portal-app .workspace-reader .dropzone { border-radius:12px;background:var(--surface-sheen); }
 .portal-app .model-showcase-card { padding:24px; }
 .portal-app .model-showcase-copy h3 { font-size:23px; }
 .portal-app .model-utility-card { background:var(--paper);border:1px solid var(--line);border-radius:12px; }
@@ -166,6 +168,42 @@
 .portal-app .admin-metrics { gap:14px;margin:0; }
 .portal-app .admin-metrics article { padding:22px 24px;border:1px solid var(--line);border-radius:10px;background:var(--paper); }
 .portal-app .admin-metrics strong { font:36px/1.4 Georgia,serif;font-variant-numeric:tabular-nums; }
+
+/* Shared reading rhythm also covers the newer learning and research pages. */
+.portal-app .app-content :is(.page-heading,.research-intro) { padding:2px 0 22px;border-bottom:1px solid var(--line);margin-bottom:24px; }
+.portal-app .app-content :is(.page-heading,.research-intro) h1 { margin:12px 0;font-size:32px;line-height:1.5;font-weight:500;letter-spacing:-.035em;color:var(--ink-strong); }
+.portal-app .app-content :is(.page-heading,.research-intro)>p:last-child { color:var(--muted);font-size:13px;line-height:1.9; }
+.portal-app .app-content :is(.daily-plan,.today-learning,.learning-statistics) { padding:28px;margin-block:24px;border:1px solid var(--line);border-radius:14px;background:var(--paper);box-shadow:var(--surface-shadow); }
+.portal-app .app-content :is(.daily-plan,.today-learning,.learning-statistics) h2 { font-size:22px;font-weight:500;letter-spacing:-.02em; }
+.portal-app .app-content .plan-steps a { background:var(--surface-sheen);border-radius:10px; }
+.portal-app .app-content .plan-steps a:hover { background:var(--hover-paper); }
+.portal-app .app-content .learning-totals { gap:12px; }
+.portal-app .app-content .learning-totals>div { padding:20px;background:var(--canvas);border:1px solid var(--line-soft);border-radius:9px; }
+.portal-app .app-content .learning-totals strong { font:32px/1.3 Georgia,serif;font-variant-numeric:tabular-nums;color:var(--green); }
+.portal-app .app-content .learning-series-tabs [aria-pressed=true] { background:var(--green-soft); }
+.portal-app .app-content .research-filters { padding:18px;background:var(--paper);border:1px solid var(--line);border-radius:12px; }
+.portal-app .app-content .search-result { padding:22px 18px;border:1px solid var(--line-soft);border-radius:10px;background:var(--paper);margin-bottom:12px; }
+.portal-app .app-content .search-result:hover { border-color:var(--line);background:var(--hover-paper); }
+.portal-app .app-content .data-table tbody tr:hover { background:color-mix(in srgb,var(--green-soft) 45%,var(--paper)); }
+.portal-app .app-content .data-table-wrap { border-radius:10px; }
+.portal-app .app-content .panel-header { border-bottom-color:var(--line-soft); }
+.portal-app .app-content :is(.learning-sidebar,.settings-navigation) nav button { border-radius:8px; }
+.portal-app .app-content :is(.settings-navigation nav button.active,.learning-sidebar>a.active) { box-shadow:inset 3px 0 var(--green); }
+.portal-app .app-content .theme-palette { padding:10px;border-radius:12px; }
+.portal-app .app-content .theme-preview { height:120px;border-radius:8px; }
+.portal-app .app-content .theme-palette[aria-pressed=true] { background:var(--green-soft); }
+.portal-app .app-content .mail-item { border-bottom-color:var(--line-soft); }
+.portal-app .app-content .mail-item:hover { background:var(--hover-paper); }
+.portal-app .app-content .modal-card { box-shadow:var(--shadow-raised); }
+.login-page .login-aside.research-login-note { margin:24px;border:1px solid var(--line);border-radius:20px;background:var(--surface-sheen);padding:12vh 9%;isolation:isolate; }
+.login-page .research-login-note::before { display:block;z-index:-1;width:420px;height:420px;right:-160px;bottom:-210px;border-color:var(--line);box-shadow:0 0 0 50px color-mix(in srgb,var(--green) 3%,transparent),0 0 0 100px color-mix(in srgb,var(--green) 2%,transparent); }
+.login-page .research-login-note h2 { font-size:clamp(30px,3vw,44px);font-weight:500;letter-spacing:-.035em; }
+.login-page .research-login-note ol { margin-block:36px; }
+.login-page .research-login-note li { padding:12px 0;border-top:1px solid var(--line); }
+.login-page .research-login-note a { text-decoration:none; }
+.login-page .login-form .button--dark { background:var(--green);border-color:var(--green);color:var(--on-dark);border-radius:9px;min-height:46px; }
+.login-page .login-form .button--dark:hover:not(:disabled) { background:var(--green);color:var(--on-dark);filter:brightness(.93); }
+.login-page .login-form .field-input { min-height:46px; }
 
 /* Finite entrance and hover feedback; typing and answer content never loop. */
 @keyframes workspace-settle { from { opacity:.65;translate:0 5px; } to { opacity:1;translate:0 0; } }
