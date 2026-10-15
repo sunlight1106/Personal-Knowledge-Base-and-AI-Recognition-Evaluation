@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { ref } from 'vue'
 
 withDefaults(defineProps<{
@@ -14,7 +16,7 @@ const position = ref(52)
 <template>
   <div class="comparison-slider" :style="{ '--position': `${position}%` }">
     <div v-if="!originalUrl" class="comparison-placeholder">
-      <span>选择一条已完成的优化实验</span>
+      <span>{{ uiText('选择一条已完成的优化实验') }}</span>
     </div>
     <template v-else>
       <img class="comparison-image comparison-image--original" :src="originalUrl" :alt="originalLabel" />
@@ -24,7 +26,7 @@ const position = ref(52)
       <span class="comparison-label comparison-label--left">{{ optimizedLabel }}</span>
       <span class="comparison-label comparison-label--right">{{ originalLabel }}</span>
       <div class="comparison-divider"><span>↔</span></div>
-      <input v-model="position" class="comparison-range" type="range" min="0" max="100" aria-label="拖动查看优化前后对比" />
+      <input v-model="position" class="comparison-range" type="range" min="0" max="100" :aria-label="uiText('拖动查看优化前后对比')" />
     </template>
   </div>
 </template>

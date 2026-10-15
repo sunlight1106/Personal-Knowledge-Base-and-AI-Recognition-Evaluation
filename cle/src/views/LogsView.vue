@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { api, ApiClientError } from '@/api/client'
@@ -45,7 +47,7 @@ async function refresh() {
 }
 async function recover(task: InferenceView) {
   if (recovering.value || loading.value || !canRecover(task)) return
-  if (!window.confirm('将这个等待中的 DEMO 实验重新入队？只恢复本人实验，沿用原任务与 trace_id。仅生成合成结果，不调用个人 AI。若 Worker 正在处理，将等待现有执行结束。')) return
+  if (!window.confirm(uiText('将这个等待中的 DEMO 实验重新入队？只恢复本人实验，沿用原任务与 trace_id。仅生成合成结果，不调用个人 AI。若 Worker 正在处理，将等待现有执行结束。'))) return
   const request = guard.start()
   recovering.value = task.id; recoveryNotice.value = ''; error.value = ''
   try {
@@ -78,23 +80,23 @@ async function exportLogs(format: 'pdf' | 'docx' | 'csv' | 'json') {
 
 <template>
   <div class="page-stack logs-page">
-    <section class="page-intro page-intro--split"><div><p class="page-kicker">OBSERVABILITY</p><h2>Logs</h2><p>按 trace_id 回看每次模型调用、适配器、状态、时延和 token 用量。</p></div><div v-if="canExport" class="export-actions"><button v-for="format in (['pdf', 'docx', 'csv', 'json'] as const)" :key="format" :disabled="!!exporting" @click="exportLogs(format)"><AppIcon name="download" :size="15" />{{ format.toUpperCase() }}</button></div></section>
-    <section class="log-stats"><button :class="{ active: status === 'ALL' }" @click="status = 'ALL'"><span>全部调用</span><strong>{{ counts.all }}</strong></button><button :class="{ active: status === 'COMPLETED' }" @click="status = 'COMPLETED'"><span>已完成</span><strong>{{ counts.completed }}</strong></button><button :class="{ active: status === 'RUNNING' }" @click="status = 'RUNNING'"><span>运行中</span><strong>{{ counts.running }}</strong></button><button :class="{ active: status === 'FAILED' }" @click="status = 'FAILED'"><span>失败</span><strong>{{ counts.failed }}</strong></button></section>
+    <section class="page-intro page-intro--split"><div><p class="page-kicker">OBSERVABILITY</p><h2>Logs</h2><p>{{ uiText('按 trace_id 回看每次模型调用、适配器、状态、时延和 token 用量。') }}</p></div><div v-if="canExport" class="export-actions"><button v-for="format in (['pdf', 'docx', 'csv', 'json'] as const)" :key="format" :disabled="!!exporting" @click="exportLogs(format)"><AppIcon name="download" :size="15" />{{ format.toUpperCase() }}</button></div></section>
+    <section class="log-stats"><button :class="{ active: status === 'ALL' }" @click="status = 'ALL'"><span>{{ uiText('全部调用') }}</span><strong>{{ counts.all }}</strong></button><button :class="{ active: status === 'COMPLETED' }" @click="status = 'COMPLETED'"><span>{{ uiText('已完成') }}</span><strong>{{ counts.completed }}</strong></button><button :class="{ active: status === 'RUNNING' }" @click="status = 'RUNNING'"><span>{{ uiText('运行中') }}</span><strong>{{ counts.running }}</strong></button><button :class="{ active: status === 'FAILED' }" @click="status = 'FAILED'"><span>{{ uiText('失败') }}</span><strong>{{ counts.failed }}</strong></button></section>
     <section class="panel log-panel">
-      <div class="log-toolbar"><label class="asset-search"><AppIcon name="search" :size="18" /><input v-model="query" type="search" placeholder="搜索 trace_id、文件或模型" /></label><span>{{ filtered.length }} entries</span><button type="button" class="button button--ghost" :disabled="loading || !!recovering" @click="refresh">刷新状态</button></div>
-      <p v-if="recoveryNotice" role="status" class="inline-alert">{{ recoveryNotice }}</p>
+      <div class="log-toolbar"><label class="asset-search"><AppIcon name="search" :size="18" /><input v-model="query" type="search" :placeholder="uiText('搜索 trace_id、文件或模型')" /></label><span>{{ filtered.length }} entries</span><button type="button" class="button button--ghost" :disabled="loading || !!recovering" @click="refresh">{{ uiText('刷新状态') }}</button></div>
+      <p v-if="recoveryNotice" role="status" class="inline-alert">{{ uiText(recoveryNotice) }}</p>
       <div v-if="loading" class="table-skeleton" />
-      <div v-else-if="error" class="inline-alert inline-alert--error">{{ error }}</div>
-      <EmptyState v-else-if="!filtered.length" title="没有匹配日志" description="模型调用后，完整追踪记录会显示在这里。" icon="logs" />
+      <div v-else-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</div>
+      <EmptyState v-else-if="!filtered.length" :title="uiText('没有匹配日志')" :description="uiText('模型调用后，完整追踪记录会显示在这里。')" icon="logs" />
       <div v-else class="log-list">
         <article v-for="task in filtered" :key="task.id" :class="{ expanded: expanded === task.id }">
           <button class="log-row" @click="expanded = expanded === task.id ? '' : task.id">
-            <StatusBadge :status="task.status" /><code>{{ task.traceId.slice(0, 12) }}</code><span><strong>{{ task.taskType === 'LICENSE_PLATE' ? '车牌分析' : '票据分析' }}</strong><small>{{ task.inputFile.originalName }}</small></span><span><small>MODEL</small>{{ task.model.name }}</span><span><small>LATENCY</small>{{ task.optimizedLatencyMs ?? task.baselineLatencyMs ?? '—' }} ms</span><time>{{ formatDate(task.createdAt) }}</time><AppIcon name="chevron" :size="17" />
+            <StatusBadge :status="task.status" /><code>{{ task.traceId.slice(0, 12) }}</code><span><strong>{{ task.taskType === 'LICENSE_PLATE' ? uiText('车牌分析') : uiText('票据分析') }}</strong><small>{{ task.inputFile.originalName }}</small></span><span><small>MODEL</small>{{ task.model.name }}</span><span><small>LATENCY</small>{{ task.optimizedLatencyMs ?? task.baselineLatencyMs ?? '—' }} ms</span><time>{{ formatDate(task.createdAt) }}</time><AppIcon name="chevron" :size="17" />
           </button>
           <div v-if="expanded === task.id" class="log-detail">
             <div><small>Adapter</small><code>{{ adapter(task) }}</code></div><div><small>Prompt tokens</small><strong>{{ usage(task)?.prompt_tokens ?? '—' }}</strong></div><div><small>Completion tokens</small><strong>{{ usage(task)?.completion_tokens ?? '—' }}</strong></div><div><small>Requested by</small><strong>{{ task.requestedBy }}</strong></div>
-            <p v-if="task.errorMessage">{{ task.errorMessage }}</p><RouterLink :to="`/app/comparisons?task=${task.id}`">查看完整分析 <AppIcon name="arrow" :size="15" /></RouterLink>
-            <div v-if="canRecover(task)" class="log-recovery"><p>长期等待或 Worker 中断后，可将本人 DEMO 实验重新入队。请先刷新确认状态。</p><button type="button" class="button button--ghost" :disabled="!!recovering || loading" @click="recover(task)">{{ recovering === task.id ? '正在恢复…' : '重新入队 DEMO 实验' }}</button></div>
+            <p v-if="task.errorMessage">{{ task.errorMessage }}</p><RouterLink :to="`/app/comparisons?task=${task.id}`">{{ uiText('查看完整分析') }} <AppIcon name="arrow" :size="15" /></RouterLink>
+            <div v-if="canRecover(task)" class="log-recovery"><p>{{ uiText('长期等待或 Worker 中断后，可将本人 DEMO 实验重新入队。请先刷新确认状态。') }}</p><button type="button" class="button button--ghost" :disabled="!!recovering || loading" @click="recover(task)">{{ recovering === task.id ? uiText('正在恢复…') : uiText('重新入队 DEMO 实验') }}</button></div>
           </div>
         </article>
       </div>

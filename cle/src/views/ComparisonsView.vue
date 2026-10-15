@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, ApiClientError } from '@/api/client'
@@ -108,17 +110,17 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('zh-CN', {
 <template>
   <div class="page-stack">
     <section class="page-intro page-intro--split">
-      <div><p class="page-kicker">结果分析</p><h2>优化前后对比</h2><p>同一输入、同一模型版本下查看识别结果、置信度收益与时延代价。</p></div>
+      <div><p class="page-kicker">{{ uiText('结果分析') }}</p><h2>{{ uiText('优化前后对比') }}</h2><p>{{ uiText('同一输入、同一模型版本下查看识别结果、置信度收益与时延代价。') }}</p></div>
       <div v-if="tasks.length" class="comparison-picker">
-        <label>选择实验</label>
+        <label>{{ uiText('选择实验') }}</label>
         <select v-model="selectedId" class="field-input"><option v-for="task in tasks" :key="task.id" :value="task.id">{{ label(task) }}</option></select>
       </div>
     </section>
 
     <div v-if="loading" class="large-skeleton" />
-    <div v-else-if="error && !selected" class="inline-alert inline-alert--error">{{ error }}</div>
-    <EmptyState v-else-if="!selected" title="还没有可对比的实验" description="先上传图片，并启用质量感知优化运行一次实验。" icon="compare">
-      <RouterLink to="/app/upload" class="button button--dark button--small">新建实验</RouterLink>
+    <div v-else-if="error && !selected" class="inline-alert inline-alert--error">{{ uiText(error) }}</div>
+    <EmptyState v-else-if="!selected" :title="uiText('还没有可对比的实验')" :description="uiText('先上传图片，并启用质量感知优化运行一次实验。')" icon="compare">
+      <RouterLink to="/app/upload" class="button button--dark button--small">{{ uiText('新建实验') }}</RouterLink>
     </EmptyState>
 
     <template v-else>
@@ -126,48 +128,48 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('zh-CN', {
         <div><span class="file-avatar"><AppIcon :name="selected.taskType === 'VIDEO_ANALYSIS' ? 'video' : selected.taskType === 'LICENSE_PLATE' ? 'model' : 'docs'" :size="18" /></span><div><strong>{{ label(selected) }}</strong><small>{{ selected.model.name }} · v{{ selected.model.version }}</small></div></div>
         <StatusBadge :status="selected.status" />
         <div class="trace-display"><span>TRACE ID</span><code>{{ selected.traceId }}</code></div>
-        <button v-if="authStore.has('report:download')" class="button button--ghost button--small" @click="downloadReport"><AppIcon name="download" :size="16" /> 下载报告</button>
+        <button v-if="authStore.has('report:download')" class="button button--ghost button--small" @click="downloadReport"><AppIcon name="download" :size="16" /> {{ uiText('下载报告') }}</button>
       </section>
 
       <section class="comparison-workspace">
         <div class="panel image-comparison-panel">
-          <div class="panel-header"><div><h3>{{ isVideo ? '视频与音轨对照' : '可视化差异' }}</h3><p>{{ isVideo ? '左侧原始视频，右侧为音轨降噪与响度归一化版本' : '拖动中间分隔线查看处理前后' }}</p></div><span class="comparison-help">{{ isVideo ? '同模型 · 双路' : '拖动 ↔' }}</span></div>
-          <div v-if="isVideo" class="video-comparison"><figure><video :src="originalUrl" controls playsinline /><figcaption>BASELINE · 原始音轨</figcaption></figure><figure><video :src="optimizedUrl || originalUrl" controls playsinline /><figcaption>OPTIMIZED · 降噪与响度归一化</figcaption></figure></div>
+          <div class="panel-header"><div><h3>{{ isVideo ? uiText('视频与音轨对照') : uiText('可视化差异') }}</h3><p>{{ isVideo ? uiText('左侧原始视频，右侧为音轨降噪与响度归一化版本') : uiText('拖动中间分隔线查看处理前后') }}</p></div><span class="comparison-help">{{ isVideo ? uiText('同模型 · 双路') : uiText('拖动 ↔') }}</span></div>
+          <div v-if="isVideo" class="video-comparison"><figure><video :src="originalUrl" controls playsinline /><figcaption>{{ uiText('BASELINE · 原始音轨') }}</figcaption></figure><figure><video :src="optimizedUrl || originalUrl" controls playsinline /><figcaption>{{ uiText('OPTIMIZED · 降噪与响度归一化') }}</figcaption></figure></div>
           <ComparisonSlider v-else :original-url="originalUrl" :optimized-url="optimizedUrl" />
         </div>
 
         <aside class="comparison-metrics">
           <article class="panel result-card">
-            <div class="result-card-heading"><span class="result-label">基线结果</span><small>无优化策略</small></div>
+            <div class="result-card-heading"><span class="result-label">{{ uiText('基线结果') }}</span><small>{{ uiText('无优化策略') }}</small></div>
             <strong class="prediction-text">{{ prediction(selected, false)?.text || '—' }}</strong>
             <div class="confidence-bar"><i :style="{ width: `${(selected.baselineConfidence || 0) * 100}%` }" /></div>
-            <div class="result-stats"><span>置信度 <b>{{ selected.baselineConfidence != null ? `${(selected.baselineConfidence * 100).toFixed(1)}%` : '—' }}</b></span><span>时延 <b>{{ selected.baselineLatencyMs ?? '—' }} ms</b></span></div>
+            <div class="result-stats"><span>{{ uiText('置信度') }} <b>{{ selected.baselineConfidence != null ? `${(selected.baselineConfidence * 100).toFixed(1)}%` : '—' }}</b></span><span>{{ uiText('时延') }} <b>{{ selected.baselineLatencyMs ?? '—' }} ms</b></span></div>
           </article>
           <article class="panel result-card result-card--optimized">
-            <div class="result-card-heading"><span class="result-label">优化结果</span><small>质量感知策略</small></div>
-            <strong class="prediction-text">{{ prediction(selected, true)?.text || '未启用' }}</strong>
+            <div class="result-card-heading"><span class="result-label">{{ uiText('优化结果') }}</span><small>{{ uiText('质量感知策略') }}</small></div>
+            <strong class="prediction-text">{{ prediction(selected, true)?.text || uiText('未启用') }}</strong>
             <div class="confidence-bar"><i :style="{ width: `${(selected.optimizedConfidence || 0) * 100}%` }" /></div>
-            <div class="result-stats"><span>置信度 <b>{{ selected.optimizedConfidence != null ? `${(selected.optimizedConfidence * 100).toFixed(1)}%` : '—' }}</b></span><span>时延 <b>{{ selected.optimizedLatencyMs ?? '—' }} ms</b></span></div>
+            <div class="result-stats"><span>{{ uiText('置信度') }} <b>{{ selected.optimizedConfidence != null ? `${(selected.optimizedConfidence * 100).toFixed(1)}%` : '—' }}</b></span><span>{{ uiText('时延') }} <b>{{ selected.optimizedLatencyMs ?? '—' }} ms</b></span></div>
           </article>
           <article class="panel delta-card">
-            <div><span>置信度变化</span><strong :class="{ positive: (confidenceLift || 0) > 0 }">{{ confidenceLift != null ? `${confidenceLift >= 0 ? '+' : ''}${(confidenceLift * 100).toFixed(1)}%` : '—' }}</strong></div>
-            <div><span>额外时延</span><strong>{{ latencyCost != null ? `+${latencyCost} ms` : '—' }}</strong></div>
+            <div><span>{{ uiText('置信度变化') }}</span><strong :class="{ positive: (confidenceLift || 0) > 0 }">{{ confidenceLift != null ? `${confidenceLift >= 0 ? '+' : ''}${(confidenceLift * 100).toFixed(1)}%` : '—' }}</strong></div>
+            <div><span>{{ uiText('额外时延') }}</span><strong>{{ latencyCost != null ? `+${latencyCost} ms` : '—' }}</strong></div>
           </article>
         </aside>
       </section>
 
       <section class="panel result-detail-grid">
-        <div><p class="page-kicker">输出字段</p><h3>结构化识别结果</h3><dl v-if="prediction(selected, true)?.fields"><template v-for="(value, key) in prediction(selected, true)?.fields" :key="key"><dt>{{ key }}</dt><dd>{{ formatField(value) }}</dd></template></dl><p v-else class="table-muted">本次实验没有优化字段输出。</p></div>
-        <div><p class="page-kicker">实验上下文</p><h3>可复现信息</h3><dl><dt>创建时间</dt><dd>{{ formatDate(selected.createdAt) }}</dd><dt>模型编码</dt><dd>{{ selected.model.code }}</dd><dt>模型版本</dt><dd>{{ selected.model.version }}</dd><dt>执行人</dt><dd>{{ selected.requestedBy }}</dd></dl></div>
-        <div class="demo-warning" :class="{ 'is-live': modelAnalysis.adapter?.endsWith('_API') }"><AppIcon name="shield" :size="22" /><div><strong>{{ modelAnalysis.adapter?.endsWith('_API') ? '真实 API · 未校准置信度' : '演示适配器' }}</strong><p>{{ modelAnalysis.adapter?.endsWith('_API') ? `识别与质量分析来自 ${modelAnalysis.provider || selected.model.provider}；置信度仍需标注集校准。` : '这些指标只用于界面与链路验证，不能写入论文结论。' }}</p></div></div>
+        <div><p class="page-kicker">{{ uiText('输出字段') }}</p><h3>{{ uiText('结构化识别结果') }}</h3><dl v-if="prediction(selected, true)?.fields"><template v-for="(value, key) in prediction(selected, true)?.fields" :key="key"><dt>{{ key }}</dt><dd>{{ formatField(value) }}</dd></template></dl><p v-else class="table-muted">{{ uiText('本次实验没有优化字段输出。') }}</p></div>
+        <div><p class="page-kicker">{{ uiText('实验上下文') }}</p><h3>{{ uiText('可复现信息') }}</h3><dl><dt>{{ uiText('创建时间') }}</dt><dd>{{ formatDate(selected.createdAt) }}</dd><dt>{{ uiText('模型编码') }}</dt><dd>{{ selected.model.code }}</dd><dt>{{ uiText('模型版本') }}</dt><dd>{{ selected.model.version }}</dd><dt>{{ uiText('执行人') }}</dt><dd>{{ selected.requestedBy }}</dd></dl></div>
+        <div class="demo-warning" :class="{ 'is-live': modelAnalysis.adapter?.endsWith('_API') }"><AppIcon name="shield" :size="22" /><div><strong>{{ modelAnalysis.adapter?.endsWith('_API') ? uiText('真实 API · 未校准置信度') : uiText('演示适配器') }}</strong><p>{{ modelAnalysis.adapter?.endsWith('_API') ? (uiText('识别与质量分析来自 ') + (modelAnalysis.provider || selected.model.provider) + uiText('；置信度仍需标注集校准。')) : uiText('这些指标只用于界面与链路验证，不能写入论文结论。') }}</p></div></div>
       </section>
 
       <section class="panel model-analysis-panel">
-        <header class="panel-header"><div><p class="page-kicker">VISION ANALYSIS</p><h3>模型对输入的解释</h3><p>{{ modelAnalysis.provider || modelAnalysis.adapter || 'Unknown adapter' }} · {{ modelAnalysis.confidenceSource || 'confidence source unknown' }}</p></div><span class="analysis-quality-score"><small>QUALITY</small><strong>{{ modelAnalysis.quality?.score != null ? modelAnalysis.quality.score.toFixed(2) : '—' }}</strong><i>{{ modelAnalysis.quality?.bucket || 'UNKNOWN' }}</i></span></header>
+        <header class="panel-header"><div><p class="page-kicker">VISION ANALYSIS</p><h3>{{ uiText('模型对输入的解释') }}</h3><p>{{ modelAnalysis.provider || modelAnalysis.adapter || 'Unknown adapter' }} · {{ modelAnalysis.confidenceSource || 'confidence source unknown' }}</p></div><span class="analysis-quality-score"><small>QUALITY</small><strong>{{ modelAnalysis.quality?.score != null ? modelAnalysis.quality.score.toFixed(2) : '—' }}</strong><i>{{ modelAnalysis.quality?.bucket || 'UNKNOWN' }}</i></span></header>
         <div class="analysis-body">
-          <div class="analysis-summary"><span class="analysis-icon"><AppIcon name="spark" :size="21" /></span><div><h4>分析摘要</h4><p>{{ modelAnalysis.analysis?.summary || '本次结果没有返回分析摘要。' }}</p><div class="quality-labels"><span v-for="label in modelAnalysis.quality?.labels || []" :key="label">{{ label }}</span></div></div></div>
-          <div class="degradation-chart"><h4>退化强度</h4><div v-for="(value, key) in modelAnalysis.quality?.degradation || {}" :key="key"><span>{{ degradationLabel[String(key)] || key }}</span><i><b :style="{ width: `${Math.max(0, Math.min(1, Number(value))) * 100}%` }" /></i><strong>{{ Number(value).toFixed(2) }}</strong></div><p v-if="!modelAnalysis.quality?.degradation">暂无退化维度。</p></div>
-          <div class="analysis-evidence"><div><h4>判断依据</h4><ul><li v-for="item in modelAnalysis.analysis?.evidence || ['暂无证据说明']" :key="item">{{ item }}</li></ul></div><div><h4>不确定性</h4><ul><li v-for="item in modelAnalysis.analysis?.uncertainties || ['未返回不确定性']" :key="item">{{ item }}</li></ul></div></div>
+          <div class="analysis-summary"><span class="analysis-icon"><AppIcon name="spark" :size="21" /></span><div><h4>{{ uiText('分析摘要') }}</h4><p>{{ modelAnalysis.analysis?.summary || uiText('本次结果没有返回分析摘要。') }}</p><div class="quality-labels"><span v-for="label in modelAnalysis.quality?.labels || []" :key="label">{{ label }}</span></div></div></div>
+          <div class="degradation-chart"><h4>{{ uiText('退化强度') }}</h4><div v-for="(value, key) in modelAnalysis.quality?.degradation || {}" :key="key"><span>{{ degradationLabel[String(key)] || key }}</span><i><b :style="{ width: `${Math.max(0, Math.min(1, Number(value))) * 100}%` }" /></i><strong>{{ Number(value).toFixed(2) }}</strong></div><p v-if="!modelAnalysis.quality?.degradation">{{ uiText('暂无退化维度。') }}</p></div>
+          <div class="analysis-evidence"><div><h4>{{ uiText('判断依据') }}</h4><ul><li v-for="item in modelAnalysis.analysis?.evidence || ['暂无证据说明']" :key="item">{{ item }}</li></ul></div><div><h4>{{ uiText('不确定性') }}</h4><ul><li v-for="item in modelAnalysis.analysis?.uncertainties || ['未返回不确定性']" :key="item">{{ item }}</li></ul></div></div>
           <div class="analysis-usage"><span><small>PROMPT TOKENS</small><strong>{{ modelAnalysis.usage?.prompt_tokens ?? '—' }}</strong></span><span><small>COMPLETION TOKENS</small><strong>{{ modelAnalysis.usage?.completion_tokens ?? '—' }}</strong></span><span><small>TOTAL TOKENS</small><strong>{{ modelAnalysis.usage?.total_tokens ?? '—' }}</strong></span><span v-if="modelAnalysis.warnings?.length"><small>WARNINGS</small><strong>{{ modelAnalysis.warnings.length }}</strong></span></div>
         </div>
       </section>

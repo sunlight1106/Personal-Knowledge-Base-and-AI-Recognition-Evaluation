@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { ref, computed, watch } from 'vue'
 import { authStore } from '@/stores/auth'
 import PersonalAiProviders from './PersonalAiProviders.vue'
@@ -10,7 +12,7 @@ watch(tabs, items => { if (!items.some(item => item.id === tab.value)) tab.value
 </script>
 <template>
   <div class="personal-ai-workspace">
-    <nav class="ai-setting-tabs" aria-label="个人 AI 设置"><button v-for="item in tabs" :key="item.id" :aria-pressed="tab === item.id" :class="{active: tab === item.id}" @click="tab = item.id">{{ item.label }}</button></nav>
+    <nav class="ai-setting-tabs" :aria-label="uiText('个人 AI 设置')"><button v-for="item in tabs" :key="item.id" :aria-pressed="tab === item.id" :class="{active: tab === item.id}" @click="tab = item.id">{{ uiText(item.label) }}</button></nav>
     <PersonalAiProviders v-if="tab === 'providers'" />
     <div v-else-if="tab" class="panel settings-card"><PersonalAiMemory v-if="tab === 'memories'" /><PersonalAiTraining v-else /></div>
   </div>

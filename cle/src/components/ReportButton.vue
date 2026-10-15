@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import {ref,watch,onBeforeUnmount} from 'vue'
 import {RouterLink} from 'vue-router'
 import {safetyApi} from '@/api/moderation'
@@ -14,5 +16,5 @@ async function send(){
  catch(e){if(version===epoch)error.value=(e as Error).message}finally{if(version===epoch)busy.value=false}
 }
 </script>
-<template><div class="report-control"><button v-if="!sent" class="table-action" :aria-expanded="open" :disabled="busy" @click="open=!open">举报</button><RouterLink v-else to="/app/safety" class="report-sent">已举报 · 查看进度</RouterLink><form v-if="open" class="report-form" @submit.prevent="send"><label>举报原因<textarea v-model="reason" required maxlength="500" rows="3" placeholder="说明这条消息存在的问题，审核员会查看消息原文。" :disabled="busy" /></label><footer><small>举报人身份不会向被举报人公开。</small><button type="button" class="table-action" :disabled="busy" @click="open=false">取消</button><button class="button button--dark button--small" :disabled="busy||!reason.trim()">{{busy?'提交中…':'提交举报'}}</button></footer></form><p v-if="error" role="alert" class="form-error">{{error}}</p></div></template>
+<template><div class="report-control"><button v-if="!sent" class="table-action" :aria-expanded="open" :disabled="busy" @click="open=!open">{{ uiText('举报') }}</button><RouterLink v-else to="/app/safety" class="report-sent">{{ uiText('已举报 · 查看进度') }}</RouterLink><form v-if="open" class="report-form" @submit.prevent="send"><label>{{ uiText('举报原因') }}<textarea v-model="reason" required maxlength="500" rows="3" :placeholder="uiText('说明这条消息存在的问题，审核员会查看消息原文。')" :disabled="busy" /></label><footer><small>{{ uiText('举报人身份不会向被举报人公开。') }}</small><button type="button" class="table-action" :disabled="busy" @click="open=false">{{ uiText('取消') }}</button><button class="button button--dark button--small" :disabled="busy||!reason.trim()">{{busy?uiText('提交中…'):uiText('提交举报')}}</button></footer></form><p v-if="error" role="alert" class="form-error">{{ uiText(error) }}</p></div></template>
 <style scoped>.report-control{font-size:12px;margin:8px 0}.report-sent{color:var(--muted);text-decoration:none}.report-form{padding:16px;border:1px solid var(--line);border-radius:5px;background:var(--paper);max-width:620px;text-align:left}.report-form label{display:block;color:var(--ink)}textarea{display:block;width:100%;margin:10px 0;padding:10px;background:var(--paper);color:var(--ink);border:1px solid var(--line);font:inherit;resize:vertical}footer{display:flex;align-items:center;gap:12px}small{flex:1;color:var(--muted)}</style>

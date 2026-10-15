@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import { api, ApiClientError } from '@/api/client'
 import type { MessageContactView } from '@/types/api'
@@ -75,27 +77,27 @@ defineExpose({ focus })
 
 <template>
   <div ref="root" class="recipient-picker" @focusout="blur" @keydown="keyboard">
-    <div class="recipient-heading"><label :for="`${listId}-input`">收件人</label><span aria-live="polite">已选 {{ modelValue.length }} / 20</span></div>
-    <div v-if="modelValue.length" class="recipient-chips" aria-label="已选收件人">
-      <span v-for="user in modelValue" :key="user.id" class="recipient-chip"><span><strong>{{ user.displayName }}</strong><code>{{ user.identityCode }}</code></span><button type="button" :aria-label="`移除收件人 ${user.displayName} ${user.identityCode}`" :disabled="disabled" @click="remove(user.id)"><AppIcon name="close" :size="14" /></button></span>
+    <div class="recipient-heading"><label :for="`${listId}-input`">{{ uiText('收件人') }}</label><span aria-live="polite">{{ uiText('已选') }} {{ modelValue.length }} / 20</span></div>
+    <div v-if="modelValue.length" class="recipient-chips" :aria-label="uiText('已选收件人')">
+      <span v-for="user in modelValue" :key="user.id" class="recipient-chip"><span><strong>{{ user.displayName }}</strong><code>{{ user.identityCode }}</code></span><button type="button" :aria-label="(uiText('移除收件人 ') + (user.displayName) + ' ' + (user.identityCode))" :disabled="disabled" @click="remove(user.id)"><AppIcon name="close" :size="14" /></button></span>
     </div>
     <div class="recipient-field" :class="{ 'is-open': opened }">
       <AppIcon name="search" :size="16" />
-      <input :id="`${listId}-input`" ref="input" v-model="query" type="text" role="combobox" aria-label="查找收件人" :aria-expanded="opened" :aria-controls="listId" :aria-activedescendant="opened && active >= 0 ? `${listId}-${active}` : undefined" aria-autocomplete="list" autocomplete="off" maxlength="80" placeholder="输入名称、用户名或完整身份码" :disabled="disabled" :readonly="!!restrictedContact" @focus="open" @click="open" />
-      <button type="button" :aria-label="opened ? '收起收件人' : '展开收件人'" :aria-expanded="opened" :disabled="disabled" @mousedown.prevent @click="toggleOpen"><AppIcon name="chevron" :style="{ transform: opened ? 'rotate(-90deg)' : 'rotate(90deg)' }" :size="16" /></button>
+      <input :id="`${listId}-input`" ref="input" v-model="query" type="text" role="combobox" :aria-label="uiText('查找收件人')" :aria-expanded="opened" :aria-controls="listId" :aria-activedescendant="opened && active >= 0 ? `${listId}-${active}` : undefined" aria-autocomplete="list" autocomplete="off" maxlength="80" :placeholder="uiText('输入名称、用户名或完整身份码')" :disabled="disabled" :readonly="!!restrictedContact" @focus="open" @click="open" />
+      <button type="button" :aria-label="opened ? uiText('收起收件人') : uiText('展开收件人')" :aria-expanded="opened" :disabled="disabled" @mousedown.prevent @click="toggleOpen"><AppIcon name="chevron" :style="{ transform: opened ? 'rotate(-90deg)' : 'rotate(90deg)' }" :size="16" /></button>
     </div>
-    <p class="recipient-help">{{ restrictedContact ? '回复仅发送给原发件人。' : '名称可重复，请用系统分配的唯一身份码核对收件人。' }}</p>
+    <p class="recipient-help">{{ restrictedContact ? uiText('回复仅发送给原发件人。') : uiText('名称可重复，请用系统分配的唯一身份码核对收件人。') }}</p>
     <div v-if="opened" class="recipient-dropdown">
-      <div ref="list" :id="listId" class="recipient-options" role="listbox" aria-label="可联系的收件人" aria-multiselectable="true" :aria-busy="loading">
+      <div ref="list" :id="listId" class="recipient-options" role="listbox" :aria-label="uiText('可联系的收件人')" aria-multiselectable="true" :aria-busy="loading">
         <button v-for="(user, index) in choices" :id="`${listId}-${index}`" :key="user.id" type="button" role="option" :aria-selected="selected(user.id)" :aria-disabled="unavailable(user.id)" :disabled="unavailable(user.id)" tabindex="-1" class="recipient-option" :class="{ 'is-active': index === active, 'is-selected': selected(user.id) }" @mousedown.prevent @click="toggle(user)">
-          <span class="recipient-avatar" aria-hidden="true">{{ user.displayName.slice(0, 1) }}</span><span class="recipient-identity"><span><strong>{{ user.displayName }}</strong><small>@{{ user.username }} · {{ relation[user.relationship] }}</small></span><code>{{ user.identityCode }}</code></span><AppIcon v-if="selected(user.id)" name="check" :size="16" /><span v-else class="recipient-check" aria-hidden="true" />
+          <span class="recipient-avatar" aria-hidden="true">{{ user.displayName.slice(0, 1) }}</span><span class="recipient-identity"><span><strong>{{ user.displayName }}</strong><small>@{{ user.username }} · {{ uiText(relation[user.relationship]) }}</small></span><code>{{ user.identityCode }}</code></span><AppIcon v-if="selected(user.id)" name="check" :size="16" /><span v-else class="recipient-check" aria-hidden="true" />
         </button>
       </div>
-      <p v-if="error" class="recipient-status" role="alert">{{ error }} <button type="button" @click="search(rows.length > 0)">重试</button></p>
-      <p v-else-if="loading" class="recipient-status" role="status">正在查找…</p>
-      <p v-else-if="!choices.length" class="recipient-status">没有找到可联系的用户，请核对名称或完整身份码。</p>
-      <button v-else-if="hasMore && !restrictedContact" type="button" class="recipient-more" @click="search(true)">加载更多收件人</button>
-      <p v-else class="recipient-status">{{ choices.length ? '已显示全部匹配用户' : '' }}</p>
+      <p v-if="error" class="recipient-status" role="alert">{{ uiText(error) }} <button type="button" @click="search(rows.length > 0)">{{ uiText('重试') }}</button></p>
+      <p v-else-if="loading" class="recipient-status" role="status">{{ uiText('正在查找…') }}</p>
+      <p v-else-if="!choices.length" class="recipient-status">{{ uiText('没有找到可联系的用户，请核对名称或完整身份码。') }}</p>
+      <button v-else-if="hasMore && !restrictedContact" type="button" class="recipient-more" @click="search(true)">{{ uiText('加载更多收件人') }}</button>
+      <p v-else class="recipient-status">{{ choices.length ? uiText('已显示全部匹配用户') : '' }}</p>
     </div>
   </div>
 </template>

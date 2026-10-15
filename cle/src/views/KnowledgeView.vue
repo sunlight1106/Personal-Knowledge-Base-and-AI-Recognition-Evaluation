@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n'
+
 import { computed, onMounted, ref, watch } from 'vue'
 import { api, ApiClientError } from '@/api/client'
 import type { KnowledgeEntryView, KnowledgeTopicView } from '@/types/api'
@@ -187,35 +189,35 @@ onMounted(load)
     <section class="page-intro page-intro--split">
       <div>
         <p class="page-kicker">KNOWLEDGE BASE</p>
-        <h2>知识库</h2>
-        <p>按学科浏览入门知识卡，在自己的学习库中写笔记、整理代码并导出文档。</p>
+        <h2>{{ uiText('知识库') }}</h2>
+        <p>{{ uiText('按学科浏览入门知识卡，在自己的学习库中写笔记、整理代码并导出文档。') }}</p>
       </div>
       <div class="intro-actions">
         <button v-if="canWrite" class="button" @click="openTopicModal">
-          <AppIcon name="plus" :size="16" /> 新建主题
+          <AppIcon name="plus" :size="16" /> {{ uiText('新建主题') }}
         </button>
         <button v-if="canWrite" class="button button--dark" :disabled="!topics.length" @click="openEntryModal()">
-          <AppIcon name="plus" :size="16" /> 新建知识卡
+          <AppIcon name="plus" :size="16" /> {{ uiText('新建知识卡') }}
         </button>
       </div>
     </section>
 
-    <nav class="learning-library-links" aria-label="学习库列表">
-      <RouterLink v-for="(name, index) in ['英语学习', '计算机学习', '数学学习', '生物化学与医学']" :key="name" :to="{ name: 'notes', query: { library: name } }"><span class="library-link-top"><AppIcon name="book" :size="20" /><i aria-hidden="true">0{{ index + 1 }}</i></span><strong>{{ name }}</strong><small>打开学习笔记 <span aria-hidden="true">↗</span></small></RouterLink>
+    <nav class="learning-library-links" :aria-label="uiText('学习库列表')">
+      <RouterLink v-for="(name, index) in ['英语学习', '计算机学习', '数学学习', '生物化学与医学']" :key="name" :to="{ name: 'notes', query: { library: name } }"><span class="library-link-top"><AppIcon name="book" :size="20" /><i aria-hidden="true">0{{ index + 1 }}</i></span><strong>{{ name }}</strong><small>{{ uiText('打开学习笔记') }} <span aria-hidden="true">↗</span></small></RouterLink>
     </nav>
 
     <section class="kb-stats">
-      <div><small>学科领域</small><strong>{{ domains.length }}</strong></div>
-      <div><small>知识主题</small><strong>{{ topics.length }}</strong></div>
-      <div><small>知识卡</small><strong>{{ totalEntries }}</strong></div>
-      <div><small>当前筛选</small><strong>{{ entries.length }}</strong></div>
+      <div><small>{{ uiText('学科领域') }}</small><strong>{{ domains.length }}</strong></div>
+      <div><small>{{ uiText('知识主题') }}</small><strong>{{ topics.length }}</strong></div>
+      <div><small>{{ uiText('知识卡') }}</small><strong>{{ totalEntries }}</strong></div>
+      <div><small>{{ uiText('当前筛选') }}</small><strong>{{ entries.length }}</strong></div>
     </section>
 
     <section class="kb-layout panel">
       <aside class="kb-sidebar">
         <label class="kb-search">
           <AppIcon name="search" :size="16" />
-          <input v-model="keyword" class="field-input" type="search" placeholder="搜索标题、正文或标签" />
+          <input v-model="keyword" class="field-input" type="search" :placeholder="uiText('搜索标题、正文或标签')" />
         </label>
 
         <button
@@ -223,7 +225,7 @@ onMounted(load)
           :class="{ active: activeTopicId === null && !keyword.trim() }"
           @click="selectTopic(null)"
         >
-          <AppIcon name="book" :size="17" /><span>全部知识卡</span><b>{{ totalEntries }}</b>
+          <AppIcon name="book" :size="17" /><span>{{ uiText('全部知识卡') }}</span><b>{{ totalEntries }}</b>
         </button>
 
         <div v-if="loading" class="table-skeleton" />
@@ -239,25 +241,25 @@ onMounted(load)
             >
               <span>{{ topic.name }}</span>
               <b>{{ topic.entryCount }}</b>
-              <i v-if="topic.builtin" class="kb-builtin" title="平台预置主题" />
+              <i v-if="topic.builtin" class="kb-builtin" :title="uiText('平台预置主题')" />
               <i
                 v-if="canWrite && !topic.builtin"
                 class="kb-topic-delete"
-                title="删除主题"
+                :title="uiText('删除主题')"
                 @click.stop="removeTopic(topic)"
               ><AppIcon name="close" :size="13" /></i>
             </button>
           </section>
         </nav>
-        <p v-if="error" class="inline-alert inline-alert--error">{{ error }}</p>
+        <p v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</p>
       </aside>
 
       <div class="kb-entries">
         <EmptyState
           v-if="!loading && !entries.length"
           icon="book"
-          :title="keyword.trim() ? '没有匹配的知识卡' : '该主题下还没有知识卡'"
-          :description="keyword.trim() ? '换个关键词试试，或直接创建一张新卡。' : '点击右上角「新建知识卡」开始积累。'"
+          :title="keyword.trim() ? uiText('没有匹配的知识卡') : uiText('该主题下还没有知识卡')"
+          :description="keyword.trim() ? uiText('换个关键词试试，或直接创建一张新卡。') : uiText('点击右上角「新建知识卡」开始积累。')"
         />
         <article
           v-for="item in entries"
@@ -269,7 +271,7 @@ onMounted(load)
         >
           <header>
             <span class="kb-card-domain">{{ item.domain }} · {{ item.topicName }}</span>
-            <i v-if="item.builtin" class="kb-card-builtin">预置</i>
+            <i v-if="item.builtin" class="kb-card-builtin">{{ uiText('预置') }}</i>
           </header>
           <h3>{{ item.title }}</h3>
           <p v-if="item.summary">{{ item.summary }}</p>
@@ -280,8 +282,8 @@ onMounted(load)
               <i v-if="item.tags.length > 4" class="kb-card-more">+{{ item.tags.length - 4 }}</i>
             </span>
             <span class="kb-card-meta">
-              <b>{{ countWords(item.body) }}</b> 字 · <b>{{ readingMinutes(item.body) }}</b> 分钟
-              <template v-if="item.noteReferences"> · <b>{{ item.noteReferences }}</b> 篇引用</template>
+              <b>{{ countWords(item.body) }}</b> {{ uiText('字 ·') }} <b>{{ readingMinutes(item.body) }}</b> {{ uiText('分钟') }}
+              <template v-if="item.noteReferences"> · <b>{{ item.noteReferences }}</b> {{ uiText('篇引用') }}</template>
             </span>
           </footer>
         </article>
@@ -294,27 +296,27 @@ onMounted(load)
             <h3>{{ activeEntry.title }}</h3>
           </div>
           <div class="kb-reader-actions">
-            <RouterLink v-if="authStore.has('note:write')" class="button button--ghost button--small" :to="{ name: 'note-create', query: { entry: activeEntry.id, library: activeEntry.domain } }">写成笔记 / 导出</RouterLink>
-            <button v-if="canWrite" class="icon-button" title="以本卡内容为模板新建" @click="openEntryModal(activeEntry)">
+            <RouterLink v-if="authStore.has('note:write')" class="button button--ghost button--small" :to="{ name: 'note-create', query: { entry: activeEntry.id, library: activeEntry.domain } }">{{ uiText('写成笔记 / 导出') }}</RouterLink>
+            <button v-if="canWrite" class="icon-button" :title="uiText('以本卡内容为模板新建')" @click="openEntryModal(activeEntry)">
               <AppIcon name="copy" :size="17" />
             </button>
             <button
               v-if="canWrite && !activeEntry.builtin"
               class="icon-button"
-              title="删除知识卡"
+              :title="uiText('删除知识卡')"
               @click="removeEntry(activeEntry)"
             ><AppIcon name="close" :size="17" /></button>
-            <button class="icon-button" title="关闭" @click="activeEntry = null">
+            <button class="icon-button" :title="uiText('关闭')" @click="activeEntry = null">
               <AppIcon name="chevron" :size="17" />
             </button>
           </div>
         </header>
         <p v-if="activeEntry.summary" class="kb-reader-summary">{{ activeEntry.summary }}</p>
         <div class="kb-reader-meta">
-          <span><b>{{ countWords(activeEntry.body) }}</b> 字</span>
-          <span>约 <b>{{ readingMinutes(activeEntry.body) }}</b> 分钟读完</span>
-          <span>更新于 {{ new Date(activeEntry.updatedAt).toLocaleDateString('zh-CN') }}</span>
-          <span v-if="activeEntry.noteReferences"><b>{{ activeEntry.noteReferences }}</b> 篇笔记引用</span>
+          <span><b>{{ countWords(activeEntry.body) }}</b> {{ uiText('字') }}</span>
+          <span>{{ uiText('约') }} <b>{{ readingMinutes(activeEntry.body) }}</b> {{ uiText('分钟读完') }}</span>
+          <span>{{ uiText('更新于') }} {{ new Date(activeEntry.updatedAt).toLocaleDateString(uiLocale()) }}</span>
+          <span v-if="activeEntry.noteReferences"><b>{{ activeEntry.noteReferences }}</b> {{ uiText('篇笔记引用') }}</span>
         </div>
         <NotePreview :body="activeEntry.body" />
         <footer v-if="activeEntry.tags.length" class="kb-reader-tags">
@@ -326,46 +328,46 @@ onMounted(load)
     <div v-if="topicModal" class="modal-backdrop" @click.self="topicModal = false">
       <form class="modal-card" @submit.prevent="submitTopic">
         <header>
-          <div><p class="page-kicker">NEW TOPIC</p><h3>新建知识主题</h3></div>
+          <div><p class="page-kicker">NEW TOPIC</p><h3>{{ uiText('新建知识主题') }}</h3></div>
           <button type="button" class="icon-button" @click="topicModal = false"><AppIcon name="close" /></button>
         </header>
         <label class="field-label">
-          学科领域
-          <input v-model="topicForm.domain" class="field-input" list="kb-domains" maxlength="40" required placeholder="如：生物化学与医学、计算机科学" />
+          {{ uiText('学科领域') }}
+          <input v-model="topicForm.domain" class="field-input" list="kb-domains" maxlength="40" required :placeholder="uiText('如：生物化学与医学、计算机科学')" />
           <datalist id="kb-domains">
             <option v-for="group in domains" :key="group.domain" :value="group.domain" />
           </datalist>
         </label>
-        <label class="field-label">主题名称<input v-model="topicForm.name" class="field-input" maxlength="120" required placeholder="如：糖代谢" /></label>
-        <label class="field-label">主题描述<input v-model="topicForm.description" class="field-input" maxlength="500" placeholder="一句话说明该主题涵盖的内容" /></label>
-        <button class="button button--dark button--full" :disabled="busy">{{ busy ? '创建中…' : '创建主题' }}</button>
+        <label class="field-label">{{ uiText('主题名称') }}<input v-model="topicForm.name" class="field-input" maxlength="120" required :placeholder="uiText('如：糖代谢')" /></label>
+        <label class="field-label">{{ uiText('主题描述') }}<input v-model="topicForm.description" class="field-input" maxlength="500" :placeholder="uiText('一句话说明该主题涵盖的内容')" /></label>
+        <button class="button button--dark button--full" :disabled="busy">{{ busy ? uiText('创建中…') : uiText('创建主题') }}</button>
       </form>
     </div>
 
     <div v-if="entryModal" class="modal-backdrop" @click.self="entryModal = false">
       <form class="modal-card modal-card--wide" @submit.prevent="submitEntry">
         <header>
-          <div><p class="page-kicker">NEW ENTRY</p><h3>新建知识卡</h3></div>
+          <div><p class="page-kicker">NEW ENTRY</p><h3>{{ uiText('新建知识卡') }}</h3></div>
           <button type="button" class="icon-button" @click="entryModal = false"><AppIcon name="close" /></button>
         </header>
         <div class="form-grid">
           <label class="field-label">
-            所属主题
+            {{ uiText('所属主题') }}
             <select v-model.number="entryForm.topicId" class="field-input" required>
               <option v-for="topic in writableTopics" :key="topic.id" :value="topic.id">{{ topic.domain }} · {{ topic.name }}</option>
             </select>
           </label>
-          <label class="field-label">标签（逗号分隔）<input v-model="entryForm.tags" class="field-input" maxlength="500" placeholder="糖酵解, PFK-1, 代谢调控" /></label>
+          <label class="field-label">{{ uiText('标签（逗号分隔）') }}<input v-model="entryForm.tags" class="field-input" maxlength="500" :placeholder="uiText('糖酵解, PFK-1, 代谢调控')" /></label>
         </div>
-        <label class="field-label">标题<input v-model="entryForm.title" class="field-input" maxlength="180" required /></label>
-        <label class="field-label">摘要<input v-model="entryForm.summary" class="field-input" maxlength="500" placeholder="一句话概括，显示在卡片上" /></label>
+        <label class="field-label">{{ uiText('标题') }}<input v-model="entryForm.title" class="field-input" maxlength="180" required /></label>
+        <label class="field-label">{{ uiText('摘要') }}<input v-model="entryForm.summary" class="field-input" maxlength="500" :placeholder="uiText('一句话概括，显示在卡片上')" /></label>
         <div class="knowledge-compose-split"><label class="field-label">
-          正文（Markdown，可嵌入 HTML）
-          <textarea v-model="entryForm.body" class="field-input kb-editor-textarea" rows="14" required placeholder="## 小节标题&#10;&#10;支持表格、列表、代码块。" />
+          {{ uiText('正文（Markdown，可嵌入 HTML）') }}
+          <textarea v-model="entryForm.body" class="field-input kb-editor-textarea" rows="14" required :placeholder="uiText('## 小节标题\n\n支持表格、列表、代码块。')" />
         </label>
-        <section class="knowledge-compose-preview"><strong>实时预览</strong><div class="markdown-body" v-html="renderMarkdown(entryForm.body)" /></section></div>
-        <p class="field-hint">{{ countWords(entryForm.body) }} 字 · 内容经消毒后渲染，可放心粘贴外部资料</p>
-        <button class="button button--dark button--full" :disabled="busy">{{ busy ? '创建中…' : '创建知识卡' }}</button>
+        <section class="knowledge-compose-preview"><strong>{{ uiText('实时预览') }}</strong><div class="markdown-body" v-html="renderMarkdown(entryForm.body)" /></section></div>
+        <p class="field-hint">{{ countWords(entryForm.body) }} {{ uiText('字 · 内容经消毒后渲染，可放心粘贴外部资料') }}</p>
+        <button class="button button--dark button--full" :disabled="busy">{{ busy ? uiText('创建中…') : uiText('创建知识卡') }}</button>
       </form>
     </div>
   </div>

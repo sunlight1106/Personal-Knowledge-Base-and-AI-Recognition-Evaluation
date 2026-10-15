@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n'
+
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useUnsavedDraft } from '@/lib/useUnsavedDraft'
@@ -93,7 +95,7 @@ async function compose(to?: number, original?: MessageView) {
   if (busy.value || loading.value) return
   if (hasDraft.value) {
     if (!to && !original) { composeOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null; composing.value = true; return }
-    if (!window.confirm('已有未发送的草稿。放弃草稿并写一封新信？')) return
+    if (!window.confirm(uiText('已有未发送的草稿。放弃草稿并写一封新信？'))) return
   }
   const version = epoch
   composeOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -153,37 +155,37 @@ onBeforeUnmount(reset)
 
 <template>
   <div class="page-stack mailbox-page">
-    <section class="page-intro page-intro--split"><div><p class="page-kicker">COLLABORATION</p><h2>站内信箱</h2><p>联系平台管理员或联系人或同组成员；群内讨论和资料分享请进入群组协作。</p></div><button class="button button--dark" :disabled="loading || busy" @click="compose()"><AppIcon name="plus" :size="17" /> 写信</button></section>
-    <div class="mail-shortcuts"><RouterLink to="/app/groups">打开群组协作 →</RouterLink><button type="button" :disabled="loading || busy" @click="load">刷新联系人与消息</button><button v-for="admin in directory.filter(user => user.relationship === 'ADMIN')" :key="admin.id" type="button" :disabled="loading || busy" @click="compose(admin.id)">联系管理员 · {{ admin.displayName }}</button></div>
+    <section class="page-intro page-intro--split"><div><p class="page-kicker">COLLABORATION</p><h2>{{ uiText('站内信箱') }}</h2><p>{{ uiText('联系平台管理员或联系人或同组成员；群内讨论和资料分享请进入群组协作。') }}</p></div><button class="button button--dark" :disabled="loading || busy" @click="compose()"><AppIcon name="plus" :size="17" /> {{ uiText('写信') }}</button></section>
+    <div class="mail-shortcuts"><RouterLink to="/app/groups">{{ uiText('打开群组协作 →') }}</RouterLink><button type="button" :disabled="loading || busy" @click="load">{{ uiText('刷新联系人与消息') }}</button><button v-for="admin in directory.filter(user => user.relationship === 'ADMIN')" :key="admin.id" type="button" :disabled="loading || busy" @click="compose(admin.id)">{{ uiText('联系管理员 ·') }} {{ admin.displayName }}</button></div>
     <section class="mail-layout panel">
       <aside class="mail-list">
-        <header><div><button :class="{ active: tab === 'inbox' }" @click="switchTab('inbox')">收件箱 <b>{{ unread }}</b></button><button :class="{ active: tab === 'sent' }" @click="switchTab('sent')">已发送</button></div></header>
+        <header><div><button :class="{ active: tab === 'inbox' }" @click="switchTab('inbox')">{{ uiText('收件箱') }} <b>{{ unread }}</b></button><button :class="{ active: tab === 'sent' }" @click="switchTab('sent')">{{ uiText('已发送') }}</button></div></header>
         <div v-if="loading" class="table-skeleton" />
-        <EmptyState v-else-if="!messages.length" title="暂无消息" description="新消息会出现在这里。" icon="mail" />
+        <EmptyState v-else-if="!messages.length" :title="uiText('暂无消息')" :description="uiText('新消息会出现在这里。')" icon="mail" />
         <button v-for="item in messages" v-else :key="item.id" class="mail-row" :class="{ active: selected?.id === item.id, unread: !item.read }" @click="open(item)">
-          <span>{{ item.senderName.slice(0, 1) }}</span><div><strong>{{ item.subject }}</strong><small>{{ tab === 'inbox' ? item.senderName : `发送给 ${item.recipients.map(r => r.displayName).join('、')}` }}</small></div><time>{{ new Date(item.createdAt).toLocaleDateString('zh-CN') }}</time>
+          <span>{{ item.senderName.slice(0, 1) }}</span><div><strong>{{ item.subject }}</strong><small>{{ tab === 'inbox' ? item.senderName : (uiText('发送给 ') + (item.recipients.map(r => r.displayName).join('、'))) }}</small></div><time>{{ new Date(item.createdAt).toLocaleDateString(uiLocale()) }}</time>
         </button>
-        <p v-if="error" class="inline-alert inline-alert--error">{{ error }}</p>
+        <p v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</p>
       </aside>
       <article class="mail-reader">
-        <template v-if="selected"><p class="page-kicker">{{ tab === 'inbox' ? 'INBOX' : 'SENT' }}</p><h3>{{ selected.subject }}</h3><div class="mail-meta"><b>{{ selected.senderName }}</b><span>发送给 {{ selected.recipients.map(r => r.displayName).join('、') }}</span><time>{{ new Date(selected.createdAt).toLocaleString('zh-CN') }}</time></div><button v-if="tab === 'inbox' && selected.senderId !== authStore.state.user?.id" class="button button--ghost" :disabled="busy || loading" @click="compose(selected.senderId, selected)">回复这封信</button><p class="mail-body">{{ selected.body }}</p><ReportButton v-if="selected.senderId !== authStore.state.user?.id" type="MESSAGE" :source-id="selected.id" /><div v-if="selected.attachments.length" class="mail-attachments"><button v-for="file in selected.attachments" :key="file.id" @click="download(file)"><AppIcon name="file" :size="18" /><span>{{ file.fileName }}<small>{{ Math.ceil(file.sizeBytes / 1024) }} KB</small></span><AppIcon name="download" :size="16" /></button></div></template>
-        <EmptyState v-else title="选择一封消息" description="邮件内容和附件会显示在这里。" icon="mail" />
+        <template v-if="selected"><p class="page-kicker">{{ tab === 'inbox' ? 'INBOX' : 'SENT' }}</p><h3>{{ selected.subject }}</h3><div class="mail-meta"><b>{{ selected.senderName }}</b><span>{{ uiText('发送给') }} {{ selected.recipients.map(r => r.displayName).join('、') }}</span><time>{{ new Date(selected.createdAt).toLocaleString(uiLocale()) }}</time></div><button v-if="tab === 'inbox' && selected.senderId !== authStore.state.user?.id" class="button button--ghost" :disabled="busy || loading" @click="compose(selected.senderId, selected)">{{ uiText('回复这封信') }}</button><p class="mail-body">{{ selected.body }}</p><ReportButton v-if="selected.senderId !== authStore.state.user?.id" type="MESSAGE" :source-id="selected.id" /><div v-if="selected.attachments.length" class="mail-attachments"><button v-for="file in selected.attachments" :key="file.id" @click="download(file)"><AppIcon name="file" :size="18" /><span>{{ file.fileName }}<small>{{ Math.ceil(file.sizeBytes / 1024) }} KB</small></span><AppIcon name="download" :size="16" /></button></div></template>
+        <EmptyState v-else :title="uiText('选择一封消息')" :description="uiText('邮件内容和附件会显示在这里。')" icon="mail" />
       </article>
     </section>
 
     <div v-if="composing" class="modal-backdrop mail-compose-backdrop" @click.self="closeComposer">
       <form ref="composeForm" class="modal-card compose-modal" role="dialog" aria-modal="true" aria-labelledby="mail-compose-title" :aria-busy="busy" tabindex="-1" @keydown="composerKeyboard" @submit.prevent="send">
-        <header class="compose-header"><div class="compose-title"><span class="compose-mark"><AppIcon name="edit" :size="21" /></span><div><h3 id="mail-compose-title">{{ replyToId ? '回复站内信' : '写一封站内信' }}</h3><p>{{ replyToId ? '继续这次交流，回复将发给原发件人。' : '分享想法、提出问题，或发送一份资料。' }}</p></div></div><button type="button" class="compose-close" aria-label="关闭写信" :disabled="busy" @click="closeComposer"><AppIcon name="close" :size="20" /></button></header>
+        <header class="compose-header"><div class="compose-title"><span class="compose-mark"><AppIcon name="edit" :size="21" /></span><div><h3 id="mail-compose-title">{{ replyToId ? uiText('回复站内信') : uiText('写一封站内信') }}</h3><p>{{ replyToId ? uiText('继续这次交流，回复将发给原发件人。') : uiText('分享想法、提出问题，或发送一份资料。') }}</p></div></div><button type="button" class="compose-close" :aria-label="uiText('关闭写信')" :disabled="busy" @click="closeComposer"><AppIcon name="close" :size="20" /></button></header>
         <div class="compose-workspace">
-          <section class="compose-writing" aria-label="信件内容">
+          <section class="compose-writing" :aria-label="uiText('信件内容')">
             <MessageRecipientPicker ref="recipientPicker" v-model="selectedContacts" :disabled="busy" :restricted-contact="replyContact" />
-            <div class="compose-editor"><label class="compose-subject"><span>主题</span><input v-model="subject" maxlength="180" required :disabled="busy" placeholder="用一句话说明来意" /></label>
-            <label class="compose-body"><span class="compose-sr-only">正文</span><textarea ref="bodyEditor" v-model="body" rows="10" maxlength="20000" required :disabled="busy" placeholder="在这里写下你的消息…" /><span class="compose-word-count">{{ body.length.toLocaleString() }} / 20,000</span></label>
-            <ul v-if="files.length" class="compose-files" aria-label="已添加附件"><li v-for="(file, index) in files" :key="`${file.name}-${file.lastModified}-${file.size}`"><AppIcon name="file" :size="18" /><span>{{ file.name }}<small>{{ attachmentSize(file.size) }}</small></span><button type="button" :aria-label="`移除附件 ${file.name}`" :disabled="busy" @click="files.splice(index, 1)"><AppIcon name="close" :size="15" /></button></li></ul>
-            <p v-if="error" class="compose-error" role="alert">{{ error }}</p></div>
+            <div class="compose-editor"><label class="compose-subject"><span>{{ uiText('主题') }}</span><input v-model="subject" maxlength="180" required :disabled="busy" :placeholder="uiText('用一句话说明来意')" /></label>
+            <label class="compose-body"><span class="compose-sr-only">{{ uiText('正文') }}</span><textarea ref="bodyEditor" v-model="body" rows="10" maxlength="20000" required :disabled="busy" :placeholder="uiText('在这里写下你的消息…')" /><span class="compose-word-count">{{ body.length.toLocaleString(uiLocale()) }} / 20,000</span></label>
+            <ul v-if="files.length" class="compose-files" :aria-label="uiText('已添加附件')"><li v-for="(file, index) in files" :key="`${file.name}-${file.lastModified}-${file.size}`"><AppIcon name="file" :size="18" /><span>{{ file.name }}<small>{{ attachmentSize(file.size) }}</small></span><button type="button" :aria-label="(uiText('移除附件 ') + (file.name))" :disabled="busy" @click="files.splice(index, 1)"><AppIcon name="close" :size="15" /></button></li></ul>
+            <p v-if="error" class="compose-error" role="alert">{{ uiText(error) }}</p></div>
           </section>
         </div>
-        <footer class="compose-footer"><div class="compose-attachment-action"><input ref="attachmentInput" class="compose-sr-only" type="file" multiple tabindex="-1" aria-label="添加附件" :disabled="busy" @change="chooseFiles" /><button type="button" class="compose-attach" :disabled="busy || files.length >= 5" @click="attachmentInput?.click()"><AppIcon name="upload" :size="17" /> 添加附件<span v-if="files.length">{{ files.length }}/5</span></button><small>最多 5 个 · 每个 20 MB</small></div><div class="compose-actions"><button type="button" class="compose-cancel" :disabled="busy" @click="closeComposer">取消</button><button class="button button--dark compose-send" :disabled="busy || !canSend">{{ busy ? '正在发送…' : '发送站内信' }}<AppIcon name="arrow" :size="16" /></button></div></footer>
+        <footer class="compose-footer"><div class="compose-attachment-action"><input ref="attachmentInput" class="compose-sr-only" type="file" multiple tabindex="-1" :aria-label="uiText('添加附件')" :disabled="busy" @change="chooseFiles" /><button type="button" class="compose-attach" :disabled="busy || files.length >= 5" @click="attachmentInput?.click()"><AppIcon name="upload" :size="17" /> {{ uiText('添加附件') }}<span v-if="files.length">{{ files.length }}/5</span></button><small>{{ uiText('最多 5 个 · 每个 20 MB') }}</small></div><div class="compose-actions"><button type="button" class="compose-cancel" :disabled="busy" @click="closeComposer">{{ uiText('取消') }}</button><button class="button button--dark compose-send" :disabled="busy || !canSend">{{ busy ? uiText('正在发送…') : uiText('发送站内信') }}<AppIcon name="arrow" :size="16" /></button></div></footer>
       </form>
     </div>
   </div>

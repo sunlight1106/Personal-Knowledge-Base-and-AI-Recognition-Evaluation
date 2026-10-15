@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import AppIcon from './AppIcon.vue'
 import { toastStore } from '@/stores/toast'
 </script>
@@ -8,8 +10,8 @@ import { toastStore } from '@/stores/toast'
     <TransitionGroup name="toast">
       <div v-for="item in toastStore.state.items" :key="item.id" class="toast" :class="`toast--${item.kind}`">
         <span class="toast-dot" />
-        <span>{{ item.message }}</span>
-        <button class="icon-button" aria-label="关闭通知" @click="toastStore.remove(item.id)"><AppIcon name="close" :size="16" /></button>
+        <span>{{ uiText(item.message) }}</span>
+        <button class="icon-button" :aria-label="uiText('关闭通知')" @click="toastStore.remove(item.id)"><AppIcon name="close" :size="16" /></button>
       </div>
     </TransitionGroup>
   </div>

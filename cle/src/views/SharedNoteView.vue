@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n'
+
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { api, ApiClientError } from '@/api/client'
@@ -20,7 +22,7 @@ const minutes = computed(() => readingMinutes(note.value?.body))
 const refTypeLabel: Record<string, string> = { FILE: '文件', TASK: '任务', ENTRY: '知识卡' }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString('zh-CN', { hour12: false })
+  return new Date(value).toLocaleString(uiLocale(), { hour12: false })
 }
 
 async function load() {
@@ -46,30 +48,30 @@ onMounted(load)
 <template>
   <div class="shared-page">
     <header class="shared-nav">
-      <RouterLink to="/" class="shared-brand">个人知识库与 AI 识别评测</RouterLink>
+      <RouterLink to="/" class="shared-brand">{{ uiText('个人知识库与 AI 识别评测') }}</RouterLink>
       <RouterLink :to="{ name: 'notes' }" class="shared-back">
-        <AppIcon name="note" :size="16" /> 我的笔记
+        <AppIcon name="note" :size="16" /> {{ uiText('我的笔记') }}
       </RouterLink>
     </header>
 
     <main class="shared-main">
-      <p v-if="loading" class="shared-loading"><span class="mini-loader" /> 正在加载分享内容…</p>
+      <p v-if="loading" class="shared-loading"><span class="mini-loader" /> {{ uiText('正在加载分享内容…') }}</p>
 
       <section v-else-if="error" class="panel shared-error">
         <span class="shared-error-icon"><AppIcon name="lock" :size="22" /></span>
-        <h2>无法查看</h2>
-        <p>{{ error }}</p>
-        <RouterLink to="/" class="button button--dark">返回首页</RouterLink>
+        <h2>{{ uiText('无法查看') }}</h2>
+        <p>{{ uiText(error) }}</p>
+        <RouterLink to="/" class="button button--dark">{{ uiText('返回首页') }}</RouterLink>
       </section>
 
       <article v-else-if="note" class="panel shared-note">
         <header class="shared-note-head">
-          <p class="page-kicker">SHARED NOTE · 只读</p>
+          <p class="page-kicker">{{ uiText('SHARED NOTE · 只读') }}</p>
           <h1>{{ note.title }}</h1>
           <div class="shared-note-meta">
             <span class="shared-owner"><i>{{ note.ownerName.slice(0, 1) }}</i>{{ note.ownerName }}</span>
-            <span>更新于 {{ formatDate(note.updatedAt) }}</span>
-            <span><b>{{ words }}</b> 字 · 约 <b>{{ minutes }}</b> 分钟</span>
+            <span>{{ uiText('更新于') }} {{ formatDate(note.updatedAt) }}</span>
+            <span><b>{{ words }}</b> {{ uiText('字 · 约') }} <b>{{ minutes }}</b> {{ uiText('分钟') }}</span>
           </div>
           <div v-if="note.tags.length" class="shared-tags">
             <i v-for="tag in note.tags" :key="tag">{{ tag }}</i>
@@ -79,13 +81,13 @@ onMounted(load)
         <NotePreview class="shared-note-body" :body="note.body" :format="note.contentFormat" />
 
         <footer v-if="note.references.length" class="shared-refs">
-          <h3>引用</h3>
+          <h3>{{ uiText('引用') }}</h3>
           <div class="note-refs">
             <article v-for="reference in note.references" :key="reference.id" class="note-ref" :class="{ 'note-ref--blocked': !reference.accessible }">
               <span class="note-ref-kind">{{ refTypeLabel[reference.referenceType] || reference.referenceType }}</span>
               <div>
                 <strong>{{ reference.displayTitle }}</strong>
-                <small>{{ reference.displayMeta || (reference.accessible ? '' : '不可访问') }}</small>
+                <small>{{ reference.displayMeta || (reference.accessible ? '' : uiText('不可访问')) }}</small>
               </div>
             </article>
           </div>

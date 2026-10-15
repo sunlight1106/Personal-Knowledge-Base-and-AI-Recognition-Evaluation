@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotifications } from '@/lib/useNotifications'
@@ -7,6 +9,13 @@ import type { NotificationItem } from '@/api/research'
 import AppIcon from './AppIcon.vue'
 const router = useRouter(), menu = ref<HTMLDetailsElement | null>(null)
 const { unreadItems, actions, actionTotal, popups, total, dismiss, pause, resume, refresh } = useNotifications()
+function notificationTitle(item: NotificationItem) {
+  if (['mail-older', 'note-reviews', 'backup-warning', 'group-invites'].includes(item.id)) return uiText(item.title)
+  // Translate only server-authored suffixes; group names, people and message subjects are content.
+  if (item.id.startsWith('announcement-') && item.title.endsWith(' · 群公告')) return item.title.slice(0, -6) + ' · ' + uiText('群公告')
+  if (item.id.startsWith('request-') && item.title.endsWith(' 请求添加联系人')) return item.title.slice(0, -8) + ' ' + uiText('请求添加联系人')
+  return item.title
+}
 async function open(item: NotificationItem) {
   if (menu.value) menu.value.open = false
   dismiss(item.id)
@@ -22,19 +31,19 @@ function mouseLeave(event: MouseEvent, id: string) { if (!(event.currentTarget a
 
 <template>
   <details ref="menu" class="notification-menu" @keydown.esc="menu && (menu.open = false)">
-    <summary :aria-label="total ? `通知，${total} 条未读消息` : '通知，没有未读消息'" @click="refresh">
-      <AppIcon name="bell" :size="16" />通知 <span v-if="total" class="notification-count">{{ total > 99 ? '99+' : total }}</span>
+    <summary :aria-label="total ? (uiText('通知，') + (total) + uiText(' 条未读消息')) : uiText('通知，没有未读消息')" @click="refresh">
+      <AppIcon name="bell" :size="16" />{{ uiText('通知') }} <span v-if="total" class="notification-count">{{ total > 99 ? '99+' : total }}</span>
     </summary>
     <div class="notification-list">
-      <header><strong>未读消息</strong><small v-if="total">{{ total }} 条</small></header>
-      <p v-if="!unreadItems.length" class="notification-empty">没有未读消息</p>
-      <button v-for="item in unreadItems" :key="item.id" @click="open(item)"><span>{{ item.title }}</span><small>{{ item.count }}</small></button>
-      <section v-if="actions.length" class="notification-actions" aria-label="待处理事项">
-        <header><strong>待处理事项</strong><small>{{ actionTotal }} 项</small></header>
-        <p>邀请、复习与系统提醒会保留到处理完成，不计入未读消息。</p>
-        <button v-for="item in actions" :key="item.id" @click="open(item)"><span>{{ item.title }}</span><small>{{ item.count }}</small></button>
+      <header><strong>{{ uiText('未读消息') }}</strong><small v-if="total">{{ total }} {{ uiText('条') }}</small></header>
+      <p v-if="!unreadItems.length" class="notification-empty">{{ uiText('没有未读消息') }}</p>
+      <button v-for="item in unreadItems" :key="item.id" @click="open(item)"><span>{{ notificationTitle(item) }}</span><small>{{ item.count }}</small></button>
+      <section v-if="actions.length" class="notification-actions" :aria-label="uiText('待处理事项')">
+        <header><strong>{{ uiText('待处理事项') }}</strong><small>{{ actionTotal }} {{ uiText('项') }}</small></header>
+        <p>{{ uiText('邀请、复习与系统提醒会保留到处理完成，不计入未读消息。') }}</p>
+        <button v-for="item in actions" :key="item.id" @click="open(item)"><span>{{ notificationTitle(item) }}</span><small>{{ item.count }}</small></button>
       </section>
-      <RouterLink v-if="authStore.has('research:use')" to="/app/research?tab=cards" @click="menu && (menu.open = false)">查看复习计划 →</RouterLink>
+      <RouterLink v-if="authStore.has('research:use')" to="/app/research?tab=cards" @click="menu && (menu.open = false)">{{ uiText('查看复习计划 →') }}</RouterLink>
     </div>
   </details>
   <Teleport to="body">
@@ -42,8 +51,8 @@ function mouseLeave(event: MouseEvent, id: string) { if (!(event.currentTarget a
       <TransitionGroup name="notification-popup">
         <article v-for="item in popups" :key="item.id" class="notification-popup" @mouseenter="pause(item.id)" @mouseleave="mouseLeave($event, item.id)" @focusin="pause(item.id)" @focusout="leave($event, item.id)">
           <span class="notification-symbol"><AppIcon :name="item.id.startsWith('announcement-') ? 'bell' : 'mail'" :size="18" /></span>
-          <button class="notification-open" @click="open(item)"><small>{{ item.id.startsWith('announcement-') ? '新公告' : '新通知' }}</small><strong>{{ item.title }}</strong><span>{{ item.count > 1 ? `${item.count} ${item.kind === 'ACTION' ? '项待处理' : '条未读'} · ` : '' }}点击查看</span></button>
-          <button class="notification-dismiss" aria-label="收起提醒" @click="dismiss(item.id)"><AppIcon name="close" :size="16" /></button>
+          <button class="notification-open" @click="open(item)"><small>{{ item.id.startsWith('announcement-') ? uiText('新公告') : uiText('新通知') }}</small><strong>{{ notificationTitle(item) }}</strong><span>{{ item.count > 1 ? `${item.count} ${item.kind === 'ACTION' ? uiText('项待处理') : uiText('条未读')} · ` : '' }}{{ uiText('点击查看') }}</span></button>
+          <button class="notification-dismiss" :aria-label="uiText('收起提醒')" @click="dismiss(item.id)"><AppIcon name="close" :size="16" /></button>
         </article>
       </TransitionGroup>
     </div>

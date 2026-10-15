@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 withDefaults(defineProps<{
   label: string
   value: string | number
@@ -9,9 +11,9 @@ withDefaults(defineProps<{
 
 <template>
   <article class="metric-card" :class="`metric-card--${tone}`">
-    <span class="metric-label">{{ label }}</span>
+    <span class="metric-label">{{ uiText(label) }}</span>
     <strong class="metric-value">{{ value }}</strong>
-    <span v-if="hint" class="metric-hint">{{ hint }}</span>
+    <span v-if="hint" class="metric-hint">{{ uiText(hint) }}</span>
   </article>
 </template>
 

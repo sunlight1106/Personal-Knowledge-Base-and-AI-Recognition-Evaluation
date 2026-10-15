@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { noteTree } from '@/lib/noteTree'
@@ -72,46 +74,46 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
 <template>
   <div class="page-stack learning-notes-page">
     <section class="page-intro page-intro--split">
-      <div><p class="page-kicker">KNOWLEDGE / NOTEBOOKS</p><h2>{{ library || '我的学习库' }}</h2><p>把理解写下来，把知识连接起来。笔记仅自己可见，主动分享后他人才能阅读。</p></div>
+      <div><p class="page-kicker">KNOWLEDGE / NOTEBOOKS</p><h2>{{ library || uiText('我的学习库') }}</h2><p>{{ uiText('把理解写下来，把知识连接起来。笔记仅自己可见，主动分享后他人才能阅读。') }}</p></div>
       <div class="intro-actions"><NoteTemplateGallery v-if="canWrite" @choose="chooseTemplate" />
-        <RouterLink :to="{ name: 'knowledge' }" class="button button--ghost">知识目录 ↗</RouterLink>
-        <RouterLink v-if="canWrite" :to="{ name: 'note-create', query: { library: library || '综合学习' } }" class="button button--dark"><AppIcon name="plus" :size="16" /> 新建笔记</RouterLink>
+        <RouterLink :to="{ name: 'knowledge' }" class="button button--ghost">{{ uiText('知识目录 ↗') }}</RouterLink>
+        <RouterLink v-if="canWrite" :to="{ name: 'note-create', query: { library: library || '综合学习' } }" class="button button--dark"><AppIcon name="plus" :size="16" /> {{ uiText('新建笔记') }}</RouterLink>
       </div>
     </section>
     <NoteReviewList />
     <div class="learning-layout">
       <aside class="learning-sidebar">
-        <p class="page-kicker learning-sidebar-title"><AppIcon name="book" :size="15" /> 我的学习库</p>
-        <RouterLink :to="{ name: 'notes' }" :class="{ selected: !library }"><span>全部笔记</span><small>{{ notes.length }}</small></RouterLink>
+        <p class="page-kicker learning-sidebar-title"><AppIcon name="book" :size="15" /> {{ uiText('我的学习库') }}</p>
+        <RouterLink :to="{ name: 'notes' }" :class="{ selected: !library }"><span>{{ uiText('全部笔记') }}</span><small>{{ notes.length }}</small></RouterLink>
         <RouterLink v-for="name in libraries" :key="name" :to="{ name: 'notes', query: { library: name } }" :class="{ selected: library === name }"><span>{{ name }}</span><small>{{ libraryCount(name) }}</small></RouterLink>
-        <p class="learning-aside-hint">新建笔记时可输入新的学习库名称。保存后会自动加入此列表。</p>
-        <RouterLink v-if="library === '英语学习'" to="/app/vocabulary" class="learning-related"><span>词汇复习</span><span>↗</span></RouterLink>
-        <RouterLink v-if="authStore.has('research:use')" to="/app/research?tab=trash" class="learning-trash"><AppIcon name="trash" :size="15" /><span>回收站</span><AppIcon name="arrow" :size="14" /></RouterLink>
+        <p class="learning-aside-hint">{{ uiText('新建笔记时可输入新的学习库名称。保存后会自动加入此列表。') }}</p>
+        <RouterLink v-if="library === '英语学习'" to="/app/vocabulary" class="learning-related"><span>{{ uiText('词汇复习') }}</span><span>↗</span></RouterLink>
+        <RouterLink v-if="authStore.has('research:use')" to="/app/research?tab=trash" class="learning-trash"><AppIcon name="trash" :size="15" /><span>{{ uiText('回收站') }}</span><AppIcon name="arrow" :size="14" /></RouterLink>
       </aside>
       <section class="learning-list">
         <LoraColabCard v-if="library === '计算机学习'" />
         <div class="learning-toolbar">
-          <nav aria-label="笔记状态"><button v-for="tab in tabs" :key="tab.code" :class="{ selected: status === tab.code }" :aria-pressed="status === tab.code" @click="status = tab.code">{{ tab.label }} <small>{{ tabCount(tab.code) }}</small></button></nav>
-          <label class="learning-search"><AppIcon name="search" :size="16" /><input v-model="keyword" type="search" placeholder="搜索标题、正文、标签" aria-label="搜索笔记" /></label>
+          <nav :aria-label="uiText('笔记状态')"><button v-for="tab in tabs" :key="tab.code" :class="{ selected: status === tab.code }" :aria-pressed="status === tab.code" @click="status = tab.code">{{ uiText(tab.label) }} <small>{{ tabCount(tab.code) }}</small></button></nav>
+          <label class="learning-search"><AppIcon name="search" :size="16" /><input v-model="keyword" type="search" :placeholder="uiText('搜索标题、正文、标签')" :aria-label="uiText('搜索笔记')" /></label>
         </div>
-        <div class="note-list-options"><label>排列方式<select v-model="sort" class="field-input"><option value="updated">最近更新</option><option value="oldest">最早更新</option><option value="title">标题</option></select></label><button v-if="canWrite && treeRows.length" class="table-action" :disabled="batchBusy" @click="selectPage">选择当前页</button><span>每页最多 50 篇</span></div><NoteBatchTools :selected="selectedNotes" @clear="clearSelection" @busy="batchBusy=$event" @changed="organized" />
-        <p v-if="error" class="inline-alert inline-alert--error">{{ error }} <button class="button button--ghost" @click="load">重试</button></p>
-        <div v-if="loading" class="table-skeleton" aria-label="正在加载笔记" />
+        <div class="note-list-options"><label>{{ uiText('排列方式') }}<select v-model="sort" class="field-input"><option value="updated">{{ uiText('最近更新') }}</option><option value="oldest">{{ uiText('最早更新') }}</option><option value="title">{{ uiText('标题') }}</option></select></label><button v-if="canWrite && treeRows.length" class="table-action" :disabled="batchBusy" @click="selectPage">{{ uiText('选择当前页') }}</button><span>{{ uiText('每页最多 50 篇') }}</span></div><NoteBatchTools :selected="selectedNotes" @clear="clearSelection" @busy="batchBusy=$event" @changed="organized" />
+        <p v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }} <button class="button button--ghost" @click="load">{{ uiText('重试') }}</button></p>
+        <div v-if="loading" class="table-skeleton" :aria-label="uiText('正在加载笔记')" />
         <template v-else-if="!filteredNotes.length">
-          <EmptyState icon="note" :title="keyword ? '没有匹配的笔记' : '从一篇学习记录开始'" :description="keyword ? '试试其他关键词或切换学习库。' : '使用模板记录目标、例子、理解与复习问题。'">
-            <RouterLink v-if="canWrite && !keyword" class="button button--ghost" :to="{ name: 'note-create', query: { library: library || '综合学习', template: 'study' } }">用学习模板开始 →</RouterLink>
+          <EmptyState icon="note" :title="keyword ? uiText('没有匹配的笔记') : uiText('从一篇学习记录开始')" :description="keyword ? uiText('试试其他关键词或切换学习库。') : uiText('使用模板记录目标、例子、理解与复习问题。')">
+            <RouterLink v-if="canWrite && !keyword" class="button button--ghost" :to="{ name: 'note-create', query: { library: library || '综合学习', template: 'study' } }">{{ uiText('用学习模板开始 →') }}</RouterLink>
           </EmptyState>
         </template>
         <article v-for="row in treeRows" v-else :key="row.note.id" class="learning-note-row" :style="{ paddingLeft: `${row.depth * 22 + 8}px` }">
-          <div><label v-if="canWrite" class="note-row-selection"><input type="checkbox" :checked="selectedIds.has(row.note.id)" :disabled="batchBusy" :aria-label="`选择 ${row.note.title}`" @change="toggleSelected(row.note.id)" /></label><span class="learning-note-meta">{{ row.note.library || '综合学习' }} <span> / </span> {{ row.note.status.label }} <span> / </span> {{ row.note.contentFormat === 'HTML' ? 'HTML' : 'Markdown' }}</span>
-            <h3><button v-if="hasChildren(row.note.id)" class="page-tree-toggle" :aria-expanded="!folded.has(row.note.id)" :aria-label="folded.has(row.note.id) ? '展开子页面' : '收起子页面'" @click="togglePage(row.note.id)">{{ folded.has(row.note.id) ? "▸" : "▾" }}</button><RouterLink :to="{ name: 'note-edit', params: { id: row.note.id } }">{{ row.note.title }}</RouterLink></h3>
-            <p>{{ row.note.excerpt || '暂无正文' }}</p>
+          <div><label v-if="canWrite" class="note-row-selection"><input type="checkbox" :checked="selectedIds.has(row.note.id)" :disabled="batchBusy" :aria-label="(uiText('选择 ') + (row.note.title))" @change="toggleSelected(row.note.id)" /></label><span class="learning-note-meta">{{ row.note.library || uiText('综合学习') }} <span> / </span> {{ uiText(row.note.status.label) }} <span> / </span> {{ row.note.contentFormat === 'HTML' ? 'HTML' : 'Markdown' }}</span>
+            <h3><button v-if="hasChildren(row.note.id)" class="page-tree-toggle" :aria-expanded="!folded.has(row.note.id)" :aria-label="folded.has(row.note.id) ? uiText('展开子页面') : uiText('收起子页面')" @click="togglePage(row.note.id)">{{ folded.has(row.note.id) ? "▸" : "▾" }}</button><RouterLink :to="{ name: 'note-edit', params: { id: row.note.id } }">{{ row.note.title }}</RouterLink></h3>
+            <p>{{ row.note.excerpt || uiText('暂无正文') }}</p>
             <div class="learning-note-tags"><button v-for="tag in row.note.tags" :key="tag" @click="keyword = tag">{{ tag }}</button></div>
           </div>
-          <div class="learning-note-end"><RouterLink v-if="canWrite" :to="{ name: 'note-create', query: { library: row.note.library, parent: row.note.id } }" class="page-child-link">＋ 子页面</RouterLink><time>{{ new Date(row.note.updatedAt).toLocaleDateString('zh-CN') }}</time><button v-if="canWrite" class="icon-button" :aria-label="`删除 ${row.note.title}`" :disabled="deleting.has(row.note.id)" @click="remove(row.note)"><AppIcon name="trash" :size="15" /></button></div>
+          <div class="learning-note-end"><RouterLink v-if="canWrite" :to="{ name: 'note-create', query: { library: row.note.library, parent: row.note.id } }" class="page-child-link">{{ uiText('＋ 子页面') }}</RouterLink><time>{{ new Date(row.note.updatedAt).toLocaleDateString(uiLocale()) }}</time><button v-if="canWrite" class="icon-button" :aria-label="(uiText('删除 ') + (row.note.title))" :disabled="deleting.has(row.note.id)" @click="remove(row.note)"><AppIcon name="trash" :size="15" /></button></div>
         </article>
-        <nav v-if="pages>1" class="note-pagination" aria-label="笔记分页"><button class="button button--ghost" :disabled="page===0||batchBusy" @click="page--">上一页</button><span>{{ page+1 }} / {{ pages }}</span><button class="button button--ghost" :disabled="page+1>=pages||batchBusy" @click="page++">下一页</button></nav>
-        <footer class="learning-list-footer">{{ keyword ? '搜索结果' : '当前列表' }} · {{ filteredNotes.length }} 篇笔记 <span>Markdown / HTML 编写 · MD / PDF / Word / HTML / TXT 导出</span></footer>
+        <nav v-if="pages>1" class="note-pagination" :aria-label="uiText('笔记分页')"><button class="button button--ghost" :disabled="page===0||batchBusy" @click="page--">{{ uiText('上一页') }}</button><span>{{ page+1 }} / {{ pages }}</span><button class="button button--ghost" :disabled="page+1>=pages||batchBusy" @click="page++">{{ uiText('下一页') }}</button></nav>
+        <footer class="learning-list-footer">{{ keyword ? uiText('搜索结果') : uiText('当前列表') }} · {{ filteredNotes.length }} {{ uiText('篇笔记') }} <span>{{ uiText('Markdown / HTML 编写 · MD / PDF / Word / HTML / TXT 导出') }}</span></footer>
       </section>
     </div>
   </div>

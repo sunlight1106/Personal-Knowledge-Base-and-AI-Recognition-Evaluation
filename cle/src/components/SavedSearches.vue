@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { onMounted,onBeforeUnmount,ref } from 'vue'
 import { researchApi,type SearchFilters,type SavedSearch } from '@/api/research'
 import { createRequestGuard } from '@/lib/requestGuard'
@@ -11,5 +13,5 @@ async function remove(row:SavedSearch){if(busy.value)return;const request=guard.
 onMounted(load);onBeforeUnmount(()=>guard.cancel())
 </script>
 <template>
- <section class="saved-searches" aria-label="常用搜索"><div class="saved-search-row"><span>常用搜索</span><span v-if="!rows.length" class="research-hint">把常查的关键词与筛选条件保存在这里。</span><div v-for="row in rows" :key="row.id" class="saved-search-chip"><button :disabled="busy" @click="emit('apply',row.filters)">{{ row.name }}</button><button :disabled="busy" :aria-label="'删除常用搜索 '+row.name" @click="remove(row)">×</button></div><details ref="panel" class="save-search-form"><summary>＋ 保存当前搜索</summary><form @submit.prevent="save"><label>搜索名称<input v-model="name" class="field-input" maxlength="80" placeholder="例如：上周的实验笔记"/></label><button class="button button--dark" :disabled="busy||!name.trim()">保存</button></form></details></div><p v-if="error" role="alert">{{ error }}</p></section>
+ <section class="saved-searches" :aria-label="uiText('常用搜索')"><div class="saved-search-row"><span>{{ uiText('常用搜索') }}</span><span v-if="!rows.length" class="research-hint">{{ uiText('把常查的关键词与筛选条件保存在这里。') }}</span><div v-for="row in rows" :key="row.id" class="saved-search-chip"><button :disabled="busy" @click="emit('apply',row.filters)">{{ row.name }}</button><button :disabled="busy" :aria-label="'删除常用搜索 '+row.name" @click="remove(row)">×</button></div><details ref="panel" class="save-search-form"><summary>{{ uiText('＋ 保存当前搜索') }}</summary><form @submit.prevent="save"><label>{{ uiText('搜索名称') }}<input v-model="name" class="field-input" maxlength="80" :placeholder="uiText('例如：上周的实验笔记')"/></label><button class="button button--dark" :disabled="busy||!name.trim()">{{ uiText('保存') }}</button></form></details></div><p v-if="error" role="alert">{{ uiText(error) }}</p></section>
 </template>

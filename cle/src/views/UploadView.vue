@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, ApiClientError } from '@/api/client'
@@ -117,49 +119,49 @@ async function run() {
 <template>
   <div class="lab-docs workspace-reader">
     <section id="experiment" class="page-intro page-intro--split experiment-page-intro">
-      <div><p class="page-kicker">RECOGNITION / EXPERIMENTS</p><h2>识别实验</h2><p>用个人模型理解图片，或从本地演示开始一次对照实验。</p></div>
-      <nav class="experiment-index" aria-label="实验步骤"><a v-if="authStore.has('personal-ai:use')" href="#personal-vision">个人图片识别</a><a href="#sample">DEMO 样本</a><a href="#configuration">选择模型</a><a href="#run">运行实验</a></nav>
+      <div><p class="page-kicker">RECOGNITION / EXPERIMENTS</p><h2>{{ uiText('识别实验') }}</h2><p>{{ uiText('用个人模型理解图片，或从本地演示开始一次对照实验。') }}</p></div>
+      <nav class="experiment-index" :aria-label="uiText('实验步骤')"><a v-if="authStore.has('personal-ai:use')" href="#personal-vision">{{ uiText('个人图片识别') }}</a><a href="#sample">{{ uiText('DEMO 样本') }}</a><a href="#configuration">{{ uiText('选择模型') }}</a><a href="#run">{{ uiText('运行实验') }}</a></nav>
     </section>
         <section v-if="authStore.has('personal-ai:use')" id="personal-vision" class="reader-personal"><PersonalRecognitionPanel /></section>
-    <DocRow id="sample" title="DEMO · 输入样本">
-      <p>选择一张图片，或一段视频。你也可以把文件直接拖入右侧。</p>
-      <p class="experiment-caption">JPEG、PNG、WEBP / MP4、WEBM<br />单个文件最大 20 MB</p>
+    <DocRow id="sample" :title="uiText('DEMO · 输入样本')">
+      <p>{{ uiText('选择一张图片，或一段视频。你也可以把文件直接拖入右侧。') }}</p>
+      <p class="experiment-caption">JPEG、PNG、WEBP / MP4、WEBM<br />{{ uiText('单个文件最大 20 MB') }}</p>
       <template #detail>
-        <p v-if="!authStore.has('file:write')" class="experiment-caption" role="status">当前账号没有上传权限。需要上传样本时，请联系管理员开放文件上传。</p>
+        <p v-if="!authStore.has('file:write')" class="experiment-caption" role="status">{{ uiText('当前账号没有上传权限。需要上传样本时，请联系管理员开放文件上传。') }}</p>
         <UploadDropzone v-else-if="!selectedFile" @selected="handleFile" />
         <div v-else class="experiment-preview">
           <video v-if="selectedFile.type.startsWith('video/')" :src="previewUrl" controls playsinline muted />
-          <img v-else :src="previewUrl" alt="待识别图片预览" />
-          <div><span>{{ selectedFile.name }} <small>{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</small></span><button class="button" :disabled="busyStage !== 'idle'" @click="selectedFile = null; uploadedFile = null">重新选择</button></div>
+          <img v-else :src="previewUrl" :alt="uiText('待识别图片预览')" />
+          <div><span>{{ selectedFile.name }} <small>{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</small></span><button class="button" :disabled="busyStage !== 'idle'" @click="selectedFile = null; uploadedFile = null">{{ uiText('重新选择') }}</button></div>
         </div>
       </template>
     </DocRow>
-    <DocRow id="configuration" title="模型与任务">
-      <p v-if="!authStore.has('model:read')" class="experiment-caption" role="status">当前账号没有查看模型运行状态的权限，暂时不能运行 DEMO 实验。</p>
-      <p>任务决定模型的识别目标。选择文件后，会自动匹配图片或视频任务。</p>
-      <p><RouterLink to="/app/models">查看模型说明 ↗</RouterLink></p>
+    <DocRow id="configuration" :title="uiText('模型与任务')">
+      <p v-if="!authStore.has('model:read')" class="experiment-caption" role="status">{{ uiText('当前账号没有查看模型运行状态的权限，暂时不能运行 DEMO 实验。') }}</p>
+      <p>{{ uiText('任务决定模型的识别目标。选择文件后，会自动匹配图片或视频任务。') }}</p>
+      <p><RouterLink to="/app/models">{{ uiText('查看模型说明 ↗') }}</RouterLink></p>
       <template #detail>
         <fieldset class="experiment-fields" :disabled="busyStage !== 'idle'">
-          <legend>任务类型</legend>
+          <legend>{{ uiText('任务类型') }}</legend>
           <div class="experiment-tasks">
-            <button v-for="option in taskOptions" :key="option.id" type="button" :aria-pressed="taskType === option.id" @click="taskType = option.id"><span>{{ option.title }}</span><small>{{ option.hint }}</small></button>
+            <button v-for="option in taskOptions" :key="option.id" type="button" :aria-pressed="taskType === option.id" @click="taskType = option.id"><span>{{ uiText(option.title) }}</span><small>{{ uiText(option.hint) }}</small></button>
           </div>
-          <label class="field-label">识别模型<select v-model.number="modelId" class="field-input"><option v-if="!availableModels.length" :value="null" disabled>暂无可用模型</option><option v-for="model in availableModels" :key="model.id" :value="model.id">{{ model.name }} · v{{ model.version }}</option></select></label>
+          <label class="field-label">{{ uiText('识别模型') }}<select v-model.number="modelId" class="field-input"><option v-if="!availableModels.length" :value="null" disabled>{{ uiText('暂无可用模型') }}</option><option v-for="model in availableModels" :key="model.id" :value="model.id">{{ model.name }} · v{{ model.version }}</option></select></label>
         </fieldset>
       </template>
     </DocRow>
-    <DocRow id="run" title="运行与对照">
-      <p>打开优化后，将对同一样本进行两路识别，便于比较处理前后的结果。</p>
-      <p class="experiment-caption">优化效果取决于输入质量和模型能力。</p>
+    <DocRow id="run" :title="uiText('运行与对照')">
+      <p>{{ uiText('打开优化后，将对同一样本进行两路识别，便于比较处理前后的结果。') }}</p>
+      <p class="experiment-caption">{{ uiText('优化效果取决于输入质量和模型能力。') }}</p>
       <template #detail>
         <div class="experiment-run">
-          <label class="experiment-check"><input v-model="enhancementEnabled" :disabled="busyStage !== 'idle'" type="checkbox" /><span>启用质量感知优化<small>{{ taskType === 'VIDEO_ANALYSIS' ? '视频降噪与音轨处理' : '原始图片与增强图片对照' }}</small></span></label>
-          <p class="experiment-runtime">{{ runtime?.mode === 'demo' ? '演示模式 · 结果仅用于体验流程，不代表真实模型性能。' : '共享模型调用已停用。真实图片识别请使用上方个人 AI 入口。' }}</p>
-          <p v-if="(selectedFile || uploadedFile) && !mediaMatchesTask" class="inline-alert inline-alert--error">视频请选择“视频分析”，图片请选择车牌或票据任务。</p>
-          <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ error }}</p>
+          <label class="experiment-check"><input v-model="enhancementEnabled" :disabled="busyStage !== 'idle'" type="checkbox" /><span>{{ uiText('启用质量感知优化') }}<small>{{ taskType === 'VIDEO_ANALYSIS' ? uiText('视频降噪与音轨处理') : uiText('原始图片与增强图片对照') }}</small></span></label>
+          <p class="experiment-runtime">{{ runtime?.mode === 'demo' ? uiText('演示模式 · 结果仅用于体验流程，不代表真实模型性能。') : uiText('共享模型调用已停用。真实图片识别请使用上方个人 AI 入口。') }}</p>
+          <p v-if="(selectedFile || uploadedFile) && !mediaMatchesTask" class="inline-alert inline-alert--error">{{ uiText('视频请选择“视频分析”，图片请选择车牌或票据任务。') }}</p>
+          <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }}</p>
           <div class="experiment-action">
-            <button class="button button--dark" :disabled="!canRun" @click="run"><template v-if="busyStage !== 'idle'"><span class="button-spinner" />{{ busyStage === 'uploading' ? '正在上传…' : busyStage === 'queued' ? '等待处理…' : '正在识别…' }}</template><template v-else>运行实验 <AppIcon name="arrow" :size="16" /></template></button>
-            <span v-if="!selectedFile && !uploadedFile">请先选择文件</span>
+            <button class="button button--dark" :disabled="!canRun" @click="run"><template v-if="busyStage !== 'idle'"><span class="button-spinner" />{{ busyStage === 'uploading' ? uiText('正在上传…') : busyStage === 'queued' ? uiText('等待处理…') : uiText('正在识别…') }}</template><template v-else>{{ uiText('运行实验') }} <AppIcon name="arrow" :size="16" /></template></button>
+            <span v-if="!selectedFile && !uploadedFile">{{ uiText('请先选择文件') }}</span>
           </div>
         </div>
       </template>

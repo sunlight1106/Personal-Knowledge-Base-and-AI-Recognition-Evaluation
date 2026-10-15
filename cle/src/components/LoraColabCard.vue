@@ -1,13 +1,15 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import AppIcon from '@/components/AppIcon.vue'
 
 const notebookUrl = 'https://colab.research.google.com/github/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/lora/experiment.ipynb#scrollTo=c5ed37230628ee76'
 </script>
 
 <template>
-  <aside class="lora-colab-card" aria-label="LoRA 微调在线实验">
-    <div class="lora-colab-content"><span class="lora-colab-label"><AppIcon name="terminal" :size="16" /> 在线实验 · GPT-2 / LoRA</span><h4>动手学习 LoRA 微调</h4><p>跟随交互式笔记本，从安装依赖、初始化模型到运行训练，逐步理解微调流程。</p></div>
-    <div class="lora-colab-actions"><a :href="notebookUrl" target="_blank" rel="noopener noreferrer" class="lora-colab-button">打开 Colab 实验 <span aria-hidden="true">↗</span><span class="lora-colab-sr">（新标签页）</span></a><small>训练在 Colab 中运行</small></div>
+  <aside class="lora-colab-card" :aria-label="uiText('LoRA 微调在线实验')">
+    <div class="lora-colab-content"><span class="lora-colab-label"><AppIcon name="terminal" :size="16" /> {{ uiText('在线实验 · GPT-2 / LoRA') }}</span><h4>{{ uiText('动手学习 LoRA 微调') }}</h4><p>{{ uiText('跟随交互式笔记本，从安装依赖、初始化模型到运行训练，逐步理解微调流程。') }}</p></div>
+    <div class="lora-colab-actions"><a :href="notebookUrl" target="_blank" rel="noopener noreferrer" class="lora-colab-button">{{ uiText('打开 Colab 实验') }} <span aria-hidden="true">↗</span><span class="lora-colab-sr">{{ uiText('（新标签页）') }}</span></a><small>{{ uiText('训练在 Colab 中运行') }}</small></div>
   </aside>
 </template>
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import type { VocabularyLesson } from '@/api/vocabulary'
 import WordPronunciation from './WordPronunciation.vue'
 defineProps<{ lesson: VocabularyLesson; hideIdentity?: boolean }>()
@@ -9,8 +11,8 @@ defineProps<{ lesson: VocabularyLesson; hideIdentity?: boolean }>()
     <header v-if="!hideIdentity"><div><h3>{{ lesson.term }}</h3><p class="phonetic">{{ lesson.ipa }} <span>{{ lesson.pos }}</span></p></div></header>
     <WordPronunciation v-if="!hideIdentity" :text="lesson.term" />
     <p v-if="!hideIdentity" class="meaning">{{ lesson.meaning }}</p>
-    <div class="lesson-columns"><div><section class="scene"><span class="label">先记一个画面</span><p>{{ lesson.memoryCue }}</p></section><blockquote v-if="lesson.example"><p>{{ lesson.example }}</p><small>{{ lesson.exampleTranslation }}</small><WordPronunciation v-if="!hideIdentity" :text="lesson.example" /></blockquote></div>
-    <section class="combinations"><span class="label">连着记 · 搭配与用法</span><div v-for="item in lesson.collocations" :key="item.pattern" class="pattern"><strong>{{ item.pattern }}</strong><span>{{ item.meaning }}</span><small v-if="item.note">{{ item.note }}</small></div><p v-if="!lesson.collocations.length" class="subtle">这条词库尚未收录固定搭配。先按当前释义使用；私有词书可补充搭配和用法。</p><p class="usage">{{ lesson.usageNote }}</p></section></div>
+    <div class="lesson-columns"><div><section class="scene"><span class="label">{{ uiText('先记一个画面') }}</span><p>{{ lesson.memoryCue }}</p></section><blockquote v-if="lesson.example"><p>{{ lesson.example }}</p><small>{{ lesson.exampleTranslation }}</small><WordPronunciation v-if="!hideIdentity" :text="lesson.example" /></blockquote></div>
+    <section class="combinations"><span class="label">{{ uiText('连着记 · 搭配与用法') }}</span><div v-for="item in lesson.collocations" :key="item.pattern" class="pattern"><strong>{{ item.pattern }}</strong><span>{{ item.meaning }}</span><small v-if="item.note">{{ item.note }}</small></div><p v-if="!lesson.collocations.length" class="subtle">{{ uiText('这条词库尚未收录固定搭配。先按当前释义使用；私有词书可补充搭配和用法。') }}</p><p class="usage">{{ lesson.usageNote }}</p></section></div>
   </div>
 </template>
 

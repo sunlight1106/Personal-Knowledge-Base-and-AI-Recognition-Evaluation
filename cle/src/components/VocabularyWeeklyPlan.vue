@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { computed,onMounted,onBeforeUnmount,ref } from 'vue'
 import { workflowApi,type WorkflowPreferences } from '@/api/workflows'
 import type { VocabularyDashboard } from '@/api/vocabulary'
@@ -11,13 +13,13 @@ const answers=computed(()=>props.dashboard.history.filter(d=>d.date&&d.date>=mon
 const target=computed(()=>plan.value?.weeklyTarget||70),progress=computed(()=>Math.min(100,answers.value/target.value*100))
 </script>
 <template>
-  <section class="weekly-plan" aria-label="本周学习计划">
+  <section class="weekly-plan" :aria-label="uiText('本周学习计划')">
     <div class="weekly-plan-summary">
-      <strong>本周练习</strong><span>{{ answers }} / {{ target }} 次</span>
-      <progress :value="progress" max="100" :aria-label="`本周已完成 ${answers} 次练习`" />
-      <a href="/app/settings?section=workflow">调整计划 →</a>
+      <strong>{{ uiText('本周练习') }}</strong><span>{{ answers }} / {{ target }} {{ uiText('次') }}</span>
+      <progress :value="progress" max="100" :aria-label="(uiText('本周已完成 ') + (answers) + uiText(' 次练习'))" />
+      <a href="/app/settings?section=workflow">{{ uiText('调整计划 →') }}</a>
     </div>
-    <details><summary>如何统计</summary><p>周一至周日统计答题次数；掌握程度另按独立回忆和复习表现记录。</p></details>
+    <details><summary>{{ uiText('如何统计') }}</summary><p>{{ uiText('周一至周日统计答题次数；掌握程度另按独立回忆和复习表现记录。') }}</p></details>
   </section>
 </template>
 <style scoped>

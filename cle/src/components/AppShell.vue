@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import LanguageToggle from '@/components/LanguageToggle.vue'
+import { uiRoleName, uiText } from '@/i18n'
+
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { sectionLinks as vSectionLinks } from '@/directives/sectionLinks'
@@ -51,39 +54,39 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
 <template>
   <div class="portal-app">
     <LearningActivity v-if="authStore.state.user" :key="'activity-'+authStore.state.user.id" />
-    <a class="portal-skip" href="#workspace-content">跳转到内容</a>
+    <a class="portal-skip" href="#workspace-content">{{ uiText('跳转到内容') }}</a>
     <header class="workspace-header">
-      <nav class="workspace-breadcrumb" aria-label="当前位置"><RouterLink to="/" class="workspace-brand"><BrandMark /><span>个人知识库 <small>PERSONAL WORKSPACE</small></span></RouterLink><span>/</span><span>{{ title }}</span></nav>
-      <nav class="workspace-quick" aria-label="常用页面">
-        <RouterLink v-for="item in quickItems" :key="item.to" :to="item.to"><AppIcon :name="item.icon" :size="15" /><span>{{ item.label }}</span></RouterLink>
-        <span v-if="!quickItems.length" class="workspace-quick-hint">在「目录与账户」中固定常用页面</span>
+      <nav class="workspace-breadcrumb" :aria-label="uiText('当前位置')"><RouterLink to="/" class="workspace-brand"><BrandMark /><span>{{ uiText('个人知识库') }} <small>PERSONAL WORKSPACE</small></span></RouterLink><span>/</span><span>{{ uiText(title) }}</span></nav>
+      <nav class="workspace-quick" :aria-label="uiText('常用页面')">
+        <RouterLink v-for="item in quickItems" :key="item.to" :to="item.to"><AppIcon :name="item.icon" :size="15" /><span>{{ uiText(item.label) }}</span></RouterLink>
+        <span v-if="!quickItems.length" class="workspace-quick-hint">{{ uiText('在「目录与账户」中固定常用页面') }}</span>
       </nav>
       <div class="workspace-tools"><WorkspaceTools v-if="authStore.state.user" :key="authStore.state.user.id" />
-        <MotionToggle />
-        <button class="topbar-tool" :aria-label="themeStore.isDark() ? '切换到浅色' : '切换到暗色'" @click="themeStore.toggle()"><AppIcon :name="themeStore.isDark() ? 'sun' : 'moon'" :size="16" /></button>
+        <LanguageToggle /><MotionToggle />
+        <button class="topbar-tool" :aria-label="themeStore.isDark() ? uiText('切换到浅色') : uiText('切换到暗色')" @click="themeStore.toggle()"><AppIcon :name="themeStore.isDark() ? 'sun' : 'moon'" :size="16" /></button>
         <details ref="menu" class="workspace-directory" @keydown.esc="closeMenu(); menu?.querySelector('summary')?.focus()">
-          <summary><AppIcon name="menu" :size="16" />目录与账户</summary>
+          <summary><AppIcon name="menu" :size="16" />{{ uiText('目录与账户') }}</summary>
           <div class="workspace-directory-body">
-            <div class="directory-caption"><span>全部页面</span><small>固定到顶部 · {{ quickItems.length }}/5</small></div>
-            <nav aria-label="全部页面">
+            <div class="directory-caption"><span>{{ uiText('全部页面') }}</span><small>{{ uiText('固定到顶部 ·') }} {{ quickItems.length }}/5</small></div>
+            <nav :aria-label="uiText('全部页面')">
               <section v-for="group in [...navGroups, {label:'系统管理',items:visible(adminItems)}, {label:'帮助',items:supportItems}].filter(group => group.items.length)" :key="group.label">
-                <p>{{ group.label }}</p>
+                <p>{{ uiText(group.label) }}</p>
                 <div v-for="item in group.items" :key="item.to" class="directory-item">
-                  <RouterLink :to="item.to">{{ item.label }}</RouterLink>
-                  <button class="directory-pin" :aria-label="`${quickItems.some(pin => pin.to === item.to) ? '取消固定' : '固定'}${item.label}`" :aria-pressed="quickItems.some(pin => pin.to === item.to)" @click="togglePin(item)"><AppIcon :name="quickItems.some(pin => pin.to === item.to) ? 'check' : 'plus'" :size="13" /></button>
+                  <RouterLink :to="item.to">{{ uiText(item.label) }}</RouterLink>
+                  <button class="directory-pin" :aria-label="`${quickItems.some(pin => pin.to === item.to) ? uiText('取消固定') : uiText('固定')}${item.label}`" :aria-pressed="quickItems.some(pin => pin.to === item.to)" @click="togglePin(item)"><AppIcon :name="quickItems.some(pin => pin.to === item.to) ? 'check' : 'plus'" :size="13" /></button>
                 </div>
               </section>
             </nav>
-            <p class="directory-feedback" role="status">{{ !workspaceNavigation.state.persistent ? '浏览器无法保存设置，本次打开期间仍可使用。' : pinMessage }}</p>
+            <p class="directory-feedback" role="status">{{ !workspaceNavigation.state.persistent ? uiText('浏览器无法保存设置，本次打开期间仍可使用。') : pinMessage }}</p>
             <footer class="workspace-account">
-              <div class="workspace-account-identity"><span class="account-monogram">{{ authStore.state.user?.displayName?.slice(0, 1) || 'U' }}</span><div><strong>{{ authStore.state.user?.displayName }}</strong><small>@{{ authStore.state.user?.username }}</small></div><span class="account-role">{{ authStore.state.user?.roleName }}</span></div>
-              <nav class="workspace-account-links" aria-label="账户操作">
-                <RouterLink to="/app/settings?section=profile"><AppIcon name="users" :size="15" />个人资料</RouterLink>
-                <RouterLink to="/app/settings?section=security"><AppIcon name="shield" :size="15" />密码与登录设备</RouterLink>
-                <RouterLink to="/app/settings?section=privacy"><AppIcon name="key" :size="15" />隐私与数据</RouterLink>
-                <RouterLink to="/app/settings?section=appearance"><AppIcon name="eye" :size="15" />外观设置</RouterLink>
+              <div class="workspace-account-identity"><span class="account-monogram">{{ authStore.state.user?.displayName?.slice(0, 1) || 'U' }}</span><div><strong>{{ authStore.state.user?.displayName }}</strong><small>@{{ authStore.state.user?.username }}</small></div><span class="account-role">{{ uiRoleName(authStore.state.user?.roleName, authStore.state.user?.roleCode) }}</span></div>
+              <nav class="workspace-account-links" :aria-label="uiText('账户操作')">
+                <RouterLink to="/app/settings?section=profile"><AppIcon name="users" :size="15" />{{ uiText('个人资料') }}</RouterLink>
+                <RouterLink to="/app/settings?section=security"><AppIcon name="shield" :size="15" />{{ uiText('密码与登录设备') }}</RouterLink>
+                <RouterLink to="/app/settings?section=privacy"><AppIcon name="key" :size="15" />{{ uiText('隐私与数据') }}</RouterLink>
+                <RouterLink to="/app/settings?section=appearance"><AppIcon name="eye" :size="15" />{{ uiText('外观设置') }}</RouterLink>
               </nav>
-              <div class="workspace-account-exit"><RouterLink to="/account/switch"><AppIcon name="users" :size="15" />切换账号</RouterLink><RouterLink to="/account/logout"><AppIcon name="logout" :size="15" />退出登录</RouterLink></div>
+              <div class="workspace-account-exit"><RouterLink to="/account/switch"><AppIcon name="users" :size="15" />{{ uiText('切换账号') }}</RouterLink><RouterLink to="/account/logout"><AppIcon name="logout" :size="15" />{{ uiText('退出登录') }}</RouterLink></div>
             </footer>
           </div>
         </details>

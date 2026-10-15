@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n'
+
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Day } from '@/api/admin'
 const props = defineProps<{ days: Day[] }>()
@@ -81,9 +83,9 @@ function toggle(key: Metric) { selected.value = selected.value.includes(key) ? s
 </script>
 <template>
   <div class="admin-chart">
-    <div class="admin-chart-legend" aria-label="选择统计指标"><button v-for="metric in metrics" :key="metric.key" :aria-pressed="selected.includes(metric.key)" :style="{ '--series': metric.color }" @click="toggle(metric.key)"><i />{{ metric.label }}</button><button class="chart-table-toggle" :aria-expanded="table" @click="table = !table">{{ table ? '收起数据' : '查看数据表' }}</button></div>
-    <div class="chart-readout" aria-live="polite"><template v-if="day"><strong>{{ day.date }}</strong><span v-for="m in visible" :key="m.key">{{ m.label }} <b>{{ day[m.key] }}</b></span></template><span v-else>鼠标停留 1 秒查看浮层数据，也可用 Tab 和方向键逐日查看。</span></div>
-    <svg v-if="days.length" viewBox="0 0 980 290" role="group" aria-label="平台每日统计折线图" @mouseleave="clearPointer" @pointerdown="keyboard = null">
+    <div class="admin-chart-legend" :aria-label="uiText('选择统计指标')"><button v-for="metric in metrics" :key="metric.key" :aria-pressed="selected.includes(metric.key)" :style="{ '--series': metric.color }" @click="toggle(metric.key)"><i />{{ uiText(metric.label) }}</button><button class="chart-table-toggle" :aria-expanded="table" @click="table = !table">{{ table ? uiText('收起数据') : uiText('查看数据表') }}</button></div>
+    <div class="chart-readout" aria-live="polite"><template v-if="day"><strong>{{ day.date }}</strong><span v-for="m in visible" :key="m.key">{{ uiText(m.label) }} <b>{{ day[m.key] }}</b></span></template><span v-else>{{ uiText('鼠标停留 1 秒查看浮层数据，也可用 Tab 和方向键逐日查看。') }}</span></div>
+    <svg v-if="days.length" viewBox="0 0 980 290" role="group" :aria-label="uiText('平台每日统计折线图')" @mouseleave="clearPointer" @pointerdown="keyboard = null">
       <g v-for="tick in 5" :key="tick"><line x1="54" :y1="y((tick - 1) * scale / 4)" x2="944" :y2="y((tick - 1) * scale / 4)" class="chart-grid" /><text x="40" :y="y((tick - 1) * scale / 4) + 4" text-anchor="end">{{ (tick - 1) * scale / 4 }}</text></g>
       <rect v-if="activePoint !== null" :x="left(activePoint)" y="30" :width="width(activePoint)" height="220" class="chart-band" pointer-events="none" />
       <polyline v-for="m in visible" :key="m.key" :points="line(m.key)" :stroke="m.color" fill="none" stroke-width="2.3" stroke-linejoin="round" />
@@ -91,15 +93,15 @@ function toggle(key: Metric) { selected.value = selected.value.includes(key) ? s
       <line v-if="activePoint !== null" :x1="x(activePoint)" :x2="x(activePoint)" y1="30" y2="250" class="chart-cursor" pointer-events="none" />
       <text x="54" y="278">{{ days[0]?.date }}</text><text x="944" y="278" text-anchor="end">{{ days.at(-1)?.date }}</text>
     </svg>
-    <p v-else class="table-muted">此时间范围暂无数据。</p>
-    <p v-if="!selected.length" class="table-muted">选择上方指标以显示折线。</p>
+    <p v-else class="table-muted">{{ uiText('此时间范围暂无数据。') }}</p>
+    <p v-if="!selected.length" class="table-muted">{{ uiText('选择上方指标以显示折线。') }}</p>
     <Teleport to="body">
       <div v-if="tooltipVisible && day && hovered !== null" ref="tooltip" class="chart-tooltip" role="tooltip" :style="tooltipPosition">
         <strong class="chart-tooltip-date">{{ day.date }}<small>UTC</small></strong>
-        <div v-for="m in visible" :key="m.key" class="chart-tooltip-metric"><i :style="{ background: m.color }" /><span>{{ m.label }}</span><b>{{ day[m.key].toLocaleString() }}</b></div>
+        <div v-for="m in visible" :key="m.key" class="chart-tooltip-metric"><i :style="{ background: m.color }" /><span>{{ uiText(m.label) }}</span><b>{{ day[m.key].toLocaleString(uiLocale()) }}</b></div>
       </div>
     </Teleport>
-    <div v-if="table" class="data-table-wrap"><table class="data-table"><thead><tr><th>日期 · UTC</th><th v-for="m in metrics" :key="m.key">{{ m.label }}</th></tr></thead><tbody><tr v-for="row in days" :key="row.date"><td>{{ row.date }}</td><td v-for="m in metrics" :key="m.key">{{ row[m.key] }}</td></tr></tbody></table></div>
+    <div v-if="table" class="data-table-wrap"><table class="data-table"><thead><tr><th>{{ uiText('日期 · UTC') }}</th><th v-for="m in metrics" :key="m.key">{{ uiText(m.label) }}</th></tr></thead><tbody><tr v-for="row in days" :key="row.date"><td>{{ row.date }}</td><td v-for="m in metrics" :key="m.key">{{ row[m.key] }}</td></tr></tbody></table></div>
   </div>
 </template>
 <style scoped>

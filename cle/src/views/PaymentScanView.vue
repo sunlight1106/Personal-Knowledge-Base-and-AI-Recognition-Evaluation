@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n'
+
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { api, ApiClientError } from '@/api/client'
@@ -33,22 +35,22 @@ onMounted(load)
 
 <template>
   <main class="pay-page">
-    <header><RouterLink to="/"><AppLogo /></RouterLink><span>安全沙箱收银台</span></header>
+    <header><RouterLink to="/"><AppLogo /></RouterLink><span>{{ uiText('安全沙箱收银台') }}</span></header>
     <section class="pay-card">
       <div v-if="loading" class="large-skeleton" />
       <template v-else-if="payment">
-        <span class="pay-brand" :class="payment.method.toLowerCase()">{{ payment.method === 'WECHAT' ? '微' : '支' }}</span>
+        <span class="pay-brand" :class="payment.method.toLowerCase()">{{ payment.method === 'WECHAT' ? uiText('微') : uiText('支') }}</span>
         <p class="page-kicker">{{ brand.toUpperCase() }} · SANDBOX</p>
-        <h1>{{ payment.status === 'PAID' ? '支付已完成' : `向 ${payment.merchantName} 付款` }}</h1>
+        <h1>{{ payment.status === 'PAID' ? uiText('支付已完成') : (uiText('向 ') + (payment.merchantName) + uiText(' 付款')) }}</h1>
         <strong class="pay-amount">¥{{ Number(payment.amount).toFixed(2) }}</strong>
-        <p v-if="payment.status === 'PENDING_PAYMENT'">这是本地演示收银台。确认后，原设备会自动检测到账状态。</p>
-        <div v-else class="payment-success"><AppIcon name="check" :size="24" /> 订单已安全入账，可以关闭此页面。</div>
+        <p v-if="payment.status === 'PENDING_PAYMENT'">{{ uiText('这是本地演示收银台。确认后，原设备会自动检测到账状态。') }}</p>
+        <div v-else class="payment-success"><AppIcon name="check" :size="24" /> {{ uiText('订单已安全入账，可以关闭此页面。') }}</div>
         <button v-if="payment.status === 'PENDING_PAYMENT'" class="button button--dark button--full" :disabled="paying" @click="complete">
-          {{ paying ? '正在确认…' : `确认使用${brand}支付` }}
+          {{ paying ? uiText('正在确认…') : (uiText('确认使用') + (brand) + uiText('支付')) }}
         </button>
-        <small>订单 {{ payment.orderId.slice(0, 8) }} · 有效期至 {{ new Date(payment.expiresAt).toLocaleTimeString('zh-CN') }}</small>
+        <small>{{ uiText('订单') }} {{ payment.orderId.slice(0, 8) }} {{ uiText('· 有效期至') }} {{ new Date(payment.expiresAt).toLocaleTimeString(uiLocale()) }}</small>
       </template>
-      <div v-if="error" class="inline-alert inline-alert--error">{{ error }}</div>
+      <div v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</div>
     </section>
   </main>
 </template>

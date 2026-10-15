@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { ref } from 'vue'
 import AppIcon from './AppIcon.vue'
 
@@ -29,8 +31,8 @@ function drop(event: DragEvent) {
     @drop.prevent="drop"
   >
     <span class="dropzone-icon"><AppIcon name="upload" :size="25" /></span>
-    <strong>拖入图片或视频，或点击选择</strong>
-    <span class="dropzone-hint">支持 JPEG、PNG、WEBP、MP4、WEBM，单文件不超过 20 MB</span>
+    <strong>{{ uiText('拖入图片或视频，或点击选择') }}</strong>
+    <span class="dropzone-hint">{{ uiText('支持 JPEG、PNG、WEBP、MP4、WEBM，单文件不超过 20 MB') }}</span>
     <span class="dropzone-formats" aria-hidden="true">JPEG / PNG / WEBP / MP4 / WEBM</span>
     <input ref="input" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" hidden @change="select(($event.target as HTMLInputElement).files)" />
   </button>

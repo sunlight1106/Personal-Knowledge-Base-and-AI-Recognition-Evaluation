@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import AppIcon from '@/components/AppIcon.vue'
 import { toastStore } from '@/stores/toast'
 
@@ -11,7 +13,7 @@ async function copy() {
 </script>
 
 <template>
-  <span v-if="value" class="identity-code" :class="{ 'identity-code--prominent': prominent }" :title="`身份码 ${value}`"><code>{{ value }}</code><button v-if="copyable" type="button" aria-label="复制身份码" @click.stop="copy"><AppIcon name="copy" :size="14" /></button></span>
+  <span v-if="value" class="identity-code" :class="{ 'identity-code--prominent': prominent }" :title="(uiText('身份码 ') + (value))"><code>{{ value }}</code><button v-if="copyable" type="button" :aria-label="uiText('复制身份码')" @click.stop="copy"><AppIcon name="copy" :size="14" /></button></span>
 </template>
 
 <style scoped>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 const props = defineProps<{ status: string }>()
 const labels: Record<string, string> = {
   ACTIVE: '可用', INACTIVE: '停用', COMPLETED: '已完成', FAILED: '失败',
@@ -8,7 +10,7 @@ const labels: Record<string, string> = {
 
 <template>
   <span class="status-badge" :class="`status-badge--${props.status.toLowerCase()}`">
-    <span class="status-dot" />{{ labels[props.status] || props.status }}
+    <span class="status-dot" />{{ uiText(labels[props.status] || props.status) }}
   </span>
 </template>
 

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import LanguageToggle from '@/components/LanguageToggle.vue'
+import { uiText } from '@/i18n'
+
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import BrandMark from '@/components/BrandMark.vue'
@@ -19,18 +22,18 @@ const chapters = [
 <template>
   <div class="lab-docs lab-home">
     <header class="home-header">
-      <RouterLink to="/" class="home-brand"><BrandMark /><span>个人知识库<small>A SPACE FOR YOUR MIND</small></span></RouterLink>
-      <nav class="home-navigation" aria-label="首页导航"><a href="#collection">探索空间</a><RouterLink to="/docs">使用文档</RouterLink><RouterLink to="/models">模型目录</RouterLink><MotionToggle /><RouterLink :to="enter" class="home-enter">{{ authStore.state.user ? '进入工作台' : '登录平台' }}<AppIcon name="arrow" :size="16" /></RouterLink></nav>
+      <RouterLink to="/" class="home-brand"><BrandMark /><span>{{ uiText('个人知识库') }}<small>A SPACE FOR YOUR MIND</small></span></RouterLink>
+      <nav class="home-navigation" :aria-label="uiText('首页导航')"><a href="#collection">{{ uiText('探索空间') }}</a><RouterLink to="/docs">{{ uiText('使用文档') }}</RouterLink><RouterLink to="/models">{{ uiText('模型目录') }}</RouterLink><LanguageToggle /><MotionToggle /><RouterLink :to="enter" class="home-enter">{{ authStore.state.user ? uiText('进入工作台') : uiText('登录平台') }}<AppIcon name="arrow" :size="16" /></RouterLink></nav>
     </header>
     <main>
       <section id="introduction" class="home-hero" aria-labelledby="home-title">
         <AmbientWaves />
         <div class="home-hero-copy">
-          <p class="home-eyebrow"><span aria-hidden="true" />个人知识库与 AI 识别评测</p>
-          <h1 id="home-title">让知识有序。<br /><span>让探索有迹。</span></h1>
-          <p class="home-hero-description">一个安静的空间，收藏知识与灵感。<br />记录所学，积累词汇，让每一次思考都有下一页。</p>
-          <div class="home-intro-actions"><RouterLink :to="enter" class="home-primary">进入工作台 <AppIcon name="arrow" :size="18" /></RouterLink><RouterLink to="/docs">从使用指南开始 <span aria-hidden="true">↗</span></RouterLink></div>
-          <p class="home-hero-footnote"><span>记录</span><i aria-hidden="true" /><span>学习</span><i aria-hidden="true" /><span>探索</span></p>
+          <p class="home-eyebrow"><span aria-hidden="true" />{{ uiText('个人知识库与 AI 识别评测') }}</p>
+          <h1 id="home-title">{{ uiText('让知识有序。') }}<br /><span>{{ uiText('让探索有迹。') }}</span></h1>
+          <p class="home-hero-description">{{ uiText('一个安静的空间，收藏知识与灵感。') }}<br />{{ uiText('记录所学，积累词汇，让每一次思考都有下一页。') }}</p>
+          <div class="home-intro-actions"><RouterLink :to="enter" class="home-primary">{{ uiText('进入工作台') }} <AppIcon name="arrow" :size="18" /></RouterLink><RouterLink to="/docs">{{ uiText('从使用指南开始') }} <span aria-hidden="true">↗</span></RouterLink></div>
+          <p class="home-hero-footnote"><span>{{ uiText('记录') }}</span><i aria-hidden="true" /><span>{{ uiText('学习') }}</span><i aria-hidden="true" /><span>{{ uiText('探索') }}</span></p>
         </div>
         <div class="home-folio-wrap">
           <HomeWorkspacePreview />
@@ -38,26 +41,26 @@ const chapters = [
         </div>
       </section>
       <section id="collection" class="home-collection" aria-labelledby="collection-title">
-        <header class="home-section-head"><div><p class="home-eyebrow">A PLACE FOR WHAT MATTERS</p><h2 id="collection-title">为日常积累，留出空间。</h2></div><p>从今天的小小一步开始。</p></header>
+        <header class="home-section-head"><div><p class="home-eyebrow">A PLACE FOR WHAT MATTERS</p><h2 id="collection-title">{{ uiText('为日常积累，留出空间。') }}</h2></div><p>{{ uiText('从今天的小小一步开始。') }}</p></header>
         <div class="home-chapters">
           <section v-for="chapter in chapters" :id="chapter.id" :key="chapter.id" class="home-chapter" :aria-labelledby="`${chapter.id}-title`">
             <div class="home-chapter-label"><span>{{ chapter.number }}</span><small>{{ chapter.label }}</small></div>
-            <h3 :id="`${chapter.id}-title`" class="lab-heading"><a class="heading-anchor" :href="`#${chapter.id}`" :aria-label="`定位到${chapter.title}`">#</a>{{ chapter.title }}</h3><p>{{ chapter.intro }}</p>
-            <ul class="home-chapter-links"><li v-for="item in chapter.links" :key="item.to"><RouterLink :to="item.to"><div><strong>{{ item.title }}</strong><span>{{ item.text }}</span></div><AppIcon name="arrow" :size="15" /></RouterLink></li></ul>
+            <h3 :id="`${chapter.id}-title`" class="lab-heading"><a class="heading-anchor" :href="`#${chapter.id}`" :aria-label="(uiText('定位到') + (chapter.title))">#</a>{{ uiText(chapter.title) }}</h3><p>{{ uiText(chapter.intro) }}</p>
+            <ul class="home-chapter-links"><li v-for="item in chapter.links" :key="item.to"><RouterLink :to="item.to"><div><strong>{{ uiText(item.title) }}</strong><span>{{ uiText(item.text) }}</span></div><AppIcon name="arrow" :size="15" /></RouterLink></li></ul>
           </section>
         </div>
       </section>
       <section id="method" class="home-method" aria-labelledby="method-title">
-        <div><p class="home-eyebrow">THOUGHTFUL EXPERIMENTS</p><h2 id="method-title">不只得到答案，<br />也看清它如何产生。</h2><p>对照同一输入的基线与优化输出，保留可回看的记录。置信度变化只是线索，真实标注才是判断准确率的依据。</p><RouterLink to="/docs#interactive-notes">逐行阅读实验配置 ↗</RouterLink></div>
-        <div class="home-method-detail"><div class="home-method-label"><span>一份实验记录</span><span>INPUT → INSIGHT</span></div><CodeListing id="home-method" code="# 实验流程示意
+        <div><p class="home-eyebrow">THOUGHTFUL EXPERIMENTS</p><h2 id="method-title">{{ uiText('不只得到答案，') }}<br />{{ uiText('也看清它如何产生。') }}</h2><p>{{ uiText('对照同一输入的基线与优化输出，保留可回看的记录。置信度变化只是线索，真实标注才是判断准确率的依据。') }}</p><RouterLink to="/docs#interactive-notes">{{ uiText('逐行阅读实验配置 ↗') }}</RouterLink></div>
+        <div class="home-method-detail"><div class="home-method-label"><span>{{ uiText('一份实验记录') }}</span><span>INPUT → INSIGHT</span></div><CodeListing id="home-method" code="# 实验流程示意
 input → baseline
 input → preprocessing → optimized
 
 # 比较输出，保留记录
-compare(baseline, optimized)" /><p>个人模型用于图片识别；双路 DEMO 用于体验对照流程。</p><nav aria-label="实验记录"><RouterLink to="/app/logs">调用日志 →</RouterLink><RouterLink to="/app/downloads">下载结果 →</RouterLink></nav></div>
+compare(baseline, optimized)" /><p>{{ uiText('个人模型用于图片识别；双路 DEMO 用于体验对照流程。') }}</p><nav :aria-label="uiText('实验记录')"><RouterLink to="/app/logs">{{ uiText('调用日志 →') }}</RouterLink><RouterLink to="/app/downloads">{{ uiText('下载结果 →') }}</RouterLink></nav></div>
       </section>
     </main>
-    <footer class="home-footer"><RouterLink to="/" class="home-brand"><BrandMark /><span>个人知识库<small>学习 · 记录 · 探索</small></span></RouterLink><p>把每一次思考，留给未来的自己。</p><a href="#introduction">返回顶部 ↑</a></footer>
+    <footer class="home-footer"><RouterLink to="/" class="home-brand"><BrandMark /><span>{{ uiText('个人知识库') }}<small>{{ uiText('学习 · 记录 · 探索') }}</small></span></RouterLink><p>{{ uiText('把每一次思考，留给未来的自己。') }}</p><a href="#introduction">{{ uiText('返回顶部 ↑') }}</a></footer>
   </div>
 </template>
 

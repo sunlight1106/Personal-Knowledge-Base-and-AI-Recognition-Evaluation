@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 const props = defineProps<{ title: string; description: string; confirmLabel: string; busy?: boolean; error?: string }>()
 const emit = defineEmits<{ cancel: []; confirm: [] }>()
@@ -18,7 +20,7 @@ onBeforeUnmount(() => { document.body.style.overflow = overflow; if (opener?.isC
 </script>
 
 <template>
-  <Teleport to="body"><div class="action-confirm-backdrop" @click.self="cancel"><section ref="dialog" class="action-confirm" role="alertdialog" aria-modal="true" aria-labelledby="contact-action-title" aria-describedby="contact-action-description" :aria-busy="busy" @keydown="keyboard"><h3 id="contact-action-title">{{ title }}</h3><p id="contact-action-description">{{ description }}</p><p v-if="error" role="alert">{{ error }}</p><footer><button ref="cancelButton" type="button" class="button button--ghost" :disabled="busy" @click="cancel">取消</button><button type="button" class="button button--dark" :disabled="busy" @click="emit('confirm')">{{ busy ? '正在处理…' : confirmLabel }}</button></footer></section></div></Teleport>
+  <Teleport to="body"><div class="action-confirm-backdrop" @click.self="cancel"><section ref="dialog" class="action-confirm" role="alertdialog" aria-modal="true" aria-labelledby="contact-action-title" aria-describedby="contact-action-description" :aria-busy="busy" @keydown="keyboard"><h3 id="contact-action-title">{{ uiText(title) }}</h3><p id="contact-action-description">{{ uiText(description) }}</p><p v-if="error" role="alert">{{ uiText(error) }}</p><footer><button ref="cancelButton" type="button" class="button button--ghost" :disabled="busy" @click="cancel">{{ uiText('取消') }}</button><button type="button" class="button button--dark" :disabled="busy" @click="emit('confirm')">{{ busy ? uiText('正在处理…') : uiText(confirmLabel) }}</button></footer></section></div></Teleport>
 </template>
 
 <style scoped>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { personalApi } from '@/api/personal'
 import type { PersonalAiMemory } from '@/types/personal'
@@ -44,21 +46,21 @@ onBeforeUnmount(() => { active = false; reset(); memories.value = [] })
 </script>
 <template>
   <section class="ai-memory">
-    <header class="ai-section-heading"><div><h3>让 AI 记住你的偏好</h3><p>写一次，在你的不同 AI 服务间共用。只有你能查看、编辑和删除这些记忆。</p></div><span>{{ enabledCount }} 条启用</span></header>
-    <p class="field-hint">已启用的记忆会随笔记 AI 和图片理解请求发送给你选定的供应商；每次发送前都能预览。停用后仍会保留在这里。</p>
-    <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ error }} <button class="table-action" :disabled="busy" @click="load">刷新列表</button></p>
+    <header class="ai-section-heading"><div><h3>{{ uiText('让 AI 记住你的偏好') }}</h3><p>{{ uiText('写一次，在你的不同 AI 服务间共用。只有你能查看、编辑和删除这些记忆。') }}</p></div><span>{{ enabledCount }} {{ uiText('条启用') }}</span></header>
+    <p class="field-hint">{{ uiText('已启用的记忆会随笔记 AI 和图片理解请求发送给你选定的供应商；每次发送前都能预览。停用后仍会保留在这里。') }}</p>
+    <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }} <button class="table-action" :disabled="busy" @click="load">{{ uiText('刷新列表') }}</button></p>
     <div class="ai-memory-layout">
       <form class="ai-memory-editor" @submit.prevent="save">
-        <h4>{{ editing ? '编辑记忆' : '添加一条记忆' }}</h4>
-        <label class="field-label">标题<input v-model="form.title" class="field-input" maxlength="100" required :disabled="busy" placeholder="例如：我的学习方式" /></label>
-        <label class="field-label">内容<textarea v-model="form.body" class="field-input" rows="6" maxlength="1000" required :disabled="busy" placeholder="我正在学习 Java。请用中文解释，先给简短例子，再讲原理。" /></label>
-        <small>{{ form.body.length }} / 1000 字</small>
-        <label class="settings-check"><input v-model="form.enabled" type="checkbox" :disabled="busy" /> 在我的 AI 请求中使用</label>
-        <div class="settings-button-row"><button class="button button--dark" :disabled="busy || loading">{{ busy ? '处理中…' : editing ? '保存更改' : '添加记忆' }}</button><button v-if="editing" type="button" class="button button--ghost" :disabled="busy" @click="reset">取消编辑</button></div>
+        <h4>{{ editing ? uiText('编辑记忆') : uiText('添加一条记忆') }}</h4>
+        <label class="field-label">{{ uiText('标题') }}<input v-model="form.title" class="field-input" maxlength="100" required :disabled="busy" :placeholder="uiText('例如：我的学习方式')" /></label>
+        <label class="field-label">{{ uiText('内容') }}<textarea v-model="form.body" class="field-input" rows="6" maxlength="1000" required :disabled="busy" :placeholder="uiText('我正在学习 Java。请用中文解释，先给简短例子，再讲原理。')" /></label>
+        <small>{{ form.body.length }} {{ uiText('/ 1000 字') }}</small>
+        <label class="settings-check"><input v-model="form.enabled" type="checkbox" :disabled="busy" /> {{ uiText('在我的 AI 请求中使用') }}</label>
+        <div class="settings-button-row"><button class="button button--dark" :disabled="busy || loading">{{ busy ? uiText('处理中…') : editing ? uiText('保存更改') : uiText('添加记忆') }}</button><button v-if="editing" type="button" class="button button--ghost" :disabled="busy" @click="reset">{{ uiText('取消编辑') }}</button></div>
       </form>
-      <div class="ai-memory-list" :aria-busy="loading"><div class="ai-list-heading"><h4>我的记忆</h4><small>{{ used }} / 6000 字已启用</small></div>
-        <p v-if="loading" role="status">正在加载…</p><p v-else-if="!memories.length" class="settings-empty">还没有记忆。可以从表达风格、学习目标或常用背景开始。</p>
-        <article v-for="item in memories" :key="item.id" class="ai-memory-item" :class="{ 'is-disabled': !item.enabled }"><div class="ai-list-heading"><strong>{{ item.title }}</strong><small>{{ item.enabled ? '启用' : '停用' }}</small></div><p>{{ item.body }}</p><div class="ai-memory-actions"><button class="table-action" :disabled="busy" @click="edit(item)">编辑</button><button class="table-action" :disabled="busy" @click="change(item)">{{ item.enabled ? '停用' : '启用' }}</button><button class="table-action note-danger" :disabled="busy" @click="change(item, true)">删除</button></div></article>
+      <div class="ai-memory-list" :aria-busy="loading"><div class="ai-list-heading"><h4>{{ uiText('我的记忆') }}</h4><small>{{ used }} {{ uiText('/ 6000 字已启用') }}</small></div>
+        <p v-if="loading" role="status">{{ uiText('正在加载…') }}</p><p v-else-if="!memories.length" class="settings-empty">{{ uiText('还没有记忆。可以从表达风格、学习目标或常用背景开始。') }}</p>
+        <article v-for="item in memories" :key="item.id" class="ai-memory-item" :class="{ 'is-disabled': !item.enabled }"><div class="ai-list-heading"><strong>{{ item.title }}</strong><small>{{ item.enabled ? uiText('启用') : uiText('停用') }}</small></div><p>{{ item.body }}</p><div class="ai-memory-actions"><button class="table-action" :disabled="busy" @click="edit(item)">{{ uiText('编辑') }}</button><button class="table-action" :disabled="busy" @click="change(item)">{{ item.enabled ? uiText('停用') : uiText('启用') }}</button><button class="table-action note-danger" :disabled="busy" @click="change(item, true)">{{ uiText('删除') }}</button></div></article>
       </div>
     </div>
   </section>

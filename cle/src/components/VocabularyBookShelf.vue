@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n'
+
 import { computed, ref, watch } from 'vue'
 import type { VocabularyBook } from '@/api/vocabulary'
 import AppIcon from './AppIcon.vue'
@@ -34,23 +36,23 @@ function clear() { query.value = ''; category.value = '全部' }
 
 <template>
   <div class="book-shelf">
-    <header class="shelf-heading"><div><p class="shelf-eyebrow">FIND YOUR NEXT WORDS</p><h3>从你的目标，找到一本词书。</h3><p>{{ publicBooks.length }} 本内置词书 · {{ totalEntries.toLocaleString() }} 个词条收录 · 学习进度独立保存</p></div><button class="button button--light" :disabled="busy" @click="emit('import')"><AppIcon name="plus" :size="16" />导入自己的词书</button></header>
-    <div class="shelf-tools"><label class="shelf-search"><AppIcon name="search" :size="17" /><input v-model="query" type="search" maxlength="80" placeholder="搜索考研、雅思、高中、计算机…" aria-label="搜索词书" /></label><label class="shelf-sort">排序<select v-model="sort" aria-label="词书排序"><option value="recommended">推荐顺序</option><option value="words">词量从少到多</option><option value="progress">学习进度</option></select></label></div>
-    <nav class="shelf-categories" aria-label="词书分类"><button v-for="item in categories" :key="item" :aria-pressed="category === item" @click="category = item">{{ item }}<small>{{ item === '全部' ? books.length : books.filter(book => group(book) === item).length }}</small></button></nav>
-    <div class="shelf-result"><span role="status">{{ category }} · {{ filtered.length }} 本词书</span><span>同一单词可能收录于不同词书</span></div>
+    <header class="shelf-heading"><div><p class="shelf-eyebrow">FIND YOUR NEXT WORDS</p><h3>{{ uiText('从你的目标，找到一本词书。') }}</h3><p>{{ publicBooks.length }} {{ uiText('本内置词书 ·') }} {{ totalEntries.toLocaleString(uiLocale()) }} {{ uiText('个词条收录 · 学习进度独立保存') }}</p></div><button class="button button--light" :disabled="busy" @click="emit('import')"><AppIcon name="plus" :size="16" />{{ uiText('导入自己的词书') }}</button></header>
+    <div class="shelf-tools"><label class="shelf-search"><AppIcon name="search" :size="17" /><input v-model="query" type="search" maxlength="80" :placeholder="uiText('搜索考研、雅思、高中、计算机…')" :aria-label="uiText('搜索词书')" /></label><label class="shelf-sort">{{ uiText('排序') }}<select v-model="sort" :aria-label="uiText('词书排序')"><option value="recommended">{{ uiText('推荐顺序') }}</option><option value="words">{{ uiText('词量从少到多') }}</option><option value="progress">{{ uiText('学习进度') }}</option></select></label></div>
+    <nav class="shelf-categories" :aria-label="uiText('词书分类')"><button v-for="item in categories" :key="item" :aria-pressed="category === item" @click="category = item">{{ uiText(item) }}<small>{{ item === '全部' ? books.length : books.filter(book => group(book) === item).length }}</small></button></nav>
+    <div class="shelf-result"><span role="status">{{ uiText(category) }} · {{ filtered.length }} {{ uiText('本词书') }}</span><span>{{ uiText('同一单词可能收录于不同词书') }}</span></div>
     <div v-if="visible.length" class="shelf-grid">
       <article v-for="book in visible" :key="book.id" class="shelf-book" :class="{ 'is-current': selected === book.id }">
-        <div class="shelf-book-top"><span>{{ book.owned ? '私人词书' : book.level }}</span><span v-if="selected === book.id" class="shelf-current"><AppIcon name="check" :size="13" />正在学习</span><small v-else>{{ book.totalWords.toLocaleString() }} 词</small></div>
+        <div class="shelf-book-top"><span>{{ book.owned ? uiText('私人词书') : book.level }}</span><span v-if="selected === book.id" class="shelf-current"><AppIcon name="check" :size="13" />{{ uiText('正在学习') }}</span><small v-else>{{ book.totalWords.toLocaleString(uiLocale()) }} {{ uiText('词') }}</small></div>
         <h4>{{ book.title }}</h4><p class="shelf-description">{{ book.description }}</p>
-        <div class="shelf-progress-copy"><span>{{ book.learned.toLocaleString() }} / {{ book.totalWords.toLocaleString() }} 词掌握</span><span>{{ book.due }} 待复习</span></div>
+        <div class="shelf-progress-copy"><span>{{ book.learned.toLocaleString(uiLocale()) }} / {{ book.totalWords.toLocaleString(uiLocale()) }} {{ uiText('词掌握') }}</span><span>{{ book.due }} {{ uiText('待复习') }}</span></div>
         <div class="shelf-progress" role="progressbar" :aria-label="book.title + '学习进度'" :aria-valuenow="book.learned" :aria-valuemax="book.totalWords" aria-valuemin="0"><i :style="{ width: `${book.totalWords ? book.learned / book.totalWords * 100 : 0}%` }" /></div>
-        <div class="shelf-actions"><button :disabled="busy" @click="emit('choose', book.id)">{{ selected === book.id ? '继续学习' : '选这本词书' }} <span aria-hidden="true">→</span></button><button :disabled="busy" @click="emit('preview', book.id)">查看单词</button></div>
-        <details class="shelf-source"><summary>词书来源</summary><p>{{ book.attribution }}</p></details>
+        <div class="shelf-actions"><button :disabled="busy" @click="emit('choose', book.id)">{{ selected === book.id ? uiText('继续学习') : uiText('选这本词书') }} <span aria-hidden="true">→</span></button><button :disabled="busy" @click="emit('preview', book.id)">{{ uiText('查看单词') }}</button></div>
+        <details class="shelf-source"><summary>{{ uiText('词书来源') }}</summary><p>{{ book.attribution }}</p></details>
       </article>
     </div>
-    <div v-else class="shelf-empty"><AppIcon name="book" :size="28" /><h4>还没有匹配的词书</h4><p>换一个关键词，或导入自己整理的版本。</p><button class="button button--light" @click="clear">清除筛选</button><button class="button button--light" :disabled="busy" @click="emit('import')">导入词书</button></div>
-    <button v-if="visible.length < filtered.length" class="shelf-more" @click="limit += 9">再看 {{ Math.min(9, filtered.length - visible.length) }} 本词书 <span aria-hidden="true">↓</span></button>
-    <details class="shelf-editions"><summary>寻找指定年份或教材版本？</summary><p>内置词书按考试方向与主题整理。闪过 2028、红宝书 2028、人教版等具体版本，可通过「导入自己的词书」添加你有权使用的内容；内置词书不冒充这些出版物的原版或完整考纲。</p></details>
+    <div v-else class="shelf-empty"><AppIcon name="book" :size="28" /><h4>{{ uiText('还没有匹配的词书') }}</h4><p>{{ uiText('换一个关键词，或导入自己整理的版本。') }}</p><button class="button button--light" @click="clear">{{ uiText('清除筛选') }}</button><button class="button button--light" :disabled="busy" @click="emit('import')">{{ uiText('导入词书') }}</button></div>
+    <button v-if="visible.length < filtered.length" class="shelf-more" @click="limit += 9">{{ uiText('再看') }} {{ Math.min(9, filtered.length - visible.length) }} {{ uiText('本词书') }} <span aria-hidden="true">↓</span></button>
+    <details class="shelf-editions"><summary>{{ uiText('寻找指定年份或教材版本？') }}</summary><p>{{ uiText('内置词书按考试方向与主题整理。闪过 2028、红宝书 2028、人教版等具体版本，可通过「导入自己的词书」添加你有权使用的内容；内置词书不冒充这些出版物的原版或完整考纲。') }}</p></details>
   </div>
 </template>
 

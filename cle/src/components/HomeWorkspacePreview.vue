@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from '@/i18n'
+
 import { computed, nextTick, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppIcon from './AppIcon.vue'
@@ -24,38 +26,38 @@ async function navigate(event: KeyboardEvent) {
 </script>
 
 <template>
-  <section class="workspace-preview" aria-label="工作空间预览">
-    <header class="preview-caption"><span>YOUR NEXT PAGE</span><span>界面示例 <i aria-hidden="true" /></span></header>
-    <div ref="tablist" class="preview-tabs" role="tablist" aria-label="预览内容" @keydown="navigate">
-      <button v-for="(tab, index) in tabs" :id="`preview-tab-${tab.id}`" :key="tab.id" role="tab" :aria-selected="selected === index" :aria-controls="`preview-panel-${tab.id}`" :tabindex="selected === index ? 0 : -1" @click="selected = index"><AppIcon :name="tab.icon" :size="15" />{{ tab.label }}</button>
+  <section class="workspace-preview" :aria-label="uiText('工作空间预览')">
+    <header class="preview-caption"><span>YOUR NEXT PAGE</span><span>{{ uiText('界面示例') }} <i aria-hidden="true" /></span></header>
+    <div ref="tablist" class="preview-tabs" role="tablist" :aria-label="uiText('预览内容')" @keydown="navigate">
+      <button v-for="(tab, index) in tabs" :id="`preview-tab-${tab.id}`" :key="tab.id" role="tab" :aria-selected="selected === index" :aria-controls="`preview-panel-${tab.id}`" :tabindex="selected === index ? 0 : -1" @click="selected = index"><AppIcon :name="tab.icon" :size="15" />{{ uiText(tab.label) }}</button>
     </div>
     <div v-for="(tab, index) in tabs" v-show="selected === index" :id="`preview-panel-${tab.id}`" :key="tab.id" class="preview-page" role="tabpanel" :aria-labelledby="`preview-tab-${tab.id}`" tabindex="0">
       <template v-if="tab.id === 'notes'">
-        <div class="preview-path"><AppIcon name="folder" :size="13" />我的知识库<span>/</span>思考与记录</div>
-        <span class="preview-overline">一页笔记，一点新的理解</span>
-        <h2>把想法，连成自己的知识。</h2>
-        <p>读到一句话，记下一个问题。<br />从零散的片段，慢慢长出自己的答案。</p>
-        <blockquote>记录，是思考的另一种方式。</blockquote>
-        <div class="preview-tags"><span>阅读笔记</span><span>灵感</span><span>知识连接</span></div>
+        <div class="preview-path"><AppIcon name="folder" :size="13" />{{ uiText('我的知识库') }}<span>/</span>{{ uiText('思考与记录') }}</div>
+        <span class="preview-overline">{{ uiText('一页笔记，一点新的理解') }}</span>
+        <h2>{{ uiText('把想法，连成自己的知识。') }}</h2>
+        <p>{{ uiText('读到一句话，记下一个问题。') }}<br />{{ uiText('从零散的片段，慢慢长出自己的答案。') }}</p>
+        <blockquote>{{ uiText('记录，是思考的另一种方式。') }}</blockquote>
+        <div class="preview-tags"><span>{{ uiText('阅读笔记') }}</span><span>{{ uiText('灵感') }}</span><span>{{ uiText('知识连接') }}</span></div>
       </template>
       <template v-else-if="tab.id === 'words'">
-        <div class="preview-path"><AppIcon name="book" :size="13" />每日学习<span>/</span>场景与搭配</div>
-        <span class="preview-overline">从一个词，走进一种表达</span>
+        <div class="preview-path"><AppIcon name="book" :size="13" />{{ uiText('每日学习') }}<span>/</span>{{ uiText('场景与搭配') }}</div>
+        <span class="preview-overline">{{ uiText('从一个词，走进一种表达') }}</span>
         <h2 class="preview-word">a little, every day.</h2>
-        <p>每天一点，慢慢积累。</p>
-        <blockquote><strong>make progress</strong><br />取得进步 · We make progress by practising.</blockquote>
-        <div class="preview-tags"><span>听读</span><span>搭配回忆</span><span>间隔复习</span></div>
+        <p>{{ uiText('每天一点，慢慢积累。') }}</p>
+        <blockquote><strong>make progress</strong><br />{{ uiText('取得进步 · We make progress by practising.') }}</blockquote>
+        <div class="preview-tags"><span>{{ uiText('听读') }}</span><span>{{ uiText('搭配回忆') }}</span><span>{{ uiText('间隔复习') }}</span></div>
       </template>
       <template v-else>
-        <div class="preview-path"><AppIcon name="spark" :size="13" />识别实验<span>/</span>从观察开始</div>
-        <span class="preview-overline">让每一次探索，都有据可循</span>
-        <h2>带着问题，看懂一张图片。</h2>
-        <p>选择图片与模型，查看识别结果。<br />将值得留下的发现，接着写进笔记。</p>
-        <div class="preview-flow"><span><AppIcon name="images" :size="19" />图片</span><AppIcon name="arrow" :size="15" /><span><AppIcon name="model" :size="19" />理解</span><AppIcon name="arrow" :size="15" /><span><AppIcon name="docs" :size="19" />记录</span></div>
-        <div class="preview-tags"><span>图片理解</span><span>结果对照</span><span>保存发现</span></div>
+        <div class="preview-path"><AppIcon name="spark" :size="13" />{{ uiText('识别实验') }}<span>/</span>{{ uiText('从观察开始') }}</div>
+        <span class="preview-overline">{{ uiText('让每一次探索，都有据可循') }}</span>
+        <h2>{{ uiText('带着问题，看懂一张图片。') }}</h2>
+        <p>{{ uiText('选择图片与模型，查看识别结果。') }}<br />{{ uiText('将值得留下的发现，接着写进笔记。') }}</p>
+        <div class="preview-flow"><span><AppIcon name="images" :size="19" />{{ uiText('图片') }}</span><AppIcon name="arrow" :size="15" /><span><AppIcon name="model" :size="19" />{{ uiText('理解') }}</span><AppIcon name="arrow" :size="15" /><span><AppIcon name="docs" :size="19" />{{ uiText('记录') }}</span></div>
+        <div class="preview-tags"><span>{{ uiText('图片理解') }}</span><span>{{ uiText('结果对照') }}</span><span>{{ uiText('保存发现') }}</span></div>
       </template>
     </div>
-    <footer class="preview-footer"><span>留给下一次思考</span><RouterLink :to="active.to">{{ active.action }}<AppIcon name="arrow" :size="16" /></RouterLink></footer>
+    <footer class="preview-footer"><span>{{ uiText('留给下一次思考') }}</span><RouterLink :to="active.to">{{ uiText(active.action) }}<AppIcon name="arrow" :size="16" /></RouterLink></footer>
   </section>
 </template>
 
