@@ -29,7 +29,7 @@ public class AccountExportService {
         data.put("profile", profile);
         data.put("notes", rows("SELECT id, title, body, tags, status, library, content_format, parent_id, revision, deleted_at, created_at, updated_at FROM note WHERE owner_id = ? ORDER BY created_at, id", id));
         data.put("noteVersions", rows("SELECT id,note_id,revision,title,body,tags,library,content_format,status,created_at FROM note_version WHERE owner_id=? ORDER BY created_at,id",id));
-        for(String table:List.of("learning_event","learning_day","study_document","document_passage"))data.put(table,rows("SELECT * FROM "+table+" WHERE owner_id=?",id));
+        for(String table:List.of("practice_followup","reading_clip","study_plan","workspace_job","learning_event","learning_day","study_document","document_passage"))data.put(table,rows("SELECT * FROM "+table+" WHERE owner_id=?",id));
         data.put("learningRecords", rows("SELECT id,kind,title,payload,revision,created_at,updated_at FROM learning_record WHERE owner_id=? ORDER BY created_at,id",id));
         data.put("workspaceShortcuts", rows("SELECT id,kind,title,source_kind,source_id,filters_json,created_at FROM workspace_shortcut WHERE owner_id=? ORDER BY created_at,id",id));
         data.put("noteReferences", rows("SELECT r.id, r.note_id, r.reference_type, r.reference_id, r.label, r.sort_order FROM note_reference r JOIN note n ON n.id = r.note_id WHERE n.owner_id = ? ORDER BY r.id", id));

@@ -26,7 +26,7 @@ public class KnowledgeSearchService {
         String type=input.type()==null||input.type().isBlank()?"ALL":input.type().toUpperCase(Locale.ROOT);
         String tag=input.tag()==null?"":input.tag().trim();
         String sort=input.sort()==null||input.sort().isBlank()?"relevance":input.sort();
-        if(q.length()>160||tag.length()>80||!KINDS.contains(type)||!Set.of("relevance","recent").contains(sort)
+        if(q.length()>160||tag.length()>80||!KINDS.contains(type)||!Set.of("relevance","recent","natural").contains(sort)
                 ||(!q.isEmpty()&&q.split(" ").length>10)||input.group()!=null&&input.group()<1)
             throw new BusinessException(HttpStatus.BAD_REQUEST,"SEARCH_INVALID","搜索最多 10 个关键词，请检查资料类型、排序或群组编号");
         return new Filters(q,type,tag,input.since(),input.group(),sort);
@@ -66,6 +66,7 @@ public class KnowledgeSearchService {
     @Transactional(readOnly=true)
     public Page search(Filters input,int page) {
         Filters f=validate(input);validPage(page);Scope s=scope(f.type(),f.group());
+        if(f.sort().equals("natural")&&!f.q().isBlank())return natural(f,s,page);
         List<String> terms=f.q().isEmpty()?List.of():Arrays.stream(f.q().toLowerCase(Locale.ROOT).split(" ")).distinct().toList();
         List<Object> args=new ArrayList<>();String score="0";
         if(!terms.isEmpty()&&f.sort().equals("relevance")) {
@@ -82,6 +83,17 @@ public class KnowledgeSearchService {
         sql+=" ORDER BY score DESC,updated_at DESC,kind,id LIMIT 31 OFFSET ?";args.add(page*30);
         List<Hit> hits=jdbc.query(sql,(r,i)->hit(r),args.toArray());
         return new Page(hits.stream().limit(30).toList(),hits.size()>30,page);
+    }
+    private Page natural(Filters f,Scope scope,int page){
+        var terms=NaturalQuery.terms(f.q());if(terms.isEmpty())return new Page(List.of(),false,page);
+        List<Object> args=new ArrayList<>();List<String> scores=new ArrayList<>();
+        scores.add("CASE WHEN LOWER(title) LIKE ? ESCAPE '!' THEN 100 ELSE 0 END");args.add(like(f.q()));
+        for(String term:terms){scores.add("CASE WHEN LOWER(title) LIKE ? ESCAPE '!' THEN 12 ELSE 0 END + CASE WHEN LOWER(body) LIKE ? ESCAPE '!' THEN 3 ELSE 0 END + CASE WHEN LOWER(tags) LIKE ? ESCAPE '!' THEN 8 ELSE 0 END");args.add(like(term));args.add(like(term));args.add(like(term));}
+        // Permission scope is applied before ranking; no global/private index is queried.
+        String sql="SELECT id,kind,title,updated_at,SUBSTRING(body,1,240) excerpt,"+String.join(" + ",scores)+" score FROM ("+scope.sql()+") scoped WHERE 1=1";args.addAll(scope.args());
+        if(!f.tag().isBlank()){sql+=" AND LOWER(tags) LIKE ? ESCAPE '!'";args.add(like(f.tag()));}if(f.since()!=null){sql+=" AND updated_at>=?";args.add(java.sql.Timestamp.from(f.since()));}
+        sql="SELECT * FROM ("+sql+") ranked WHERE score>0 ORDER BY score DESC,updated_at DESC,kind,id LIMIT 31 OFFSET ?";args.add(page*30);
+        var hits=jdbc.query(sql,(r,i)->hit(r),args.toArray());return new Page(hits.stream().limit(30).toList(),hits.size()>30,page);
     }
     @Transactional(readOnly=true)
     public Page bookmarks(int page) {

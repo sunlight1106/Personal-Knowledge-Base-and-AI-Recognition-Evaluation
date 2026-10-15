@@ -23,8 +23,10 @@ public final class VocabularyDtos {
                             List<Day> history, long dueTotal, long starredTotal) {}
     public record NextRequest(@NotBlank @Size(max=36) String bookId,
                               @NotBlank @Pattern(regexp="LEARN|REVIEW|MISTAKES") String mode,
-                              @Pattern(regexp="CHOICE|RECALL|LISTENING|MIXED|CONFUSABLE|MEANINGS") String style) {
-        public NextRequest(String bookId,String mode){this(bookId,mode,"CHOICE");}
+                              @Pattern(regexp="CHOICE|RECALL|LISTENING|MIXED|CONFUSABLE|MEANINGS|SPELLING|COLLOCATION") String style,
+                              @Size(max=100) String focusTerm) {
+        public NextRequest(String bookId,String mode){this(bookId,mode,"CHOICE",null);}
+        public NextRequest(String bookId,String mode,String style){this(bookId,mode,style,null);}
     }
     public record Option(String id, String meaning) {}
     /** No meaning, example, correct option, database word id, or progress mutation in this DTO. */

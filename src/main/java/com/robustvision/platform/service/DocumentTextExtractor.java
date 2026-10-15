@@ -12,9 +12,13 @@ import java.util.zip.*;
 
 @Component
 public class DocumentTextExtractor {
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private LocalOcrService ocr;
     public record Part(String locator,String text) {}
     private static final int MAX_CHARS=500_000;
     public List<Part> extract(byte[] bytes,String name){
+        return extract(bytes,name,false,p->{});
+    }
+    public List<Part> extract(byte[] bytes,String name,boolean recognize,java.util.function.IntConsumer progress){
         if(bytes.length>10*1024*1024)throw invalid("文档不能超过 10 MB");
         try {
             List<Part> result=new ArrayList<>();String lower=name.toLowerCase(Locale.ROOT);
@@ -23,7 +27,13 @@ public class DocumentTextExtractor {
                     if(pdf.isEncrypted()||!pdf.getCurrentAccessPermission().canExtractContent())throw invalid("文档已加密或不允许提取文字");
                     if(pdf.getNumberOfPages()>300)throw invalid("一次最多导入 300 页，请先拆分文档");
                     PDFTextStripper reader=new PDFTextStripper();reader.setSortByPosition(true);int total=0;
-                    for(int page=1;page<=pdf.getNumberOfPages();page++){reader.setStartPage(page);reader.setEndPage(page);String text=reader.getText(pdf).trim();total+=text.length();if(total>MAX_CHARS)throw invalid("文字超过 50 万字，请先拆分文档");split(result,"第 "+page+" 页",text);}
+                    int scanned=0;
+                    for(int page=1;page<=pdf.getNumberOfPages();page++){
+                        final int percent=5+80*page/Math.max(1,pdf.getNumberOfPages());progress.accept(percent);
+                        reader.setStartPage(page);reader.setEndPage(page);String text=reader.getText(pdf).trim();
+                        if(recognize&&text.length()<12){if(++scanned>60)throw invalid("一次最多识别 60 个扫描页，请拆分文档");if(ocr==null)throw invalid("本地 OCR 环境未启动");text=ocr.read(pdf,page-1,()->progress.accept(percent));}
+                        total+=text.length();if(total>MAX_CHARS)throw invalid("文字超过 50 万字，请先拆分文档");split(result,"第 "+page+" 页",text);
+                    }
                 }
             }else if(lower.endsWith(".docx")){
                 byte[] xml=null;int expanded=0;

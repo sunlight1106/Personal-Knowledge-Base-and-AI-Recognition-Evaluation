@@ -16,6 +16,7 @@ public class VocabularyController {
     public VocabularyController(VocabularyService service,com.robustvision.platform.service.VocabularyBackupService backups) {this.service=service;this.backups=backups;}
     public record Collect(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=80) String term) {}
     @PostMapping("/collect") public Object collect(@Valid @RequestBody Collect input){return ApiResponse.ok(service.collectTerm(input.term()));}
+    @GetMapping("/lookup") public Object lookup(@RequestParam @jakarta.validation.constraints.Size(max=80) String term){return ApiResponse.ok(service.lookup(term));}
     @GetMapping("/dashboard") public ApiResponse<Dashboard> dashboard(){return ApiResponse.ok(service.dashboard());}
     @PutMapping("/settings") public ApiResponse<Settings> settings(@Valid @RequestBody SettingsRequest input){return ApiResponse.ok(service.updateSettings(input));}
     @PostMapping("/next") public ApiResponse<Next> next(@Valid @RequestBody NextRequest input){return ApiResponse.ok(service.next(input));}

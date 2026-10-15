@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReadingSelection from '@/components/ReadingSelection.vue'
 import NoteReminder from '@/components/NoteReminder.vue'
 import { noteTemplateCatalog } from '@/lib/noteTemplateCatalog'
 import NoteConflict from '@/components/NoteConflict.vue'
@@ -642,7 +643,7 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
           <strong>预览</strong>
           <span class="note-preview-hint">实时更新 · 仅排版，不执行脚本</span>
         </header>
-        <NotePreview v-if="previewHtml" :body="body" :format="contentFormat" :note-id="currentId||undefined" />
+        <ReadingSelection v-if="previewHtml&&currentId" kind="NOTE" :source-id="currentId" :disabled="dirty||saving"><NotePreview :body="body" :format="contentFormat" :note-id="currentId" /></ReadingSelection><NotePreview v-else-if="previewHtml" :body="body" :format="contentFormat" />
         <p v-else class="note-preview-empty">预览会随左侧输入实时更新。</p>
       </article>
 

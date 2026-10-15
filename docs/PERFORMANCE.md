@@ -168,3 +168,17 @@ The original run is retained in `.runtime/logs/note-reference-mysql-first-fixtur
 这个长笔记样本的中位数减少约 72%，正文传输量减少超过 99.8%。这是数据库到后端读取的对比，不包含网络、登录、页面渲染或模型调用，不能当作所有页面或公网速度的保证。
 
 验证入口：`ResearchWorkspaceMySqlIntegrationTest`，需要 `MYSQL_TEST_URL` 等隔离数据库配置；它只创建、删除随机命名的测试库。前端交互回归包含快速输入合并、旧响应丢弃、键盘选择和账号权限，随 `npm run test:ui` 执行。
+
+## 多人访问与重启验收
+
+启动项目后执行：
+
+```powershell
+python scripts/performance/operational_acceptance.py --url http://127.0.0.1:4273 --credentials .env
+```
+
+使用 `.env` 中已有的 test 账号凭据，默认八路并发、48 次只读请求，报告中记录成功率、P50、P95 和最慢响应。还检查未登录访问、无效计划、未知任务与超限文件。不会更改 test 的密码或调用外部模型。端口按当前部署调整。
+
+加 `--restart` 会短暂重启 backend，并检查原登录会话是否仍可使用。结果保存在 `.runtime/operational-acceptance.json`。这些数字反映当前机器和数据量，不能代替正式服务器上的容量测试。
+
+本机使用 IPv4 回环地址测量，避免 Windows 上 `localhost` 先尝试 IPv6、连接失败后回退的等待被计入服务器耗时。2026-10-15 的 48 次请求全部成功，八路并发下 P50 为 65 ms、P95 为 91 ms、最慢 130 ms；同一批接口使用本机 Python 的 `localhost` 连接时约有两秒回退开销。后端重启后原会话仍有效。

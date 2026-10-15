@@ -12,5 +12,6 @@ public class StudyDocumentEntity {
     @Column(nullable=false) public String title;
     @Column(length=64,nullable=false) public String sha256;
     @Column(length=8,nullable=false) public String format;
+    public boolean ocr;
     @Column(name="created_at",nullable=false) public Instant createdAt=Instant.now();
 }

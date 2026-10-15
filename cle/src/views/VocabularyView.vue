@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
+import PracticeFollowups, { type Followup } from '@/components/PracticeFollowups.vue'
 import AmbientWaves from '@/components/AmbientWaves.vue'
 import { wordSpeaker,stopWordSpeech } from '@/lib/pronunciation'
 const automaticSpeaker = wordSpeaker(), autoPronounce = ref(true), audioError = ref('')
@@ -18,6 +20,8 @@ import VocabularyBookShelf from '@/components/VocabularyBookShelf.vue'
 import VocabularyRecallCard from '@/components/VocabularyRecallCard.vue'
 import VocabularyLessonCard from '@/components/VocabularyLessonCard.vue'
 
+const route=useRoute(), focusTerm=ref<string>(), followupPanel=ref<InstanceType<typeof PracticeFollowups>>()
+async function focusPractice(item:Followup){await chooseBook(item.bookId);if(error.value)return;focusTerm.value=item.term;studyStyle.value=item.kind==='MEANING'?'MEANINGS':item.kind;await start('MISTAKES',true)}
 const dashboard = ref<VocabularyDashboard | null>(null)
 const assistantLesson = ref<VocabularyLesson | null>(null)
 const selected = ref(''), tab = ref<'study' | 'books' | 'words' | 'stats'>('study')
@@ -71,7 +75,7 @@ async function chooseBook(id: string) {
   await run('book', async () => {
     if (dashboard.value?.settings.zoneId) await vocabularyApi.settings({ zoneId: dashboard.value.settings.zoneId, dailyGoal: dashboard.value.settings.dailyGoal, selectedBookId: id })
     if (!active) return
-    selected.value = id; resetSession(); page.value = 0; wordPage.value = null; tab.value = 'study'
+    focusTerm.value=undefined; selected.value = id; resetSession(); page.value = 0; wordPage.value = null; tab.value = 'study'
   })
 }
 async function previewBook(id: string) {
@@ -81,13 +85,15 @@ async function previewBook(id: string) {
 function resetSession() { automaticSpeaker.stop(); question.value = null; answer.value = null; emptyReason.value = ''; selectedOption.value = ''; sessionCount.value = 0; sessionCorrect.value = 0; sessionLearned.value = 0 }
 async function loadQuestion() {
   stopWordSpeech()
-  const value = await vocabularyApi.next(selected.value, mode.value, studyStyle.value)
+  const value = await vocabularyApi.next(selected.value, mode.value, studyStyle.value, focusTerm.value)
   if (!active) return
   question.value = value.question; answer.value = null; selectedOption.value = ''; emptyReason.value = value.reason || ''
   await nextTick()
+  if(active&&!value.question&&focusTerm.value){notice.value=value.reason||'已完成本次检查';focusTerm.value=undefined}
   if (active) { studyCard.value?.focus(); audioError.value = ''; if (value.question && autoPronounce.value) automaticSpeaker.say(value.question.term, 'en-US', false, { error: message => audioError.value = message }) }
 }
-async function start(nextMode: VocabularyMode) {
+async function start(nextMode: VocabularyMode, focused=false) {
+  if(!focused)focusTerm.value=undefined
   await run('question', async () => {
     if (!dashboard.value?.settings.zoneId) {
       await vocabularyApi.settings({ zoneId: settings.zoneId, dailyGoal: settings.dailyGoal, retention:settings.retention, selectedBookId: selected.value || null })
@@ -199,7 +205,7 @@ function onKey(event: KeyboardEvent) {
   if (event.key === ' ' && question.value) { event.preventDefault(); automaticSpeaker.say(question.value.term) }
   if (event.key === 'Enter' && answer.value) { event.preventDefault(); void next() }
 }
-onMounted(async () => { window.addEventListener('keydown', onKey); try { await refresh() } catch (reason) { error.value = message(reason) } finally { loading.value = false } })
+onMounted(async () => { window.addEventListener('keydown', onKey); try { await refresh(); if(route.query.followups)tab.value='stats';else if(['LEARN','REVIEW'].includes(String(route.query.mode)))await start(String(route.query.mode) as VocabularyMode) } catch (reason) { error.value = message(reason) } finally { loading.value = false } })
 onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; window.removeEventListener('keydown', onKey) })
 </script>
 
@@ -277,7 +283,7 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
         <VocabularyBookShelf :books="dashboard.books" :selected="selected" :busy="!!busy" @choose="chooseBook" @preview="previewBook" @import="showImport = !showImport" />
       </section>
       <section v-else-if="tab === 'words'" class="panel vocab-word-list"><header><div><h3>{{ selectedBook?.title }} · 单词本</h3><p>查看释义不会增加记忆次数。错词巩固答对会清除错词标记，但不提前推进复习。</p></div><button class="button button--light" :disabled="!!busy" @click="selectTab('books')">切换词书</button></header><form class="vocab-word-controls" @submit.prevent="searchWords()"><label class="vocab-search"><AppIcon name="search" :size="16" /><input v-model="wordQuery" class="field-input" type="search" maxlength="80" placeholder="搜索单词或中文释义" :disabled="!!busy" /></label><select v-model="wordFilter" class="field-input" :disabled="!!busy" @change="searchWords()"><option v-for="filter in filters" :key="filter.id" :value="filter.id">{{ filter.label }}</option></select><button class="button button--light" :disabled="!!busy">搜索</button></form><p v-if="busy === 'words'" role="status">正在加载单词…</p><p v-else-if="!wordPage?.items.length" class="vocab-empty">当前筛选下没有单词。</p><article v-for="word in wordPage?.items" :key="word.id" class="vocab-word-row"><div><h4>{{ word.term }} <span>{{ word.ipa }} {{ word.pos }}</span></h4><p>{{ word.meaning }}</p><details v-if="word.lesson" class="vocab-word-detail"><summary>场景、搭配与用法</summary><VocabularyLessonCard :lesson="word.lesson" /></details><button v-if="word.lesson && authStore.has('personal-ai:use')" class="table-action" @click="assistantLesson = word.lesson">AI 讲解与练习</button><small v-if="word.example">{{ word.example }}<template v-if="word.exampleTranslation"> · {{ word.exampleTranslation }}</template></small></div><div class="vocab-word-row-meta"><span>{{ word.learningCorrect }}/4 次 · 错 {{ word.wrongCount }} 次</span><small>{{ word.dueDate ? `复习 ${word.dueDate}` : '尚未进入复习' }}</small><button class="button button--light" :disabled="!!busy" @click="skipWord(word.id, !word.skipped)">{{ word.skipped ? '恢复学习' : 'Skip' }}</button><button class="button button--light" :disabled="!!busy" @click="star(word.id, !word.starred)">{{ word.starred ? '已收藏' : '收藏' }}</button></div></article><footer class="vocab-pagination"><span>共 {{ wordPage?.total || 0 }} 词 · 第 {{ page + 1 }} 页</span><button class="button button--light" :disabled="!!busy || page === 0" @click="paginate(-1)">上一页</button><button class="button button--light" :disabled="!!busy || (page + 1) * 30 >= (wordPage?.total || 0)" @click="paginate(1)">下一页</button></footer></section>
-      <section v-else class="panel vocab-stats"><VocabularyStatistics /><header><div><h3>每一次回忆，都算数。</h3><p>最近 14 天的答题记录 · {{ dashboard.settings.zoneId || '请先设置学习时区' }}</p></div></header><div class="vocab-history" aria-label="最近14天学习记录"><div v-for="day in dashboard.history" :key="day.date || ''" class="vocab-history-day"><span>{{ day.answers }}</span><div><i :style="{ height: `${Math.max(3, day.answers / maxAnswers * 100)}%` }" :class="{ empty: !day.answers }" /></div><small>{{ day.date?.slice(5) }}</small></div></div><div class="vocab-history-table"><div v-for="day in [...dashboard.history].reverse()" :key="day.date || ''"><span>{{ day.date }}</span><span>{{ day.answers }} 题 / {{ day.correct }} 对</span><span>掌握 {{ day.learned }} 词</span><span>复习 {{ day.reviews }} 次</span></div></div></section>
+      <section v-else class="panel vocab-stats"><PracticeFollowups ref="followupPanel" @practice="focusPractice"/><VocabularyStatistics /><header><div><h3>每一次回忆，都算数。</h3><p>最近 14 天的答题记录 · {{ dashboard.settings.zoneId || '请先设置学习时区' }}</p></div></header><div class="vocab-history" aria-label="最近14天学习记录"><div v-for="day in dashboard.history" :key="day.date || ''" class="vocab-history-day"><span>{{ day.answers }}</span><div><i :style="{ height: `${Math.max(3, day.answers / maxAnswers * 100)}%` }" :class="{ empty: !day.answers }" /></div><small>{{ day.date?.slice(5) }}</small></div></div><div class="vocab-history-table"><div v-for="day in [...dashboard.history].reverse()" :key="day.date || ''"><span>{{ day.date }}</span><span>{{ day.answers }} 题 / {{ day.correct }} 对</span><span>掌握 {{ day.learned }} 词</span><span>复习 {{ day.reviews }} 次</span></div></div></section>
       <details class="panel vocab-how"><summary>学习规则与内容说明</summary><ul><li>每日带练先看场景和完整搭配，再遮住英文回忆。即时、提示后、延迟独立回忆分别记录；带练中查看答案后至少间隔 60 秒，无提示答对才增加掌握次数。释义识记累计四次正确选择。初步掌握不代表永久记住。</li><li>新掌握单词从学习时区的次日开始复习。每次到期答对后，间隔依次为 3、7、14、30、60 天；之后保持 60 天。</li><li>Skip 只标记熟词跳过，不计为答题掌握。在单词本筛选“已跳过”即可恢复原进度。</li><li>复习答错会回到次日复习，并从最短复习间隔重新开始。错词巩固不增加学习次数、不改变复习日期。</li><li>初步掌握目标按全部词书合计。学习中的小批次会轮换出题；题目有效期 30 分钟，重复提交只计一次。</li><li>原有 3 本入门词书保留原创例句；新增词书采用 ECDICT 释义与音标，未提供的例句不虚构补齐。练习只覆盖显示的释义。</li><li>内置词书可离线使用，按考试标签、词频或主题选编，来源可在每本词书内展开查看；同一账号里相同单词跨词书共享进度；导入时忽略大小写与首尾空白并去重，不合并不同词形。</li></ul></details>
     </template>
   </div>

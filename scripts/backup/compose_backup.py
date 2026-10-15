@@ -85,7 +85,7 @@ def snapshot(root, destination, secret):
     helper = by_service['backend']['Image']
     # Verify tooling before any downtime.
     run(['docker','run','--rm','--network','none','--entrypoint','tar',helper,'--version'],stdout=subprocess.DEVNULL)
-    manifest = {'format':1,'createdAt':datetime.now(timezone.utc).isoformat(),'files':{},'images':{k:v['Config']['Image'] for k,v in by_service.items()},'project':config['name']}
+    manifest = {'format':1,'createdAt':datetime.now(timezone.utc).isoformat(),'files':{},'images':{k:v['Image'] for k,v in by_service.items()},'project':config['name']}
     with tempfile.TemporaryDirectory(prefix='pkb-backup-',dir=destination.parent) as temp:
         stage=Path(temp);os.chmod(stage,0o700)
         try:

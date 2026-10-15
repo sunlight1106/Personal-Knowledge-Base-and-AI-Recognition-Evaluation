@@ -18,7 +18,7 @@ RUN java -Djarmode=tools -jar target/*.jar extract --destination /workspace/appl
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg curl \
+    && apt-get install -y --no-install-recommends ffmpeg curl tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 appuser \
     && mkdir -p /app/data/uploads /app/data/media-tmp \

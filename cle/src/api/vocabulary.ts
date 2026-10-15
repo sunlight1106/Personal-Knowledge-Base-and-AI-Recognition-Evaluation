@@ -15,7 +15,7 @@ export interface VocabularyImport { schemaVersion?: 1; title: string; descriptio
 export const vocabularyApi = {
   dashboard: (signal?: AbortSignal) => request<VocabularyDashboard>('/vocabulary/dashboard', { signal }),
   settings: (input: Omit<VocabularySettings, 'masteryTarget'>) => request<VocabularySettings>('/vocabulary/settings', { method: 'PUT', body: JSON.stringify(input) }),
-  next: (bookId: string, mode: VocabularyMode, style = 'RECALL') => request<VocabularyNext>('/vocabulary/next', { method: 'POST', body: JSON.stringify({ bookId, mode, style }) }),
+  next: (bookId: string, mode: VocabularyMode, style = 'RECALL', focusTerm?:string) => request<VocabularyNext>('/vocabulary/next', { method: 'POST', body: JSON.stringify({ bookId, mode, style, focusTerm }) }),
   answer: (id: string, optionId: string) => request<VocabularyAnswer>(`/vocabulary/questions/${encodeURIComponent(id)}/answer`, { method: 'POST', body: JSON.stringify({ optionId }) }),
   recall: (id: string, text: string) => request<VocabularyAnswer>(`/vocabulary/questions/${encodeURIComponent(id)}/answer`, { method: 'POST', body: JSON.stringify({ text }) }),
   lesson: (id: string) => request<VocabularyLesson>(`/vocabulary/questions/${encodeURIComponent(id)}/lesson`),

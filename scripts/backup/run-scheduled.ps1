@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 $projectRoot=(Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $pointer=[IntPtr]::Zero
 try {
-    $secure=Get-Content -LiteralPath (Join-Path $projectRoot '.runtime\backup-schedule\key.dpapi') -Raw | ConvertTo-SecureString
+    $secure=(Get-Content -LiteralPath (Join-Path $projectRoot '.runtime\backup-schedule\key.dpapi') -Raw).Trim() | ConvertTo-SecureString
     $pointer=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     $env:PKB_BACKUP_PASSWORD=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
     Set-Location $projectRoot

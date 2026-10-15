@@ -9,4 +9,5 @@ public class DocumentPassageEntity {
     @Column(name="position_number",nullable=false) public int positionNumber;
     @Column(length=60,nullable=false) public String locator;
     @Column(columnDefinition="TEXT",nullable=false) public String body;
+    @Version public long revision;
 }

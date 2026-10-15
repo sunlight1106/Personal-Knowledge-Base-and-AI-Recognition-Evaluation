@@ -28,7 +28,7 @@ if ($ExportRecoveryKey) {
     $destination=[IO.Path]::GetFullPath($ExportRecoveryKey)
     $stream=[IO.File]::Open($destination,'CreateNew','Write','None');$stream.Dispose()
     Protect-KeyFile $destination
-    $secure=Get-Content -LiteralPath $keyFile -Raw | ConvertTo-SecureString
+    $secure=(Get-Content -LiteralPath $keyFile -Raw).Trim() | ConvertTo-SecureString
     $pointer=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { [IO.File]::WriteAllText($destination,[Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)) } finally {[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)}
     Write-Host 'Recovery key exported. Move this file to independent secure storage.';exit

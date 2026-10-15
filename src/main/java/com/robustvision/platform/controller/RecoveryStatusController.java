@@ -16,6 +16,8 @@ public class RecoveryStatusController {
     @GetMapping public Object status(){current.requireSuperAdmin();Map<String,Object> out=new LinkedHashMap<>();out.put("database",jdbc.queryForObject("SELECT 1",Integer.class)==1?"UP":"UNKNOWN");
         Path path=Path.of(statusFile);out.put("backup",null);
         var backup=backupStatus.read();out.put("backup",backup.isEmpty()?null:backup);
+        Path drill=path.resolveSibling("drill.json");out.put("drill",null);
+        try{if(Files.isRegularFile(drill)&&Files.size(drill)<10000){var data=mapper.readTree(Files.readString(drill));Map<String,Object> safe=new LinkedHashMap<>();for(String key:List.of("lastAttempt","lastSuccess","success","message","checks"))if(data.has(key))safe.put(key,data.get(key));out.put("drill",safe);}}catch(Exception ignored){out.put("drill",Map.of("success",false,"message","无法读取演练状态"));}
         return ApiResponse.ok(out);
     }
 }

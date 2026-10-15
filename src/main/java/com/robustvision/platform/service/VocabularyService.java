@@ -134,7 +134,7 @@ public class VocabularyService {
         // A single active question per account prevents parallel tabs accumulating credit for one encounter.
         var active=em.createQuery("select q from VocabularyQuestionEntity q where q.ownerId=:owner and q.answeredAt is null and q.expiresAt>:now order by q.createdAt desc",VocabularyQuestionEntity.class)
                 .setParameter("owner",owner).setParameter("now",now()).getResultList();
-        for(var q:active) if(q.bookId.equals(request.bookId()) && q.mode.equals(request.mode()) && Objects.equals(q.studyStyle,request.style()==null?"CHOICE":request.style())) return new Next(question(q),null,-1);
+        for(var q:active) if(q.bookId.equals(request.bookId()) && q.mode.equals(request.mode()) && Objects.equals(q.studyStyle,request.style()==null?"CHOICE":request.style()) && (request.focusTerm()==null||request.focusTerm().equals(em.find(VocabularyWordEntity.class,q.wordId).termKey))) return new Next(question(q),null,-1);
         for(var q:active) q.expiresAt=now();
         var all=words(request.bookId());var ps=progress(owner);
         long learnedToday=ps.values().stream().filter(v->day.equals(v.learnedDate)).count();
@@ -148,6 +148,11 @@ public class VocabularyService {
             candidates.addAll(incomplete.stream().filter(w->!ps.containsKey(w.termKey)||ps.get(w.termKey).lastAttemptAt==null).limit(available).toList());
         } else if(request.mode().equals("REVIEW")) candidates.addAll(all.stream().filter(w->ps.containsKey(w.termKey)&&isDue(ps.get(w.termKey),day)).toList());
         else candidates.addAll(all.stream().filter(w->ps.containsKey(w.termKey)&&ps.get(w.termKey).mistake&&!ps.get(w.termKey).skipped).toList());
+        if(request.focusTerm()!=null&&!request.focusTerm().isBlank()){
+            var due=skills.followups().stream().filter(f->request.focusTerm().equals(f.get("term"))&&Objects.equals(f.get("kind"),"MEANINGS".equals(request.style())?"MEANING":request.style())).findFirst();
+            if(due.isEmpty())return new Next(null,"这项薄弱点已完成本次检查，下次到期后再练习",0);
+            candidates.clear();candidates.addAll(all.stream().filter(w->w.termKey.equals(request.focusTerm())).toList());
+        }
         if("CONFUSABLE".equals(request.style()))candidates.removeIf(w->CONFUSABLES.stream().noneMatch(pair->pair.contains(w.termKey)));
         if(candidates.isEmpty()&&"CONFUSABLE".equals(request.style()))return new Next(null,"当前词书没有待练习的内置易混词，可选择其他词书或练习方式",0);
         if(candidates.isEmpty()) return new Next(null,request.mode().equals("REVIEW")?"今天的到期复习已完成":request.mode().equals("MISTAKES")?"当前词书没有待巩固错词":learnedToday>=p.dailyGoal?"今日新词目标已完成，可先复习或调整目标":"本词书的新词已完成或已跳过，可切换词书或复习",0);
@@ -159,10 +164,10 @@ public class VocabularyService {
         q.optionsJson=write(options);q.correctOptionId=correct.id();q.studyStyle=request.style()==null?"CHOICE":request.style();
         String selectedStyle=q.studyStyle;
         if("MIXED".equals(selectedStyle))selectedStyle=List.of("RECALL","LISTENING","MEANINGS").get(java.util.concurrent.ThreadLocalRandom.current().nextInt(3));
-        if("RECALL".equals(selectedStyle)) {
+        if(Set.of("RECALL","SPELLING","COLLOCATION").contains(selectedStyle)) {
             var progress=ps.get(word.termKey); var lesson=lessons.forWord(word);
             var patterns=lesson.collocations().stream().filter(c->c.pattern().matches("[A-Za-z .,\\'/-]+") && c.pattern().length()<=160).toList();
-            boolean collocation=progress!=null && progress.spellingCorrect>0 && progress.collocationCorrect<=progress.spellingCorrect && !patterns.isEmpty();
+            boolean collocation=!selectedStyle.equals("SPELLING") && !patterns.isEmpty() && (selectedStyle.equals("COLLOCATION")||progress!=null && progress.spellingCorrect>0 && progress.collocationCorrect<=progress.spellingCorrect);
             q.practiceKind=collocation?"COLLOCATION":"SPELLING";
             var pattern=patterns.isEmpty()?null:patterns.get(progress==null?0:progress.collocationCorrect%patterns.size());
             q.promptText=collocation?pattern.meaning():word.meaning;
@@ -265,6 +270,11 @@ public class VocabularyService {
             .setParameter("owner",owner).setParameter("term",term.trim().toLowerCase(Locale.ROOT)).setMaxResults(1).getResultList();
         if(matches.isEmpty())throw bad("TERM_NOT_FOUND","词库中还没有这个单词，可以先为它制作一张复习卡");
         var word=matches.get(0);var p=wordProgress(owner,word.id);p.starred=true;p.updatedAt=now();return wordView(word,p);
+    }
+    @Transactional(readOnly=true) public Lesson lookup(String term){
+        long owner=current.requireCurrent().getId();
+        var matches=em.createQuery("select w from VocabularyWordEntity w join VocabularyBookEntity b on b.id=w.bookId where (b.ownerId is null or b.ownerId=:owner) and lower(w.term)=:term order by w.id",VocabularyWordEntity.class).setParameter("owner",owner).setParameter("term",term.trim().toLowerCase(Locale.ROOT)).setMaxResults(1).getResultList();
+        if(matches.isEmpty())throw bad("TERM_NOT_FOUND","本地词库暂未收录，可将原句保存为复习卡");return lessons.forWord(matches.get(0));
     }
     private VocabularyQuestionEntity activeQuestion(String id,long owner) {
         var q=em.find(VocabularyQuestionEntity.class,id,LockModeType.PESSIMISTIC_WRITE);

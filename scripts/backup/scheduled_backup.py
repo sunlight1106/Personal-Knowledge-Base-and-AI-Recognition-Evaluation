@@ -29,8 +29,11 @@ def retain(directory, keep, verified):
         p.unlink(); verified.pop(p.name,None)
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--root',type=Path,default=Path(__file__).resolve().parents[2]);parser.add_argument('--keep',type=int,default=7)
-    args=parser.parse_args();root=args.root.resolve();directory=root/'.runtime'/'backups'/'scheduled';directory.mkdir(parents=True,exist_ok=True)
+    parser=argparse.ArgumentParser();parser.add_argument('--root',type=Path,default=Path(__file__).resolve().parents[2]);parser.add_argument('--keep',type=int,default=7);parser.add_argument('--drill-every-days',type=int,default=7)
+    args=parser.parse_args()
+    if not 0<=args.drill_every_days<=365:parser.error('Drill interval must be 0 to 365 days')
+    if not 2<=args.keep<=365:parser.error('Retention must be 2 to 365')
+    root=args.root.resolve();directory=root/'.runtime'/'backups'/'scheduled';directory.mkdir(parents=True,exist_ok=True)
     if directory.is_symlink(): raise ValueError('Backup directory cannot be a link')
     status=root/'.runtime'/'backups'/'status.json';manifest=directory/'verified.json';secret=backup.password()
     try:
@@ -47,6 +50,16 @@ def main():
         retain(directory,args.keep,verified)
         temp=manifest.with_suffix('.tmp');temp.write_text(json.dumps(verified));temp.replace(manifest)
         data=json.loads(status.read_text());data.update({'verified':True,'lastAttempt':datetime.now(timezone.utc).isoformat(),'lastError':None,'retained':len(verified),'scheduled':True,'warning':'旧归档校验未通过或已被移走，请检查备份目录；这些文件没有被自动删除。' if integrity_warning else None});status.write_text(json.dumps(data))
+        last=directory.parent/'drill.json'
+        record=json.loads(last.read_text()) if last.exists() else {}
+        due=not record.get('lastSuccess') or (datetime.now(timezone.utc)-datetime.fromisoformat(record['lastSuccess'])).days>=args.drill_every_days
+        if args.drill_every_days and due:
+            try:
+                from restore_drill import drill
+                drill(root,archive,secret)
+            except Exception:
+                # The archive remains valid even when the independent recovery rehearsal fails.
+                data['warning']='备份已完成，但恢复演练未通过。请检查演练状态和本机日志。';status.write_text(json.dumps(data))
     except Exception:
         data=json.loads(status.read_text()) if status.exists() else {}
         data.update({'lastAttempt':datetime.now(timezone.utc).isoformat(),'lastError':'自动备份失败，请检查本机任务日志和剩余空间。','scheduled':True});status.write_text(json.dumps(data));raise

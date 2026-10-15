@@ -13,6 +13,8 @@ public class DocumentLibraryController {
     @GetMapping("/passages/{id}") public Object passage(@PathVariable String id){return ApiResponse.ok(service.passage(id));}
     @PostMapping(consumes="multipart/form-data") @PreAuthorize("hasAuthority('research:use') and hasAuthority('note:write')") public Object upload(@RequestParam MultipartFile file){return ApiResponse.ok(service.upload(file));}
     @GetMapping("/{id}") public Object read(@PathVariable String id){return ApiResponse.ok(service.parts(id));}
+    @PatchMapping("/passages/{id}") @PreAuthorize("hasAuthority('research:use') and hasAuthority('note:write')") public Object correct(@PathVariable String id,@jakarta.validation.Valid @RequestBody DocumentLibraryService.Correction body){return ApiResponse.ok(service.correct(id,body));}
+    @GetMapping("/{id}/pages/{page}") public ResponseEntity<byte[]> image(@PathVariable String id,@PathVariable int page){return ResponseEntity.ok().header("Cache-Control","no-store").contentType(MediaType.IMAGE_PNG).body(service.pageImage(id,page));}
     @DeleteMapping("/{id}") @PreAuthorize("hasAuthority('research:use') and hasAuthority('note:write')") public Object delete(@PathVariable String id){service.delete(id);return ApiResponse.ok(null);}
     @GetMapping("/{id}/original") public ResponseEntity<byte[]> original(@PathVariable String id){var f=service.original(id);return ResponseEntity.ok().header("Cache-Control","no-store").header("X-Content-Type-Options","nosniff").header("Content-Disposition",ContentDisposition.attachment().filename(f.getOriginalName(),java.nio.charset.StandardCharsets.UTF_8).build().toString()).contentType(MediaType.parseMediaType(f.getContentType())).body(files.readBytes(f));}
 }

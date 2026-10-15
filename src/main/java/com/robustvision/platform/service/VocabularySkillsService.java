@@ -22,6 +22,19 @@ public class VocabularySkillsService {
   String key=AccountSecurityService.hash(kind+"\n"+detail);var rows=db.queryForList("SELECT id FROM vocabulary_skill WHERE owner_id=? AND term_key=? AND skill_key=?",q.ownerId,word.termKey,key);
   if(rows.isEmpty())db.update("INSERT INTO vocabulary_skill(id,owner_id,term_key,skill_key,kind,detail,correct_count,wrong_count,independent_count,last_attempt) VALUES (?,?,?,?,?,?,0,0,0,?)",UUID.randomUUID().toString(),q.ownerId,word.termKey,key,kind,detail,Timestamp.from(now));
   db.update("UPDATE vocabulary_skill SET correct_count=correct_count+?,wrong_count=wrong_count+?,independent_count=independent_count+?,last_attempt=? WHERE owner_id=? AND term_key=? AND skill_key=?",correct?1:0,correct?0:1,correct&&independent?1:0,Timestamp.from(now),q.ownerId,word.termKey,key);
+  String followup=q.ownerId+":"+AccountSecurityService.hash(word.termKey+"\n"+kind);
+  var day=q.studyDate;
+  if(day!=null&&!correct){
+   db.update("DELETE FROM practice_followup WHERE id=? AND owner_id=?",followup,q.ownerId);
+   db.update("INSERT INTO practice_followup(id,owner_id,term_key,kind,detail,due_date,independent_passes) VALUES(?,?,?,?,?,?,0)",followup,q.ownerId,word.termKey,kind,detail,day.plusDays(1));
+  }else if(day!=null&&correct&&independent){
+   db.update("UPDATE practice_followup SET independent_passes=independent_passes+1,last_pass=?,due_date=? WHERE id=? AND owner_id=? AND due_date<=? AND (last_pass IS NULL OR last_pass<?)",day,day.plusDays(3),followup,q.ownerId,day,day);
+   db.update("DELETE FROM practice_followup WHERE id=? AND owner_id=? AND independent_passes>=2",followup,q.ownerId);
+  }
+ }
+ @Transactional(readOnly=true) public List<Map<String,Object>> followups(){
+  long owner=current.requireCurrent().getId();var profile=vocabulary.profile(owner);var day=vocabulary.now().atZone(profile.zoneId==null?ZoneOffset.UTC:ZoneId.of(profile.zoneId)).toLocalDate();
+  return db.query("SELECT f.term_key term,f.kind,f.detail,f.due_date dueDate,f.independent_passes passes,MIN(w.book_id) bookId FROM practice_followup f JOIN vocabulary_word w ON w.term_key=f.term_key JOIN vocabulary_book b ON b.id=w.book_id WHERE f.owner_id=? AND (b.owner_id IS NULL OR b.owner_id=?) AND f.due_date<=? AND NOT EXISTS(SELECT 1 FROM vocabulary_progress p WHERE p.owner_id=f.owner_id AND p.term_key=f.term_key AND p.skipped=TRUE) GROUP BY f.id,f.term_key,f.kind,f.detail,f.due_date,f.independent_passes ORDER BY f.due_date,f.id LIMIT 50",(r,i)->Map.<String,Object>of("term",r.getString(1),"kind",r.getString(2),"detail",r.getString(3),"dueDate",r.getDate(4).toString(),"passes",r.getInt(5),"bookId",r.getString(6)),owner,owner,day);
  }
  public List<Skill> export(long owner){return db.query("SELECT term_key,kind,detail,correct_count,wrong_count,independent_count,last_attempt FROM vocabulary_skill WHERE owner_id=? ORDER BY term_key,kind,skill_key LIMIT 100000",(r,i)->new Skill(r.getString(1),r.getString(2),r.getString(3),r.getInt(4),r.getInt(5),r.getInt(6),r.getTimestamp(7).toInstant()),owner);}
  public void restore(long owner,List<Skill> items){if(items==null)return;if(items.size()>100000)throw bad();for(var s:items){

@@ -6,4 +6,5 @@ import org.springframework.web.bind.annotation.*;
 public class VocabularySkillsController {
  private final VocabularySkillsService service;public VocabularySkillsController(VocabularySkillsService service){this.service=service;}
  @GetMapping Object stats(@RequestParam(defaultValue="30") int days){return ApiResponse.ok(service.stats(days));}
+ @GetMapping("/followups") Object followups(){return ApiResponse.ok(service.followups());}
 }
