@@ -17,14 +17,13 @@ public interface MessageRecipientRepository extends JpaRepository<MessageRecipie
         Long getRecipientId();
         String getUsername();
         String getDisplayName();
-        String getEmail();
         Instant getReadAt();
     }
 
     @Query("""
             select r.message.id as messageId, r.recipient.id as recipientId,
                    r.recipient.username as username, r.recipient.displayName as displayName,
-                   r.recipient.email as email, r.readAt as readAt
+                   r.readAt as readAt
             from MessageRecipientEntity r where r.message.id in :messageIds order by r.id asc
             """)
     List<RecipientRow> findRowsByMessageIds(@Param("messageIds") Collection<String> messageIds);

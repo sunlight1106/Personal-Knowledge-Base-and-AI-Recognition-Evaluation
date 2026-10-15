@@ -43,7 +43,9 @@ public class MessageService {
         String pattern = text.isEmpty() ? "" : "%" + text.toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         String identityCode = text.matches("(?i)PKB-[0-9A-F]{32}") ? text.toUpperCase(Locale.ROOT) : "";
         UserEntity current = currentUserService.requireCurrent();
-        return userRepository.searchMessageContacts(current.getId(), currentUserService.isSuperAdmin(current), userId == null,
+        var permissions = currentUserService.effectivePermissions(current);
+        return userRepository.searchMessageContacts(current.getId(), currentUserService.isSuperAdmin(current),
+                        permissions.contains("contacts:use"), permissions.contains("group:use"), userId == null,
                         List.of(userId == null ? current.getId() : userId), pattern, identityCode, org.springframework.data.domain.PageRequest.of(page, 25))
                 .stream().map(user -> new ApiDtos.MessageContactView(user.getId(), user.getIdentityCode(), user.getUsername(), user.getDisplayName(),
                         "ADMIN".equals(user.getRoleCode()) ? "ADMIN" : currentUserService.isSuperAdmin(current) ? "USER" : "GROUP_MEMBER")).toList();
@@ -71,9 +73,10 @@ public class MessageService {
         UserEntity sender = currentUserService.requireCurrent();
         moderation.sending(sender.getId());
         LinkedHashSet<Long> ids = new LinkedHashSet<>(recipientIds == null ? List.of() : recipientIds);
+        var permissions = currentUserService.effectivePermissions(sender);
         if (ids.isEmpty() || ids.size() > 20 || ids.contains(null)) throw new BusinessException(HttpStatus.BAD_REQUEST, "MESSAGE_RECIPIENTS_INVALID", "请选择 1 到 20 个收件人");
         if (sender.getStatus() != UserStatus.ACTIVE || userRepository.findMessageContacts(sender.getId(),
-                currentUserService.isSuperAdmin(sender), false, ids).size() != ids.size())
+                currentUserService.isSuperAdmin(sender), permissions.contains("contacts:use"), permissions.contains("group:use"), false, ids).size() != ids.size())
             throw new BusinessException(HttpStatus.FORBIDDEN, "MESSAGE_RECIPIENT_FORBIDDEN", "只能联系平台管理员或有交流权限的联系人或同组成员，请刷新联系人列表");
         if (replyToId != null) {
             MessageEntity parent = requireAccessible(replyToId, sender);
@@ -153,7 +156,7 @@ public class MessageService {
         }
         boolean sender = message.getSender().getId().equals(current.getId());
         boolean recipient = recipientRepository.findByMessageIdAndRecipientId(id, current.getId()).isPresent();
-        if (!sender && !recipient && !currentUserService.isSuperAdmin(current))
+        if (!sender && !recipient)
             throw new BusinessException(HttpStatus.FORBIDDEN, "MESSAGE_ACCESS_DENIED", "无权查看这封站内信");
         return message;
     }
@@ -169,7 +172,7 @@ public class MessageService {
             Set<String> readMessages = new HashSet<>();
             for (MessageRecipientRepository.RecipientRow row : recipientRepository.findRowsByMessageIds(ids)) {
                 recipients.computeIfAbsent(row.getMessageId(), ignored -> new ArrayList<>()).add(
-                        new ApiDtos.UserDirectoryView(row.getRecipientId(), row.getUsername(), row.getDisplayName(), row.getEmail()));
+                        new ApiDtos.UserDirectoryView(row.getRecipientId(), row.getUsername(), row.getDisplayName(), null));
                 if (row.getRecipientId().equals(current.getId()) && row.getReadAt() != null) readMessages.add(row.getMessageId());
             }
             Map<String, List<ApiDtos.MessageAttachmentView>> attachments = new HashMap<>();
@@ -192,7 +195,7 @@ public class MessageService {
     private ApiDtos.MessageView toView(MessageEntity message, UserEntity current) {
         List<MessageRecipientEntity> recipientRows = recipientRepository.findByMessageIdOrderByIdAsc(message.getId());
         List<ApiDtos.UserDirectoryView> recipients = recipientRows.stream().map(item -> new ApiDtos.UserDirectoryView(
-                item.getRecipient().getId(), item.getRecipient().getUsername(), item.getRecipient().getDisplayName(), item.getRecipient().getEmail())).toList();
+                item.getRecipient().getId(), item.getRecipient().getUsername(), item.getRecipient().getDisplayName(), null)).toList();
         List<ApiDtos.MessageAttachmentView> attachments = attachmentRepository.findByMessageIdOrderByIdAsc(message.getId()).stream().map(item ->
                 new ApiDtos.MessageAttachmentView(item.getId(), item.getFile().getOriginalName(), item.getFile().getContentType(), item.getFile().getSizeBytes(),
                         "/api/v1/messages/" + message.getId() + "/attachments/" + item.getId())).toList();

@@ -29,15 +29,6 @@ public class WorkspaceService {
     }
 
     @Transactional(readOnly = true)
-    public List<ApiDtos.UserDirectoryView> directory(Long id) {
-        UserEntity current = currentUserService.requireCurrent();
-        requirePermission(requireAccessible(id, current), current, "MEMBERS_WRITE");
-        return userRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(user -> user.getStatus() == UserStatus.ACTIVE && !user.getId().equals(current.getId()))
-                .map(user -> new ApiDtos.UserDirectoryView(user.getId(), user.getUsername(), user.getDisplayName(), null)).toList();
-    }
-
-    @Transactional(readOnly = true)
     public List<ApiDtos.WorkspaceView> list() {
         UserEntity current = currentUserService.requireCurrent();
         boolean admin = currentUserService.isSuperAdmin(current);
@@ -96,11 +87,11 @@ public class WorkspaceService {
         if(workspace.isArchived())throw new BusinessException(HttpStatus.CONFLICT,"GROUP_ARCHIVED","群组已归档");
         UserEntity user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "用户不存在"));
-        if (user.getStatus() != UserStatus.ACTIVE) throw new BusinessException(HttpStatus.BAD_REQUEST, "WORKSPACE_USER_DISABLED", "不能添加已停用账号");
+        if (!user.hasActiveAccess(java.time.Instant.now())) throw new BusinessException(HttpStatus.BAD_REQUEST, "WORKSPACE_USER_DISABLED", "不能调整已停用或到期的账号");
         if (request.role() == WorkspaceMemberRole.OWNER && !user.getId().equals(workspace.getOwner().getId()))
             throw new BusinessException(HttpStatus.CONFLICT, "WORKSPACE_OWNER_LOCKED", "不能将其他成员设为所有者");
         WorkspaceMemberEntity member = memberRepository.findByWorkspaceIdAndUserId(workspaceId, user.getId())
-                .orElseGet(() -> new WorkspaceMemberEntity(workspace, user, request.role(), defaults(request.role())));
+                .orElseThrow(() -> new BusinessException(HttpStatus.CONFLICT, "GROUP_INVITATION_REQUIRED", "请先发送群组邀请，待对方同意后再调整成员权限"));
         if (member.getRole() == WorkspaceMemberRole.OWNER && request.role() != WorkspaceMemberRole.OWNER)
             throw new BusinessException(HttpStatus.CONFLICT, "WORKSPACE_OWNER_LOCKED", "不能修改工作空间所有者角色");
         Set<String> permissions = request.permissions() == null || request.permissions().isEmpty() ? defaults(request.role()) : request.permissions();
@@ -144,6 +135,10 @@ public class WorkspaceService {
     /** Caller transaction holds the group lock during posts and membership mutations. */
     public void requireContentPermission(Long id, boolean write) {
         UserEntity current = currentUserService.requireCurrent();
+        // Message detail and attachment routes are outside /workspaces/**.
+        // Membership alone must not restore a revoked platform module permission.
+        if (!currentUserService.hasPermission(current, "group:use"))
+            throw new BusinessException(HttpStatus.FORBIDDEN, "WORKSPACE_PERMISSION_DENIED", "没有使用群组的权限");
         moderation.group(current.getId());
         WorkspaceEntity workspace = write ? requireLocked(id, current) : requireAccessible(id, current);
         requirePermission(workspace, current, "CONTENT_READ");

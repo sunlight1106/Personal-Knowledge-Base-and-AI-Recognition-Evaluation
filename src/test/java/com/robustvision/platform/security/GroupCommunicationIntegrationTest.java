@@ -39,6 +39,7 @@ class GroupCommunicationIntegrationTest {
     @Autowired MessageRepository messages;
     @Autowired MessageAttachmentRepository attachments;
     @Autowired PasswordEncoder encoder;
+    @Autowired ContactLinkRepository links;
     @MockBean AntivirusService scanner;
     UserEntity owner, member, outsider, admin;
     String ownerToken, memberToken, outsiderToken, adminToken;
@@ -60,7 +61,28 @@ class GroupCommunicationIntegrationTest {
     MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String token, Object body) throws Exception { return auth(request, token).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(body)); }
     String login(UserEntity user) throws Exception { return data(mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(Map.of("username", user.getUsername(), "password", PASSWORD)))).andExpect(status().isOk()).andReturn()).path("token").asText(); }
     long group(String token) throws Exception { return data(mvc.perform(json(post("/api/v1/workspaces"), token, Map.of("name", "Synthetic group " + UUID.randomUUID(), "color", "#57788d"))).andExpect(status().isOk()).andReturn()).path("id").asLong(); }
-    ResultActions membership(long group, String token, UserEntity user, String role, Set<String> permissions) throws Exception { return mvc.perform(json(put("/api/v1/workspaces/{id}/members", group), token, Map.of("userId", user.getId(), "role", role, "permissions", permissions))); }
+    ResultActions membership(long group, String token, UserEntity user, String role, Set<String> permissions) throws Exception {
+        // Set up new members through the same consent flow as the UI; this endpoint only edits members.
+        var response = mvc.perform(auth(get("/api/v1/workspaces/{id}", group), token)).andReturn();
+        if (response.getResponse().getStatus() == 200) {
+            JsonNode view = data(response);
+            boolean exists = java.util.stream.StreamSupport.stream(view.path("members").spliterator(), false)
+                    .anyMatch(m -> m.path("userId").asLong() == user.getId());
+            boolean manages = java.util.stream.StreamSupport.stream(view.path("currentPermissions").spliterator(), false)
+                    .anyMatch(p -> p.asText().equals("MEMBERS_WRITE"));
+            if (!exists && manages) {
+                mvc.perform(json(post("/api/v1/workspaces/{id}/invitations", group), token,
+                        Map.of("targetId", user.getId(), "role", role.equals("VIEWER") ? "VIEWER" : "MEMBER"))).andExpect(status().isOk());
+                String recipientToken = login(user);
+                JsonNode pending = data(mvc.perform(auth(get("/api/v1/workspaces/invitations"), recipientToken)).andExpect(status().isOk()).andReturn());
+                String ticket = java.util.stream.StreamSupport.stream(pending.spliterator(), false)
+                        .filter(i -> i.path("groupId").asLong(i.path("groupid").asLong()) == group).findFirst().orElseThrow().path("id").asText();
+                mvc.perform(json(post("/api/v1/workspaces/invitations/{id}/decision", ticket), recipientToken, Map.of("accept", true))).andExpect(status().isOk());
+            }
+        }
+        return mvc.perform(json(put("/api/v1/workspaces/{id}/members", group), token,
+                Map.of("userId", user.getId(), "role", role, "permissions", permissions)));
+    }
     ResultActions postGroup(long id, String token, String text, String replyTo, boolean file) throws Exception {
         var request = multipart("/api/v1/messages/groups/{id}", id);
         if (file) request.file(new MockMultipartFile("files", "reading.txt", "text/plain", "Synthetic group material".getBytes(StandardCharsets.UTF_8)));
@@ -266,6 +288,79 @@ class GroupCommunicationIntegrationTest {
         postGroup(first, ownerToken, "Bad attachment", null, true).andExpect(status().isBadRequest());
         assertThat(messages.count()).isEqualTo(before);
         mvc.perform(auth(get("/api/v1/messages/groups/{id}", first).param("page", "-1"), ownerToken)).andExpect(status().isBadRequest());
+    }
+
+    @Test void revokingGroupModuleClosesEveryMessageRouteAndSharedGroupContactDiscovery() throws Exception {
+        long id = group(ownerToken);
+        membership(id, ownerToken, member, "MEMBER", Set.of()).andExpect(status().isOk());
+        JsonNode posted = data(postGroup(id, ownerToken, "Private group material", null, true).andExpect(status().isOk()).andReturn());
+        String messageId = posted.path("id").asText();
+        String attachment = posted.path("attachments").get(0).path("downloadUrl").asText();
+        // The token remains valid: authorization must use the current permission, not a login snapshot.
+        member.setPermissionOverrides(Map.of("group:use", false)); users.save(member);
+        for (String path : List.of("/api/v1/messages/groups/" + id, "/api/v1/messages/" + messageId, attachment))
+            mvc.perform(auth(get(path), memberToken)).andExpect(status().isForbidden());
+        postGroup(id, memberToken, "Forbidden write", null, false).andExpect(status().isForbidden());
+        assertThat(contacts(memberToken)).doesNotContain(owner.getId()).contains(admin.getId());
+        direct(memberToken, List.of(owner.getId()), null).andExpect(status().isForbidden());
+        direct(memberToken, List.of(admin.getId()), null).andExpect(status().isOk());
+        member.setPermissionOverrides(Map.of()); users.save(member);
+        mvc.perform(auth(get(attachment), memberToken)).andExpect(status().isOk());
+    }
+
+    @Test void privateMailAndAttachmentsAreParticipantOnlyAndNeverExposeRecipientEmail() throws Exception {
+        long id = group(ownerToken);
+        membership(id, ownerToken, member, "MEMBER", Set.of()).andExpect(status().isOk());
+        var request = multipart("/api/v1/messages")
+                .file(new MockMultipartFile("files", "private.txt", "text/plain", "Private attachment".getBytes(StandardCharsets.UTF_8)))
+                .param("recipientIds", member.getId().toString()).param("subject", "Private mail").param("body", "Participant-only content");
+        JsonNode sent = data(mvc.perform(auth(request, ownerToken)).andExpect(status().isOk()).andReturn());
+        String path = "/api/v1/messages/" + sent.path("id").asText();
+        String file = sent.path("attachments").get(0).path("downloadUrl").asText();
+        for (String token : List.of(adminToken, outsiderToken)) {
+            mvc.perform(auth(get(path), token)).andExpect(status().isForbidden());
+            mvc.perform(auth(get(file), token)).andExpect(status().isForbidden());
+        }
+        for (String token : List.of(ownerToken, memberToken)) {
+            mvc.perform(auth(get(path), token)).andExpect(status().isOk()).andExpect(jsonPath("$.data.recipients[0].email").doesNotExist());
+            mvc.perform(auth(get(file), token)).andExpect(status().isOk());
+        }
+        mvc.perform(auth(get("/api/v1/messages/inbox"), memberToken)).andExpect(jsonPath("$.data[0].recipients[0].email").doesNotExist());
+        mvc.perform(auth(get("/api/v1/messages/sent"), ownerToken)).andExpect(jsonPath("$.data[0].recipients[0].email").doesNotExist());
+    }
+
+    @Test void groupDiscoveryRespectsHiddenAccountsBlocksAndExpiryOnBothRoutes() throws Exception {
+        long id = group(ownerToken);
+        for (String suffix : List.of("people", "directory")) {
+            String path = "/api/v1/workspaces/" + id + "/" + suffix;
+            String visible = mvc.perform(auth(get(path).param("q", outsider.getIdentityCode()), ownerToken)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(visible).contains(outsider.getUsername());
+            outsider.setDiscoverable(false); users.save(outsider);
+            String body = mvc.perform(auth(get(path).param("q", outsider.getIdentityCode()), ownerToken)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(body).doesNotContain(outsider.getUsername());
+            outsider.setDiscoverable(true); outsider.setAccessExpiresAt(java.time.Instant.now().minusSeconds(60)); users.save(outsider);
+            body = mvc.perform(auth(get(path).param("q", outsider.getIdentityCode()), ownerToken)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(body).doesNotContain(outsider.getUsername());
+            outsider.setAccessExpiresAt(null); users.save(outsider);
+            ContactLinkEntity link = new ContactLinkEntity(owner.getId(), outsider.getId(), owner.getId());
+            link.block(outsider.getId(), true); link = links.save(link);
+            body = mvc.perform(auth(get(path).param("q", outsider.getIdentityCode()), ownerToken)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(body).doesNotContain(outsider.getUsername());
+            links.delete(link);
+        }
+    }
+
+    @Test void revokedContactPermissionCannotBeBypassedThroughMailAndExpiredRecipientsAreRejected() throws Exception {
+        ContactLinkEntity link = new ContactLinkEntity(owner.getId(), member.getId(), owner.getId());
+        link.setStatus("ACCEPTED"); links.save(link);
+        member.setPermissionOverrides(Map.of("contacts:use", true)); users.save(member);
+        direct(memberToken, List.of(owner.getId()), null).andExpect(status().isOk());
+        member.setPermissionOverrides(Map.of("contacts:use", false)); users.save(member);
+        direct(memberToken, List.of(owner.getId()), null).andExpect(status().isForbidden());
+        assertThat(contacts(memberToken)).doesNotContain(owner.getId());
+        owner.setAccessExpiresAt(java.time.Instant.now().minusSeconds(1)); users.save(owner);
+        direct(adminToken, List.of(owner.getId()), null).andExpect(status().isForbidden());
+        assertThat(contacts(adminToken)).doesNotContain(owner.getId());
     }
 
     @TestConfiguration static class FastPasswords {

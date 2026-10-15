@@ -15,6 +15,12 @@
 | 用另一个账号访问私有笔记、AI 记忆或训练任务 | 无法读取或修改；管理员也不能冒用资料所有者 |
 | 普通组员修改成员权限或读取其他群的资料 | 请求被拒绝 |
 | 临时限制到期 | 恢复原有授权，不增加角色权限，不重新启用停用账号 |
+| 收回群组功能后用原消息 ID / 下载地址访问 | 群列表、消息详情、附件与发言全部被拒绝 |
+| 邀请发出后邀请人离组、失去权限或双方拉黑 | 不能接受旧邀请，可以拒绝；不会新增成员 |
+| 直接调用成员修改接口添加陌生人 | 要求先完成邀请确认或申请审核 |
+| 管理员读取不属于自己的私人站内信或附件 | 拒绝访问；被举报的内容在审核入口查看 |
+| 隐藏、到期或拉黑账号出现在邀请搜索中 | 新旧搜索入口均不返回，结果分页 |
+
 
 管理员角色提供完整的管理权限。普通角色即使被委派了管理类权限，创建账号、调整角色、共享密钥和账户安全设置仍有最高管理员检查。群组的管理权限也单独检查。
 
@@ -25,7 +31,7 @@
 Windows，在项目目录运行：
 
 ```powershell
-.\mvnw.cmd -B -Dtest=PermissionMatrixIntegrationTest,AccountSecurityIntegrationTest,ModerationIntegrationTest test
+.\mvnw.cmd -B -Dtest=PermissionMatrixIntegrationTest,AccountSecurityIntegrationTest,ModerationIntegrationTest,GroupLifecycleIntegrationTest,SocialIntegrationTest test
 npm.cmd run test:ui --prefix cle
 npm.cmd run build --prefix cle
 ```

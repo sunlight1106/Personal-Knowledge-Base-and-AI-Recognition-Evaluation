@@ -13,8 +13,16 @@ import java.util.List;
 @PreAuthorize("isAuthenticated()")
 public class WorkspaceController {
     private final WorkspaceService service;
-    public WorkspaceController(WorkspaceService service) { this.service = service; }
-    @GetMapping("/{id}/directory") public ApiResponse<List<ApiDtos.UserDirectoryView>> directory(@PathVariable Long id) { return ApiResponse.ok(service.directory(id)); }
+    private final com.robustvision.platform.service.GroupConversationService conversation;
+    public WorkspaceController(WorkspaceService service, com.robustvision.platform.service.GroupConversationService conversation) {
+        this.service = service; this.conversation = conversation;
+    }
+    @GetMapping("/{id}/directory") public ApiResponse<List<ApiDtos.UserDirectoryView>> directory(@PathVariable Long id,
+            @RequestParam(defaultValue="") String q, @RequestParam(defaultValue="0") int page) {
+        // Keep the legacy response shape, with the same bounded search and privacy rules.
+        return ApiResponse.ok(conversation.directory(id, q, page).items().stream()
+                .map(user -> new ApiDtos.UserDirectoryView(user.id(), user.username(), user.displayName(), null)).toList());
+    }
     @GetMapping public ApiResponse<List<ApiDtos.WorkspaceView>> list() { return ApiResponse.ok(service.list()); }
     @PostMapping @PreAuthorize("hasAuthority('workspace:manage')")
     public ApiResponse<ApiDtos.WorkspaceView> create(@Valid @RequestBody ApiDtos.CreateWorkspaceRequest request) { return ApiResponse.ok(service.create(request)); }
