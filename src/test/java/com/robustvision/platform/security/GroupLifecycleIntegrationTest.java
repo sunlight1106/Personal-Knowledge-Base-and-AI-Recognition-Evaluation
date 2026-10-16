@@ -66,10 +66,19 @@ class GroupLifecycleIntegrationTest extends GroupCommunicationIntegrationTest {
   postGroup(id,memberToken,"Synthetic post",null,false).andExpect(status().isOk());
   mvc.perform(json(put("/api/v1/workspaces/{id}/lifecycle",id),ownerToken,Map.of("archived",true,"acceptRequests",false))).andExpect(status().isOk());
   postGroup(id,memberToken,"Must not post",null,false).andExpect(status().isConflict());
+  mvc.perform(auth(get("/api/v1/workspaces/{id}",id),memberToken)).andExpect(status().isOk())
+    .andExpect(jsonPath("$.data.archived").value(true)).andExpect(jsonPath("$.data.dissolved").value(false));
+  var overview=data(mvc.perform(auth(get("/api/v1/workspaces/overview"),memberToken)).andExpect(status().isOk()).andReturn());
+  var summary=java.util.stream.StreamSupport.stream(overview.path("groups").spliterator(),false).filter(g->g.path("id").asLong()==id).findFirst().orElseThrow();
+  assertThat(summary.path("archived").asBoolean()).isTrue();
+  assertThat(summary.path("dissolved").asBoolean()).isFalse();
   mvc.perform(auth(get("/api/v1/messages/groups/{id}",id),memberToken)).andExpect(status().isOk());
   var name=data(mvc.perform(auth(get("/api/v1/workspaces/{id}",id),ownerToken)).andReturn()).path("name").asText();
   mvc.perform(json(post("/api/v1/workspaces/{id}/dissolve",id),ownerToken,Map.of("name",name,"password",PASSWORD))).andExpect(status().isOk());
   mvc.perform(auth(get("/api/v1/messages/groups/{id}",id),memberToken)).andExpect(status().isForbidden());
+  mvc.perform(auth(get("/api/v1/workspaces/{id}",id),ownerToken)).andExpect(status().isOk())
+    .andExpect(jsonPath("$.data.archived").value(true)).andExpect(jsonPath("$.data.dissolved").value(true));
+  assertThat(data(mvc.perform(auth(get("/api/v1/workspaces"),memberToken)).andExpect(status().isOk()).andReturn()).toString()).doesNotContain("\"id\":"+id+",");
  }
  @Test void recallRemovesAttachmentAccessAndReportsStayWithinGroup()throws Exception {
   long id=group(ownerToken),other=group(ownerToken);membership(other,ownerToken,outsider,"MEMBER",Set.of("CONTENT_READ","CONTENT_WRITE","MEMBERS_READ")).andExpect(status().isOk());membership(id,ownerToken,member,"MEMBER",Set.of("CONTENT_READ","CONTENT_WRITE","MEMBERS_READ")).andExpect(status().isOk());

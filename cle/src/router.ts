@@ -39,6 +39,8 @@ const router = createRouter({
         { path: 'vocabulary', name: 'vocabulary', component: () => import('@/views/VocabularyView.vue'), meta: { permission: 'vocabulary:use' } },
         { path: 'knowledge', name: 'knowledge', component: () => import('@/views/KnowledgeView.vue'), meta: { permission: 'knowledge:read' } },
         { path: 'notes', name: 'notes', component: () => import('@/views/NotesView.vue'), meta: { permission: 'note:read' } },
+        { path: 'notes/trash', name: 'note-trash', component: () => import('@/views/NoteTrashView.vue'), meta: { permission: 'note:read' } },
+        { path: 'notes/:id', name: 'note-read', component: () => import('@/views/NoteReaderView.vue'), meta: { permission: 'note:read' } },
         { path: 'notes/new', name: 'note-create', component: () => import('@/views/NoteEditorView.vue'), meta: { permission: 'note:write' } },
         { path: 'notes/:id/edit', name: 'note-edit', component: () => import('@/views/NoteEditorView.vue'), meta: { permission: 'note:write' } },
         { path: 'overview', redirect: '/app/home' },
@@ -69,6 +71,7 @@ router.beforeEach(async to => {
   if (!to.matched.some(record => record.meta.requiresAuth)) return true
   const user = await authStore.ensureUser()
   if (!user) return { name: 'login', query: { redirect: to.fullPath } }
+  if (to.name === 'note-edit' && !authStore.has('note:write') && authStore.has('note:read')) return { name: 'note-read', params: { id: to.params.id } }
   const permission = to.meta.permission as string | undefined
   const permissions = to.meta.permissions as string[] | undefined
   if (permission && !authStore.has(permission)) return { path: '/app/settings' }

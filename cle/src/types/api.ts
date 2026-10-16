@@ -241,6 +241,8 @@ export interface WorkspaceView {
   currentRole: WorkspaceMemberRole
   currentPermissions: string[]
   members: WorkspaceMemberView[]
+  archived: boolean
+  dissolved: boolean
   createdAt: string
   updatedAt: string
 }

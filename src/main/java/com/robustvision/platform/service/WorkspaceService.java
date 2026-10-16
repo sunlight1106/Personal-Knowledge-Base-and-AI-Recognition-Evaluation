@@ -55,7 +55,7 @@ public class WorkspaceService {
                     workspace.getOwnerId(), workspace.getOwnerName(), currentRole, currentPermissions,
                     currentPermissions.contains("MEMBERS_READ") ? members : members.stream()
                             .filter(member -> current.getId().equals(member.userId())).toList(),
-                    workspace.getCreatedAt(), workspace.getUpdatedAt());
+                    workspace.getArchived(), workspace.getDissolved(), workspace.getCreatedAt(), workspace.getUpdatedAt());
         }).toList();
     }
 
@@ -179,7 +179,7 @@ public class WorkspaceService {
                 workspace.getOwner().getId(), workspace.getOwner().getDisplayName(), currentRole, currentPermissions,
                 currentPermissions.contains("MEMBERS_READ") ? members : members.stream()
                         .filter(member -> current.getId().equals(member.userId())).toList(),
-                workspace.getCreatedAt(), workspace.getUpdatedAt());
+                workspace.isArchived(), workspace.isDissolved(), workspace.getCreatedAt(), workspace.getUpdatedAt());
     }
 
     private static final class MemberViewBuilder {

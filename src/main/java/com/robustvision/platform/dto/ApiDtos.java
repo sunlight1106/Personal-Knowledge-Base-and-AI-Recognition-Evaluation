@@ -274,6 +274,7 @@ public final class ApiDtos {
             Long id, String name, String slug, String color,
             Long ownerId, String ownerName, WorkspaceMemberRole currentRole,
             Set<String> currentPermissions, List<WorkspaceMemberView> members,
+            boolean archived, boolean dissolved,
             Instant createdAt, Instant updatedAt
     ) {}
 

@@ -94,7 +94,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
         <RouterLink v-for="name in libraries" :key="name" :to="{ name: 'notes', query: { library: name } }" :class="{ selected: library === name }"><span>{{ name }}</span><small>{{ libraryCount(name) }}</small></RouterLink>
         <p class="learning-aside-hint">{{ uiText('新建笔记时可输入新的学习库名称。保存后会自动加入此列表。') }}</p>
         <RouterLink v-if="library === '英语学习'" to="/app/vocabulary" class="learning-related"><span>{{ uiText('词汇复习') }}</span><span>↗</span></RouterLink>
-        <RouterLink v-if="authStore.has('research:use')" to="/app/research?tab=trash" class="learning-trash"><AppIcon name="trash" :size="15" /><span>{{ uiText('回收站') }}</span><AppIcon name="arrow" :size="14" /></RouterLink>
+        <RouterLink to="/app/notes/trash" class="learning-trash"><AppIcon name="trash" :size="15" /><span>{{ uiText('回收站') }}</span><AppIcon name="arrow" :size="14" /></RouterLink>
       </aside>
       <section class="learning-list">
         <LoraColabCard v-if="library === '计算机学习'" />
@@ -107,13 +107,13 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
         <div v-if="loading" class="table-skeleton" :aria-label="uiText('正在加载笔记')" />
         <template v-else-if="!filteredNotes.length">
           <EmptyState icon="note" :title="keyword ? uiText('没有匹配的笔记') : uiText('从一篇学习记录开始')" :description="keyword ? uiText('试试其他关键词或切换学习库。') : uiText('使用模板记录目标、例子、理解与复习问题。')">
-            <RouterLink v-if="canWrite && !keyword" class="button button--ghost" :to="{ name: 'note-create', query: { library: library || '综合学习', template: 'study' } }">{{ uiText('用学习模板开始 →') }}</RouterLink>
+            <button v-if="keyword || status !== 'ALL'" class="button button--ghost" @click="keyword = ''; status = 'ALL'">{{ uiText('清空筛选') }}</button><RouterLink v-if="canWrite && !keyword" class="button button--ghost" :to="{ name: 'note-create', query: { library: library || '综合学习', template: 'study' } }">{{ uiText('用学习模板开始 →') }}</RouterLink>
           </EmptyState>
         </template>
         <article v-for="row in treeRows" v-else :key="row.note.id" class="learning-note-row" :style="{ paddingLeft: `${row.depth * 22 + 8}px` }">
           <div><label v-if="canWrite" class="note-row-selection"><input type="checkbox" :checked="selectedIds.has(row.note.id)" :disabled="batchBusy" :aria-label="(uiText('选择 ') + (row.note.title))" @change="toggleSelected(row.note.id)" /></label><span class="learning-note-meta">{{ row.note.library || uiText('综合学习') }} <span> / </span> {{ uiText(row.note.status.label) }} <span> / </span> {{ row.note.contentFormat === 'HTML' ? 'HTML' : 'Markdown' }}</span>
-            <h3><button v-if="hasChildren(row.note.id)" class="page-tree-toggle" :aria-expanded="!folded.has(row.note.id)" :aria-label="folded.has(row.note.id) ? uiText('展开子页面') : uiText('收起子页面')" @click="togglePage(row.note.id)">{{ folded.has(row.note.id) ? "▸" : "▾" }}</button><RouterLink :to="{ name: 'note-edit', params: { id: row.note.id } }">{{ row.note.title }}</RouterLink></h3>
-            <RouterLink v-if="row.note.parentId&&!notes.some(n=>n.id===row.note.parentId)" :to="{name:'note-edit',params:{id:row.note.parentId}}" class="page-child-link">{{uiText('返回父页面')}}</RouterLink><p>{{ row.note.excerpt || uiText('暂无正文') }}</p>
+            <h3><button v-if="hasChildren(row.note.id)" class="page-tree-toggle" :aria-expanded="!folded.has(row.note.id)" :aria-label="folded.has(row.note.id) ? uiText('展开子页面') : uiText('收起子页面')" @click="togglePage(row.note.id)">{{ folded.has(row.note.id) ? "▸" : "▾" }}</button><RouterLink :to="{ name: canWrite ? 'note-edit' : 'note-read', params: { id: row.note.id } }">{{ row.note.title }}</RouterLink></h3>
+            <RouterLink v-if="row.note.parentId&&!notes.some(n=>n.id===row.note.parentId)" :to="{name:canWrite?'note-edit':'note-read',params:{id:row.note.parentId}}" class="page-child-link">{{uiText('返回父页面')}}</RouterLink><p>{{ row.note.excerpt || uiText('暂无正文') }}</p>
             <div class="learning-note-tags"><button v-for="tag in row.note.tags" :key="tag" @click="keyword = tag">{{ tag }}</button></div>
           </div>
           <div class="learning-note-end"><RouterLink v-if="canWrite" :to="{ name: 'note-create', query: { library: row.note.library, parent: row.note.id } }" class="page-child-link">{{ uiText('＋ 子页面') }}</RouterLink><time>{{ new Date(row.note.updatedAt).toLocaleDateString(uiLocale()) }}</time><button v-if="canWrite" class="icon-button" :aria-label="(uiText('删除 ') + (row.note.title))" :disabled="deleting.has(row.note.id)" @click="remove(row.note)"><AppIcon name="trash" :size="15" /></button></div>

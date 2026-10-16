@@ -20,6 +20,8 @@ public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long
         String getColor();
         Long getOwnerId();
         String getOwnerName();
+        boolean getArchived();
+        boolean getDissolved();
         Instant getCreatedAt();
         Instant getUpdatedAt();
     }
@@ -27,6 +29,7 @@ public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long
     @Query("""
             select w.id as id, w.name as name, w.slug as slug, w.color as color,
                    o.id as ownerId, o.displayName as ownerName,
+                   w.archived as archived, w.dissolved as dissolved,
                    w.createdAt as createdAt, w.updatedAt as updatedAt
             from WorkspaceEntity w join w.owner o order by w.id
             """)
@@ -35,6 +38,7 @@ public interface WorkspaceRepository extends JpaRepository<WorkspaceEntity, Long
     @Query("""
             select w.id as id, w.name as name, w.slug as slug, w.color as color,
                    o.id as ownerId, o.displayName as ownerName,
+                   w.archived as archived, w.dissolved as dissolved,
                    w.createdAt as createdAt, w.updatedAt as updatedAt
             from WorkspaceMemberEntity m join m.workspace w join w.owner o
             where m.user.id = :userId order by m.createdAt desc, m.id desc

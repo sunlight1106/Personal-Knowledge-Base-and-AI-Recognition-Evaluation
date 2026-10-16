@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import DialogPanel from '@/components/DialogPanel.vue'
+import { useUnsavedDraft } from '@/lib/useUnsavedDraft'
 import SelectField from '@/components/SelectField.vue'
 import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiText, uiLocale } from '@/i18n'
 
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api, ApiClientError } from '@/api/client'
 import type { KnowledgeEntryView, KnowledgeTopicView } from '@/types/api'
 import NotePreview from '@/components/NotePreview.vue'
@@ -38,74 +40,67 @@ const domains = computed(() => {
 const totalEntries = computed(() => topics.value.reduce((sum, item) => sum + item.entryCount, 0))
 
 
+let alive = true, listVersion = 0, readerVersion = 0, topicVersion = 0
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => { alive = false; listVersion++; readerVersion++; topicVersion++; clearTimeout(searchTimer) })
 async function load() {
-  loading.value = true
-  error.value = ''
+  const current = ++topicVersion
+  loading.value = true; error.value = ''
   try {
-    topics.value = await api.knowledgeTopics()
+    const rows = await api.knowledgeTopics()
+    if (!alive || current !== topicVersion) return
+    topics.value = rows
+    if (activeTopicId.value && !rows.some(t => t.id === activeTopicId.value)) activeTopicId.value = null
     await loadEntries()
-  } catch (reason) {
-    error.value = reason instanceof ApiClientError ? reason.message : '知识库加载失败'
-  } finally {
-    loading.value = false
-  }
+  } catch (reason) { if (alive && current === topicVersion) error.value = reason instanceof Error ? reason.message : '知识库加载失败' }
+  finally { if (alive && current === topicVersion) loading.value = false }
 }
-
 async function loadEntries() {
+  const current = ++listVersion; error.value = ''
   try {
-    entries.value = await api.knowledgeEntries({
-      topicId: keyword.value.trim() ? undefined : activeTopicId.value ?? undefined,
-      keyword: keyword.value.trim() || undefined,
-    })
-  } catch (reason) {
-    error.value = reason instanceof ApiClientError ? reason.message : '知识卡加载失败'
-  }
+    const rows = await api.knowledgeEntries({ topicId: keyword.value.trim() ? undefined : activeTopicId.value ?? undefined, keyword: keyword.value.trim() || undefined })
+    if (alive && current === listVersion) entries.value = rows
+  } catch (reason) { if (alive && current === listVersion) error.value = reason instanceof Error ? reason.message : '知识卡加载失败' }
 }
-
 async function selectTopic(id: number | null) {
-  activeTopicId.value = id
-  activeEntry.value = null
-  keyword.value = ''
+  readerVersion++; listVersion++; clearTimeout(searchTimer)
+  activeTopicId.value = id; activeEntry.value = null; keyword.value = ''
   await loadEntries()
 }
-
 async function openEntry(item: KnowledgeEntryView) {
-  try {
-    activeEntry.value = await api.knowledgeEntry(item.id)
-  } catch (reason) {
-    toastStore.error(reason instanceof ApiClientError ? reason.message : '知识卡打开失败')
-  }
+  const current = ++readerVersion
+  try { const value = await api.knowledgeEntry(item.id); if (alive && current === readerVersion) activeEntry.value = value }
+  catch (reason) { if (alive && current === readerVersion) toastStore.error(reason instanceof ApiClientError ? reason.message : '知识卡打开失败') }
 }
-
-let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(keyword, () => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    if (keyword.value.trim()) activeTopicId.value = null
-    loadEntries()
-  }, 320)
+  listVersion++; readerVersion++; clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { if (keyword.value.trim()) activeTopicId.value = null; void loadEntries() }, 320)
 })
 
 // --- 新建主题 ---------------------------------------------------------------
-const topicModal = ref(false)
+const topicModal = ref(false), editingTopic = ref<number | null>(null), topicSnapshot = ref('')
 const topicForm = ref({ domain: '', name: '', description: '' })
 
-function openTopicModal() {
-  topicForm.value = { domain: domains.value[0]?.domain ?? '', name: '', description: '' }
-  topicModal.value = true
+function openTopicModal(topic?: KnowledgeTopicView) {
+  if (!canWrite.value || busy.value || topic?.builtin) return
+  editingTopic.value = topic?.id ?? null
+  topicForm.value = { domain: topic?.domain ?? domains.value[0]?.domain ?? '', name: topic?.name ?? '', description: topic?.description ?? '' }
+  topicSnapshot.value = JSON.stringify(topicForm.value); topicModal.value = true
 }
-
 async function submitTopic() {
-  if (!topicForm.value.domain.trim() || !topicForm.value.name.trim()) return
+  if (busy.value || !canWrite.value || !topicForm.value.domain.trim() || !topicForm.value.name.trim()) return
   busy.value = true
   try {
-    await api.createKnowledgeTopic({
+    const payload = {
       domain: topicForm.value.domain.trim(),
       name: topicForm.value.name.trim(),
-      description: topicForm.value.description.trim() || undefined,
-    })
+      description: topicForm.value.description.trim(),
+    }
+    if (editingTopic.value) await api.updateKnowledgeTopic(editingTopic.value, payload)
+    else await api.createKnowledgeTopic(payload)
+    if (!alive) return
     topicModal.value = false
-    toastStore.success('主题已创建')
+    toastStore.success(editingTopic.value ? '主题已更新' : '主题已创建')
     await load()
   } catch (reason) {
     toastStore.error(reason instanceof ApiClientError ? reason.message : '创建失败')
@@ -115,50 +110,58 @@ async function submitTopic() {
 }
 
 async function removeTopic(topic: KnowledgeTopicView) {
+  if (busy.value || !canWrite.value || topic.builtin) return
   if (!window.confirm(`删除主题「${topic.name}」？主题下若仍有知识卡将无法删除。`)) return
   try {
+    busy.value = true
     await api.deleteKnowledgeTopic(topic.id)
+    if (!alive) return
     if (activeTopicId.value === topic.id) await selectTopic(null)
     toastStore.success('主题已删除')
     await load()
   } catch (reason) {
     toastStore.error(reason instanceof ApiClientError ? reason.message : '删除失败')
-  }
+  } finally { busy.value = false }
 }
 
 // --- 新建知识卡 -------------------------------------------------------------
-const entryModal = ref(false)
+const entryModal = ref(false), editingEntry = ref<string | null>(null), entrySnapshot = ref('')
 const entryForm = ref({ topicId: 0, title: '', summary: '', body: '', tags: '' })
 
-function openEntryModal(source?: KnowledgeEntryView) {
+function openEntryModal(source?: KnowledgeEntryView, edit = false) {
+  if (!canWrite.value || busy.value || edit && source?.builtin) return
+  editingEntry.value = edit && source ? source.id : null
   const preferredId = source?.topicId ?? activeTopicId.value
   const target = writableTopics.value.find(topic => topic.id === preferredId) ?? writableTopics.value[0]
   if (!target) {
     toastStore.error('请先创建一个个人主题，再新建或复制知识卡。公共主题由平台维护。')
-    topicModal.value = true
+    openTopicModal()
     return
   }
   entryForm.value = source
-    ? { topicId: target.id, title: '', summary: '', body: source.body, tags: source.tags.join(', ') }
+    ? { topicId: target.id, title: edit ? source.title : '', summary: edit ? source.summary || '' : '', body: source.body, tags: source.tags.join(', ') }
     : { topicId: target.id, title: '', summary: '', body: '', tags: '' }
+  entrySnapshot.value = JSON.stringify(entryForm.value)
   entryModal.value = true
 }
 
 async function submitEntry() {
-  if (!entryForm.value.topicId || !entryForm.value.title.trim() || !entryForm.value.body.trim()) return
+  if (busy.value || !canWrite.value || !entryForm.value.topicId || !entryForm.value.title.trim() || !entryForm.value.body.trim()) return
   busy.value = true
   try {
-    const saved = await api.createKnowledgeEntry({
+    const payload = {
       topicId: entryForm.value.topicId,
       title: entryForm.value.title.trim(),
-      summary: entryForm.value.summary.trim() || undefined,
+      summary: entryForm.value.summary.trim(),
       body: entryForm.value.body,
-      tags: entryForm.value.tags.trim() || undefined,
-    })
+      tags: entryForm.value.tags.trim(),
+    }
+    const saved = editingEntry.value ? await api.updateKnowledgeEntry(editingEntry.value, payload) : await api.createKnowledgeEntry(payload)
+    if (!alive) return
     entryModal.value = false
-    toastStore.success('知识卡已创建')
+    toastStore.success(editingEntry.value ? '知识卡已更新' : '知识卡已创建')
     await load()
-    activeEntry.value = saved
+    if (alive) { readerVersion++; activeEntry.value = saved }
   } catch (reason) {
     toastStore.error(reason instanceof ApiClientError ? reason.message : '创建失败')
   } finally {
@@ -167,15 +170,18 @@ async function submitEntry() {
 }
 
 async function removeEntry(item: KnowledgeEntryView) {
+  if (busy.value || !canWrite.value || item.builtin) return
   if (!window.confirm(`删除知识卡「${item.title}」？此操作不可撤销。`)) return
   try {
+    busy.value = true
     await api.deleteKnowledgeEntry(item.id)
+    if (!alive) return
     if (activeEntry.value?.id === item.id) activeEntry.value = null
     toastStore.success('知识卡已删除')
     await load()
   } catch (reason) {
     toastStore.error(reason instanceof ApiClientError ? reason.message : '删除失败')
-  }
+  } finally { busy.value = false }
 }
 
 function filterByTag(tag: string) {
@@ -183,6 +189,13 @@ function filterByTag(tag: string) {
   activeEntry.value = null
 }
 
+const dirty = computed(() => topicModal.value && JSON.stringify(topicForm.value) !== topicSnapshot.value || entryModal.value && JSON.stringify(entryForm.value) !== entrySnapshot.value)
+useUnsavedDraft(dirty, computed(() => busy.value))
+function closeModal() {
+  if (busy.value || dirty.value && !window.confirm(uiText('有尚未保存的修改，确认关闭？'))) return
+  topicModal.value = false; entryModal.value = false
+}
+const currentTopic = computed(() => topics.value.find(topic => topic.id === activeTopicId.value))
 onMounted(load)
 </script>
 
@@ -195,7 +208,7 @@ onMounted(load)
         <p>{{ uiText('按学科浏览入门知识卡，在自己的学习库中写笔记、整理代码并导出文档。') }}</p>
       </div>
       <div class="intro-actions">
-        <button v-if="canWrite" class="button" @click="openTopicModal">
+        <button v-if="canWrite" class="button" @click="openTopicModal()">
           <AppIcon name="plus" :size="16" /> {{ uiText('新建主题') }}
         </button>
         <button v-if="canWrite" class="button button--dark" :disabled="!topics.length" @click="openEntryModal()">
@@ -244,19 +257,16 @@ onMounted(load)
               <span>{{ topic.name }}</span>
               <b>{{ topic.entryCount }}</b>
               <i v-if="topic.builtin" class="kb-builtin" :title="uiText('平台预置主题')" />
-              <i
-                v-if="canWrite && !topic.builtin"
-                class="kb-topic-delete"
-                :title="uiText('删除主题')"
-                @click.stop="removeTopic(topic)"
-              ><AppIcon name="close" :size="13" /></i>
+
             </button>
           </section>
         </nav>
-        <p v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</p>
+        <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }} <button class="table-action" :disabled="loading || busy" @click="load">{{ uiText('重试') }}</button></p>
       </aside>
 
       <div class="kb-entries">
+        <div v-if="currentTopic" class="kb-topic-toolbar"><div><strong>{{ currentTopic.name }}</strong><p v-if="currentTopic.description">{{ currentTopic.description }}</p></div><template v-if="canWrite && !currentTopic.builtin"><button class="table-action" :disabled="busy" @click="openTopicModal(currentTopic)">{{ uiText('编辑主题') }}</button><button class="table-action" :disabled="busy || currentTopic.entryCount > 0" :title="currentTopic.entryCount ? uiText('先移动或删除主题下的知识卡') : ''" @click="removeTopic(currentTopic)">{{ uiText('删除主题') }}</button></template></div>
+        <button v-if="keyword" class="table-action" @click="keyword = ''">{{ uiText('清空筛选') }}</button>
         <EmptyState
           v-if="!loading && !entries.length"
           icon="book"
@@ -297,7 +307,7 @@ onMounted(load)
             <p class="page-kicker">{{ activeEntry.domain }} · {{ activeEntry.topicName }}</p>
             <h3>{{ activeEntry.title }}</h3>
           </div>
-          <div class="kb-reader-actions">
+          <div class="kb-reader-actions"><button v-if="canWrite && !activeEntry.builtin" class="button button--ghost button--small" :disabled="busy" @click="openEntryModal(activeEntry, true)">{{ uiText('编辑知识卡') }}</button>
             <RouterLink v-if="authStore.has('note:write')" class="button button--ghost button--small" :to="{ name: 'note-create', query: { entry: activeEntry.id, library: activeEntry.domain } }">{{ uiText('写成笔记 / 导出') }}</RouterLink>
             <button v-if="canWrite" class="icon-button" :title="uiText('以本卡内容为模板新建')" @click="openEntryModal(activeEntry)">
               <AppIcon name="copy" :size="17" />
@@ -308,7 +318,7 @@ onMounted(load)
               :title="uiText('删除知识卡')"
               @click="removeEntry(activeEntry)"
             ><AppIcon name="close" :size="17" /></button>
-            <button class="icon-button" :title="uiText('关闭')" @click="activeEntry = null">
+            <button class="icon-button" :title="uiText('关闭')" @click="readerVersion++; activeEntry = null">
               <AppIcon name="chevron" :size="17" />
             </button>
           </div>
@@ -327,12 +337,8 @@ onMounted(load)
       </aside>
     </section>
 
-    <div v-if="topicModal" class="modal-backdrop" @click.self="topicModal = false">
-      <form class="modal-card" @submit.prevent="submitTopic">
-        <header>
-          <div><p class="page-kicker">NEW TOPIC</p><h3>{{ uiText('新建知识主题') }}</h3></div>
-          <button type="button" class="icon-button" @click="topicModal = false"><AppIcon name="close" /></button>
-        </header>
+    <DialogPanel v-if="topicModal" :title="editingTopic ? uiText('编辑主题') : uiText('新建知识主题')" :busy="busy" @close="closeModal">
+      <form class="knowledge-form" @submit.prevent="submitTopic"><fieldset :disabled="busy">
         <label class="field-label">
           {{ uiText('学科领域') }}
           <input v-model="topicForm.domain" class="field-input" list="kb-domains" maxlength="40" required :placeholder="uiText('如：生物化学与医学、计算机科学')" />
@@ -342,16 +348,12 @@ onMounted(load)
         </label>
         <label class="field-label">{{ uiText('主题名称') }}<input v-model="topicForm.name" class="field-input" maxlength="120" required :placeholder="uiText('如：糖代谢')" /></label>
         <label class="field-label">{{ uiText('主题描述') }}<input v-model="topicForm.description" class="field-input" maxlength="500" :placeholder="uiText('一句话说明该主题涵盖的内容')" /></label>
-        <button class="button button--dark button--full" :disabled="busy">{{ busy ? uiText('创建中…') : uiText('创建主题') }}</button>
-      </form>
-    </div>
+        <button class="button button--dark button--full" :disabled="busy">{{ busy ? uiText('正在保存…') : editingTopic ? uiText('保存修改') : uiText('创建主题') }}</button>
+      </fieldset></form>
+    </DialogPanel>
 
-    <div v-if="entryModal" class="modal-backdrop" @click.self="entryModal = false">
-      <form class="modal-card modal-card--wide" @submit.prevent="submitEntry">
-        <header>
-          <div><p class="page-kicker">NEW ENTRY</p><h3>{{ uiText('新建知识卡') }}</h3></div>
-          <button type="button" class="icon-button" @click="entryModal = false"><AppIcon name="close" /></button>
-        </header>
+    <DialogPanel v-if="entryModal" :title="editingEntry ? uiText('编辑知识卡') : uiText('新建知识卡')" :busy="busy" wide @close="closeModal">
+      <form class="knowledge-form" @submit.prevent="submitEntry"><fieldset :disabled="busy">
         <div class="form-grid">
           <label class="field-label">
             {{ uiText('所属主题') }}
@@ -369,8 +371,11 @@ onMounted(load)
         </label>
         <section class="knowledge-compose-preview"><strong>{{ uiText('实时预览') }}</strong><div class="markdown-body" v-html="renderMarkdown(entryForm.body)" /></section></div>
         <p class="field-hint">{{ countWords(entryForm.body) }} {{ uiText('字 · 内容经消毒后渲染，可放心粘贴外部资料') }}</p>
-        <button class="button button--dark button--full" :disabled="busy">{{ busy ? uiText('创建中…') : uiText('创建知识卡') }}</button>
-      </form>
-    </div>
+        <button class="button button--dark button--full" :disabled="busy">{{ busy ? uiText('正在保存…') : editingEntry ? uiText('保存修改') : uiText('创建知识卡') }}</button>
+      </fieldset></form>
+    </DialogPanel>
   </div>
 </template>
+
+<style scoped>.kb-topic-toolbar{display:flex;align-items:center;gap:14px;padding:12px 0 20px;border-bottom:1px solid var(--line);margin-bottom:18px}.kb-topic-toolbar>div{flex:1}.kb-topic-toolbar p{font-size:12px;color:var(--muted);margin:8px 0 0}.knowledge-form>fieldset{display:grid;gap:18px}.knowledge-form .form-grid{padding:0;gap:18px}.knowledge-compose-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0}.knowledge-compose-split>.field-label{display:flex;flex-direction:column;gap:10px;min-width:0}.knowledge-compose-split .kb-editor-textarea{min-height:280px;height:320px;padding:14px;line-height:1.8;resize:vertical;font-family:ui-monospace,Consolas,monospace}.knowledge-form .field-hint{font-size:12px;line-height:1.8;margin:0}
+</style>
