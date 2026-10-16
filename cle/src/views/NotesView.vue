@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import HelpHint from '@/components/HelpHint.vue'
 import { uiText, uiLocale } from '@/i18n'
 
@@ -86,7 +87,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
     </section>
     <NoteReviewList />
     <div class="learning-layout">
-      <aside class="learning-sidebar">
+      <aside class="learning-sidebar water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
         <p class="page-kicker learning-sidebar-title"><AppIcon name="book" :size="15" /> {{ uiText('我的学习库') }}</p>
         <RouterLink :to="{ name: 'notes' }" :class="{ selected: !library }"><span>{{ uiText('全部笔记') }}</span><small>{{ facets.reduce((n,f)=>n+f.count,0) }}</small></RouterLink>
         <RouterLink v-for="name in libraries" :key="name" :to="{ name: 'notes', query: { library: name } }" :class="{ selected: library === name }"><span>{{ name }}</span><small>{{ libraryCount(name) }}</small></RouterLink>

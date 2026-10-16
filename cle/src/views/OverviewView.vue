@@ -91,7 +91,7 @@ const date = (value: string) => Number.isFinite(Date.parse(value)) ? new Intl.Da
         <div v-if="authStore.has('knowledge:read')" class="workspace-library-link"><AppIcon name="folder" :size="18" /><div><strong>{{ uiText('把零散的知识，放回主题里。') }}</strong><span>{{ uiText('英语、计算机与自己的学习资料') }}</span></div><RouterLink to="/app/knowledge">{{ uiText('打开知识库') }} <span aria-hidden="true">↗</span></RouterLink></div>
       </section>
       <aside class="workspace-home-aside">
-        <section v-if="authStore.has('vocabulary:use')" class="workspace-learning" aria-labelledby="today-learning-title">
+        <section v-if="authStore.has('vocabulary:use')" class="workspace-learning water-surface" aria-labelledby="today-learning-title"><AmbientWaves variant="pool" class="surface-watermark" />
           <div class="workspace-learning-label"><span class="page-kicker">DAILY PRACTICE</span><AppIcon name="book" :size="19" /></div><h2 id="today-learning-title">{{ uiText('今天，也学一点。') }}</h2>
           <p v-if="pending.vocabulary" role="status">{{ uiText('正在读取学习进度…') }}</p><p v-else-if="errors.vocabulary" role="alert">{{ uiText('学习进度暂未加载，可进入词书查看。') }}</p>
           <template v-else-if="vocabulary"><p>{{ book?.title || uiText('选一本词书，开始积累') }}</p><div class="workspace-learning-stats"><div><strong>{{ vocabulary.today.learned }}</strong><span>{{ uiText('今日学习') }}</span></div><div><strong>{{ vocabulary.dueTotal }}</strong><span>{{ uiText('待复习') }}</span></div><div><strong>{{ vocabulary.streak }}<small> {{ uiText('天') }}</small></strong><span>{{ uiText('连续学习') }}</span></div></div></template>

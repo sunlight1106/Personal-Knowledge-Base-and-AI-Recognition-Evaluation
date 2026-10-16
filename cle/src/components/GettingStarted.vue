@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import {computed,ref,watch,onBeforeUnmount} from 'vue'
 import {authStore} from '@/stores/auth'
 import {request} from '@/api/client'
@@ -19,7 +20,7 @@ onBeforeUnmount(()=>guard.cancel())
 </script>
 <template>
   <section v-if="steps.length || error" class="getting-started panel">
-    <header><div><p class="page-kicker">YOUR FIRST STEPS</p><h3>{{ uiText('从这里开始') }} <small>{{ done }} / {{ steps.length }}</small><HelpHint label="入门进度" text="只统计已经保存的笔记、练习、文档和复习卡。点开页面不会完成任务；完成后可以点击「检查完成情况」。" /></h3></div><button class="button button--ghost" :aria-expanded="!hidden" @click="toggle">{{ hidden ? uiText('展开引导') : uiText('暂时收起') }}</button></header>
+    <header class="water-surface"><AmbientWaves variant="pool" class="surface-watermark" /><div><p class="page-kicker">YOUR FIRST STEPS</p><h3>{{ uiText('从这里开始') }} <small>{{ done }} / {{ steps.length }}</small><HelpHint label="入门进度" text="只统计已经保存的笔记、练习、文档和复习卡。点开页面不会完成任务；完成后可以点击「检查完成情况」。" /></h3></div><button class="button button--ghost" :aria-expanded="!hidden" @click="toggle">{{ hidden ? uiText('展开引导') : uiText('暂时收起') }}</button></header>
     <p v-if="error" role="alert">{{ uiText(error) }} <button class="table-action" :disabled="busy" @click="load">{{ uiText('重试') }}</button></p>
     <template v-if="!hidden">
       <p class="guide-welcome">{{ uiText('不用一次学会全部功能。先选一件想做的事，跟着步骤完成；这些入门操作都不需要 AI 密钥。') }}</p>

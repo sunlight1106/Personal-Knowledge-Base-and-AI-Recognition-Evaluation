@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -161,7 +162,7 @@ onBeforeUnmount(reset)
     <section class="page-intro page-intro--split"><div><p class="page-kicker">COLLABORATION</p><h2>{{ uiText('站内信箱') }}</h2><p>{{ uiText('联系平台管理员或联系人或同组成员；群内讨论和资料分享请进入群组协作。') }}</p></div><button class="button button--dark" :disabled="loading || busy" @click="compose()"><AppIcon name="plus" :size="17" /> {{ uiText('写信') }}</button></section>
     <div class="mail-shortcuts"><RouterLink to="/app/groups">{{ uiText('打开群组协作 →') }}</RouterLink><button type="button" :disabled="loading || busy" @click="load">{{ uiText('刷新联系人与消息') }}</button><button v-for="admin in directory.filter(user => user.relationship === 'ADMIN')" :key="admin.id" type="button" :disabled="loading || busy" @click="compose(admin.id)">{{ uiText('联系管理员 ·') }} {{ admin.displayName }}</button></div>
     <section class="mail-layout panel">
-      <aside class="mail-list">
+      <aside class="mail-list water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
         <header><div><button :class="{ active: tab === 'inbox' }" @click="switchTab('inbox')">{{ uiText('收件箱') }} <b>{{ unread }}</b></button><button :class="{ active: tab === 'sent' }" @click="switchTab('sent')">{{ uiText('已发送') }}</button></div></header>
         <div v-if="loading" class="table-skeleton" />
         <EmptyState v-else-if="!messages.length" :title="uiText('暂无消息')" :description="uiText('新消息会出现在这里。')" icon="mail" />

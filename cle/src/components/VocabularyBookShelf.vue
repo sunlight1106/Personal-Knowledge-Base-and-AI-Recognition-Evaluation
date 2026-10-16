@@ -4,6 +4,7 @@ import { uiText, uiLocale } from '@/i18n'
 import { computed, ref, watch } from 'vue'
 import type { VocabularyBook } from '@/api/vocabulary'
 import AppIcon from './AppIcon.vue'
+import AmbientWaves from './AmbientWaves.vue'
 
 const props = defineProps<{ books: VocabularyBook[]; selected: string; busy: boolean }>()
 const emit = defineEmits<{ choose: [id: string]; preview: [id: string]; import: [] }>()
@@ -41,7 +42,8 @@ function clear() { query.value = ''; category.value = '全部' }
     <nav class="shelf-categories" :aria-label="uiText('词书分类')"><button v-for="item in categories" :key="item" :aria-pressed="category === item" @click="category = item">{{ uiText(item) }}<small>{{ item === '全部' ? books.length : books.filter(book => group(book) === item).length }}</small></button></nav>
     <div class="shelf-result"><span role="status">{{ uiText(category) }} · {{ filtered.length }} {{ uiText('本词书') }}</span><span>{{ uiText('同一单词可能收录于不同词书') }}</span></div>
     <div v-if="visible.length" class="shelf-grid">
-      <article v-for="book in visible" :key="book.id" class="shelf-book" :class="{ 'is-current': selected === book.id }">
+      <article v-for="book in visible" :key="book.id" class="shelf-book water-surface" :class="{ 'is-current': selected === book.id }">
+        <AmbientWaves v-if="selected === book.id" variant="pool" class="surface-watermark" />
         <div class="shelf-book-top"><span>{{ book.owned ? uiText('私人词书') : book.level }}</span><span v-if="selected === book.id" class="shelf-current"><AppIcon name="check" :size="13" />{{ uiText('正在学习') }}</span><small v-else>{{ book.totalWords.toLocaleString(uiLocale()) }} {{ uiText('词') }}</small></div>
         <h4>{{ book.title }}</h4><p class="shelf-description">{{ book.description }}</p>
         <div class="shelf-progress-copy"><span>{{ book.learned.toLocaleString(uiLocale()) }} / {{ book.totalWords.toLocaleString(uiLocale()) }} {{ uiText('词掌握') }}</span><span>{{ book.due }} {{ uiText('待复习') }}</span></div>

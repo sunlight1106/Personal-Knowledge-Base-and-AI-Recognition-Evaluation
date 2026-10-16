@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import HelpHint from '@/components/HelpHint.vue'
 import { uiText } from '@/i18n'
 
@@ -85,7 +86,7 @@ onBeforeUnmount(() => { active = false; form.apiKey = '' })
 </script>
 <template>
   <article class="panel settings-card personal-ai-settings">
-    <header><div><h3>{{ uiText('个人 AI 服务') }}<HelpHint label="个人 AI 服务" text="普通笔记和背单词不用配置 AI。需要 AI 帮助时，选择供应商并保存自己的模型、接口地址和密钥，再单独测试连接。" /></h3><p>{{ uiText('使用你自己的 API 密钥。每个账户独立保存配置，费用由供应商向你的 API 账户结算。') }}</p></div><span class="settings-badge">{{ configuredCount }} {{ uiText('个已启用') }}</span></header>
+    <header class="water-surface"><AmbientWaves variant="pool" class="surface-watermark" /><div><h3>{{ uiText('个人 AI 服务') }}<HelpHint label="个人 AI 服务" text="普通笔记和背单词不用配置 AI。需要 AI 帮助时，选择供应商并保存自己的模型、接口地址和密钥，再单独测试连接。" /></h3><p>{{ uiText('使用你自己的 API 密钥。每个账户独立保存配置，费用由供应商向你的 API 账户结算。') }}</p></div><span class="settings-badge">{{ configuredCount }} {{ uiText('个已启用') }}</span></header>
     <p class="settings-notice">{{ uiText('密钥仅用于你的请求，不会显示给其他用户。每次在笔记中调用模型前，你都可以审阅将发送的完整内容。平台余额与个人 AI 费用分开。') }}</p>
     <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }} <button v-if="!providers.length" class="table-action" @click="load">{{ uiText('重试') }}</button></p>
     <p v-if="loading" class="settings-empty" role="status">{{ uiText('正在加载供应商…') }}</p>

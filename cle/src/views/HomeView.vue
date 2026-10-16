@@ -43,7 +43,7 @@ const chapters = [
       <section id="collection" class="home-collection" aria-labelledby="collection-title">
         <header class="home-section-head"><div><p class="home-eyebrow">A PLACE FOR WHAT MATTERS</p><h2 id="collection-title">{{ uiText('为日常积累，留出空间。') }}</h2></div><p>{{ uiText('从今天的小小一步开始。') }}</p></header>
         <div class="home-chapters">
-          <section v-for="chapter in chapters" :id="chapter.id" :key="chapter.id" class="home-chapter" :aria-labelledby="`${chapter.id}-title`">
+          <section v-for="chapter in chapters" :id="chapter.id" :key="chapter.id" class="home-chapter water-surface" :aria-labelledby="`${chapter.id}-title`"><AmbientWaves variant="pool" class="surface-watermark" />
             <div class="home-chapter-label"><span>{{ chapter.number }}</span><small>{{ chapter.label }}</small></div>
             <h3 :id="`${chapter.id}-title`" class="lab-heading"><a class="heading-anchor" :href="`#${chapter.id}`" :aria-label="(uiText('定位到') + (chapter.title))">#</a>{{ uiText(chapter.title) }}</h3><p>{{ uiText(chapter.intro) }}</p>
             <ul class="home-chapter-links"><li v-for="item in chapter.links" :key="item.to"><RouterLink :to="item.to"><div><strong>{{ uiText(item.title) }}</strong><span>{{ uiText(item.text) }}</span></div><AppIcon name="arrow" :size="15" /></RouterLink></li></ul>

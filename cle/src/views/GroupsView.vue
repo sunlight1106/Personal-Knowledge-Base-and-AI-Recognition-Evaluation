@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import GroupLifecycle from '@/components/GroupLifecycle.vue'
@@ -263,7 +264,7 @@ onBeforeUnmount(()=>window.removeEventListener('pkb:live-update',liveRefresh))
     <form v-if="creating" class="group-create" @submit.prevent="createGroup"><label class="field-label">{{ uiText('群组名称') }}<input v-model="groupName" class="field-input" maxlength="100" required :disabled="busy" :placeholder="uiText('例如：论文研读')" /></label><button class="button button--dark" :disabled="busy">{{ uiText('创建群组') }}</button></form>
     <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }}</p><p v-if="notice" class="field-hint" role="status">{{ uiText(notice) }}</p>
     <GroupInvitations @refresh="loadGroups" /><div class="group-layout">
-      <aside class="group-sidebar"><p class="page-kicker">{{ isAdmin ? uiText('全部群组') : uiText('我的会话') }}</p><input v-model="groupQuery" type="search" class="field-input group-filter" :aria-label="uiText('筛选群组')" :placeholder="uiText('搜索群组')" /><button class="group-refresh" :disabled="busy || loading" @click="loadGroups">{{ uiText('刷新列表') }}</button>
+      <aside class="group-sidebar water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" /><p class="page-kicker">{{ isAdmin ? uiText('全部群组') : uiText('我的会话') }}</p><input v-model="groupQuery" type="search" class="field-input group-filter" :aria-label="uiText('筛选群组')" :placeholder="uiText('搜索群组')" /><button class="group-refresh" :disabled="busy || loading" @click="loadGroups">{{ uiText('刷新列表') }}</button>
         <button v-for="group in visibleGroups" :key="group.id" :class="{ active: selected?.id === group.id }" :disabled="busy" @click="selectGroup(group.id)"><strong>{{ group.name }}</strong><span v-if="features[group.id]?.unread" class="unread-badge">{{ features[group.id].unread > 99 ? '99+' : features[group.id].unread }}</span><small>{{ features[group.id]?.pinned ? uiText('置顶 · ') : '' }}{{ features[group.id]?.muted ? uiText('免打扰 · ') : '' }}{{ group.ownerName }}</small></button>
         <p v-if="!visibleGroups.length && !loading">{{ groups.length ? uiText('没有匹配的群组。') : uiText('还没有群组。新建一个，或请群主通过身份码邀请你。') }}</p><RouterLink to="/app/mail">{{ uiText('联系管理员 ↗') }}</RouterLink>
       </aside>

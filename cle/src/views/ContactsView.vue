@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -211,7 +212,7 @@ onBeforeUnmount(() => { reset(); document.removeEventListener('visibilitychange'
     <section class="page-intro page-intro--split"><div><p class="page-kicker">PEOPLE & CONVERSATIONS</p><h2>{{ uiText('联系人与聊天') }}</h2><p>{{ uiText('把交流留在这里，把联系掌握在自己手中。') }}</p></div><RouterLink class="text-link" to="/app/groups">{{ uiText('群组讨论与资料 →') }}</RouterLink></section>
     <p v-if="error && !confirmation" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }}</p>
     <div class="people-layout">
-      <aside class="people-directory">
+      <aside class="people-directory water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
         <form class="people-search" @submit.prevent="search"><label for="people-query">{{ uiText('查找与添加') }}</label><div><input id="people-query" v-model="query" class="field-input" type="search" maxlength="50" :placeholder="uiText('身份码、用户名或昵称')" /><button class="button button--ghost" :disabled="searching || loading">{{ searching ? uiText('查找中…') : uiText('查找用户') }}</button></div></form>
         <nav class="people-tabs" :aria-label="uiText('联系人分类')"><button :class="{ active: listTab === 'contacts' && !searched }" :aria-current="listTab === 'contacts' && !searched ? 'page' : undefined" @click="selectList('contacts')">{{ uiText('联系人') }} <b v-if="unreadTotal">{{ unreadTotal > 99 ? '99+' : unreadTotal }}</b></button><button :class="{ active: listTab === 'requests' && !searched }" :aria-current="listTab === 'requests' && !searched ? 'page' : undefined" @click="selectList('requests')">{{ uiText('申请') }} <b v-if="incoming.length">{{ incoming.length }}</b></button><button :class="{ active: listTab === 'blacklist' && !searched }" :aria-current="listTab === 'blacklist' && !searched ? 'page' : undefined" @click="selectList('blacklist')">{{ uiText('黑名单') }} <small v-if="blocked.length">{{ blocked.length }}</small></button></nav>
         <div class="people-list-content">

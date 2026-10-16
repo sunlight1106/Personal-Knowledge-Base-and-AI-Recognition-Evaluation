@@ -1,7 +1,7 @@
 /* Authenticated pages share the same paper, spacing and interaction language. */
 .portal-app { --surface-shadow:var(--shadow-soft); --surface-hover:var(--shadow-raised); }
 .portal-app .app-content { position:relative;isolation:isolate; }
-.portal-app .app-content>.workspace-page-waves { top:2px;left:55%;right:40px;height:150px;bottom:auto;opacity:.16; }
+.portal-app .app-content>.workspace-page-waves { top:-28px;left:34%;right:0;height:260px;bottom:auto;opacity:.48; }
 .portal-app .page-intro { padding:2px 0 22px;border-bottom:1px solid var(--line);gap:30px; }
 .portal-app .page-intro h2 { font-size:32px;font-weight:500;letter-spacing:-.035em;margin:10px 0 12px; }
 .portal-app .page-intro p:last-child { max-width:700px;color:var(--muted);font-size:13px; }
@@ -69,7 +69,7 @@
 .portal-app .vocabulary-page .vocab-book-summary .field-input { font-size:12px;padding:10px; }
 .portal-app .vocabulary-page .vocab-study-card { position:relative;isolation:isolate;min-height:406px;padding:32px 36px;overflow:hidden;border:1px solid var(--line);border-radius:14px;box-shadow:var(--surface-shadow); }
 .portal-app .vocabulary-page .vocab-study-card.is-studying { overflow:visible; }
-.portal-app .vocab-study-card>.vocab-welcome-waves { top:auto;height:160px;opacity:.2; }
+.portal-app .vocab-study-card>.vocab-welcome-waves { top:auto;height:230px;opacity:.48; }
 .portal-app .vocabulary-page .vocab-welcome { min-height:324px;max-width:460px;gap:17px;padding-bottom:15px; }
 .portal-app .vocabulary-page .vocab-welcome h3 { font-size:32px;font-weight:500;letter-spacing:-.025em; }
 .portal-app .vocabulary-page .vocab-welcome-icon { width:52px;height:52px;border-radius:13px;background:var(--green-soft);border:1px solid var(--line-soft); }

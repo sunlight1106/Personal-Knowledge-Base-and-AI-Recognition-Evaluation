@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import { computed, onMounted, ref, watch } from 'vue'
@@ -214,7 +215,7 @@ onMounted(load)
     </section>
 
     <section class="kb-layout panel">
-      <aside class="kb-sidebar">
+      <aside class="kb-sidebar water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
         <label class="kb-search">
           <AppIcon name="search" :size="16" />
           <input v-model="keyword" class="field-input" type="search" :placeholder="uiText('搜索标题、正文或标签')" />

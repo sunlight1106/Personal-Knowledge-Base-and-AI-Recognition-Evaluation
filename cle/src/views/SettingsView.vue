@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiRoleName, uiText, uiLocale, uiLanguage, setUiLanguage } from '@/i18n'
 
 import AccountSecurity from '@/components/AccountSecurity.vue'
@@ -120,7 +121,7 @@ onBeforeUnmount(() => { active = false; loadVersion++; clearSecrets() })
   <div class="page-stack settings-page personal-settings">
     <section class="page-intro"><p class="page-kicker">YOUR ACCOUNT</p><h2>{{ uiText('个人设置') }}</h2><p>{{ uiText('管理你的资料、个人 AI、使用记录和数据。所有个人设置均属于当前账户。') }}</p></section>
     <div class="personal-settings-layout">
-      <aside class="panel settings-navigation">
+      <aside class="panel settings-navigation water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
         <div class="settings-identity"><span class="avatar">{{ authStore.state.user?.displayName?.slice(0, 1) || 'U' }}</span><div><strong>{{ authStore.state.user?.displayName }}</strong><small>@{{ authStore.state.user?.username }}</small></div></div>
         <nav :aria-label="uiText('个人设置分类')"><button v-for="tab in tabs" :key="tab.id" :aria-current="section === tab.id ? 'page' : undefined" :class="{ active: section === tab.id }" :disabled="!!busy" @click="select(tab.id)"><AppIcon :name="tab.icon" :size="17" />{{ uiText(tab.label) }}</button></nav>
         <p class="settings-nav-foot">{{ uiRoleName(authStore.state.user?.roleName, authStore.state.user?.roleCode) }}</p>

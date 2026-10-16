@@ -250,7 +250,7 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
       <div v-if="tab === 'study'" class="vocab-audio-setting"><label><input v-model="autoPronounce" type="checkbox" @change="!autoPronounce && automaticSpeaker.stop()" /> {{ uiText('新词自动听读 · 美音') }}</label><details class="vocab-keyboard-help"><summary>{{ uiText('键盘快捷操作') }}</summary><small>{{ uiText('空格听读 · S 跳过 · 1–4 选择 · Enter 继续；输入框中照常输入。') }}</small></details><span v-if="audioError" role="status">{{ uiText(audioError) }}</span></div>
 
       <section v-if="tab === 'study'" class="vocab-study-layout">
-        <aside class="panel vocab-book-summary">
+        <aside class="panel vocab-book-summary water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
           <p class="page-kicker">CURRENT BOOK</p><h3>{{ selectedBook?.title || uiText('先选一本词书') }}</h3><p>{{ selectedBook?.description }}</p>
           <div class="vocab-progress"><i :style="{ width: `${selectedBook?.totalWords ? selectedBook.learned / selectedBook.totalWords * 100 : 0}%` }" /></div>
           <small>{{ selectedBook?.learned || 0 }} / {{ selectedBook?.totalWords || 0 }} {{ uiText('词初步掌握') }}</small>
