@@ -35,7 +35,8 @@ public class SecurityConfig {
                                             RateLimitFilter rateLimitFilter,
                                             com.robustvision.platform.service.ModerationGuard moderation,
                                             com.robustvision.platform.repository.UserRepository users,
-                                            ObjectMapper objectMapper) throws Exception {
+                                            ObjectMapper objectMapper,
+                                            @Value("${app.monitoring.token:}") String metricsToken) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
@@ -46,6 +47,11 @@ public class SecurityConfig {
                         // filter pass; denying that completion corrupts its HTTP stream.
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/reactivate", "/api/v1/auth/register", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password", "/api/v1/auth/verify-email", "/api/v1/public/**", "/actuator/health", "/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/actuator/startup").hasRole("ADMIN")
+                        .requestMatchers("/actuator/prometheus").access((authentication,context)->{
+                            String supplied=context.getRequest().getHeader("X-Metrics-Token");
+                            return new org.springframework.security.authorization.AuthorizationDecision(metricsToken.length()>=32&&supplied!=null&&java.security.MessageDigest.isEqual(metricsToken.getBytes(java.nio.charset.StandardCharsets.UTF_8),supplied.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                        })
                         .requestMatchers("/api/v1/vocabulary/**").hasAuthority("vocabulary:use")
                         .requestMatchers("/api/v1/social/**").hasAuthority("contacts:use")
                         .requestMatchers("/api/v1/messages/**").hasAuthority("message:read")

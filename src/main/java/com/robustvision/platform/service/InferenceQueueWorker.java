@@ -29,7 +29,11 @@ public class InferenceQueueWorker {
         for (int processed = 0; processed < maxTasksPerPoll && !Thread.currentThread().isInterrupted(); processed++) {
             String taskId = queue.poll();
             if (taskId == null) return;
-            if (!taskId.isBlank()) inferenceService.processQueuedTask(taskId);
+            if (!taskId.isBlank()) {
+                // Acknowledge only after the terminal database state has committed.
+                inferenceService.processQueuedTask(taskId);
+                queue.acknowledge();
+            }
         }
     }
 }

@@ -10,6 +10,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class RobustVisionApplication {
     public static void main(String[] args) {
-        SpringApplication.run(RobustVisionApplication.class, args);
+        SpringApplication app = new SpringApplication(RobustVisionApplication.class);
+        app.setApplicationStartup(new org.springframework.boot.context.metrics.buffering.BufferingApplicationStartup(2048));
+        app.run(args);
     }
 }

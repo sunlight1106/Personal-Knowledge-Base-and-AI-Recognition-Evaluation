@@ -94,7 +94,7 @@ public class FileService {
 
     /** Called only by the committed account-cleanup queue for unshared objects. */
     public void deletePrivateObject(String key) {
-        objectStorage.delete(key);
+        objectStorage.deleteChecked(key);
         Path path=legacyRoot.resolve(key).normalize();
         if(!path.startsWith(legacyRoot))throw new IllegalArgumentException("Invalid legacy storage key");
         if(!Files.exists(path,java.nio.file.LinkOption.NOFOLLOW_LINKS))return;
@@ -111,7 +111,7 @@ public class FileService {
         List<FileAssetEntity> files = currentUserService.hasPermission(current, "file:read:any")
                 ? fileRepository.findAllByOrderByCreatedAtDesc()
                 : fileRepository.findByOwnerIdOrderByCreatedAtDesc(current.getId());
-        return files.stream().filter(file -> file.getSource() != FileSource.MESSAGE_ATTACHMENT).map(this::toView).toList();
+        return files.stream().filter(file -> file.getDeletedAt()==null && file.getSource() != FileSource.MESSAGE_ATTACHMENT).map(this::toView).toList();
     }
 
     @Transactional
@@ -146,6 +146,7 @@ public class FileService {
     public FileAssetEntity requireAccessible(String id) {
         FileAssetEntity asset = fileRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "FILE_NOT_FOUND", "文件不存在"));
+        if(asset.getDeletedAt()!=null)throw new BusinessException(HttpStatus.NOT_FOUND,"FILE_NOT_FOUND","文件已移入回收站");
         if (asset.getSource() == FileSource.MESSAGE_ATTACHMENT)
             throw new BusinessException(HttpStatus.FORBIDDEN, "MESSAGE_ATTACHMENT_ROUTE_REQUIRED", "请通过所属消息下载附件");
         UserEntity current = currentUserService.requireCurrent();

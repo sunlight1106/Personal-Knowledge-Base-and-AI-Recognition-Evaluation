@@ -45,7 +45,7 @@ class MySqlSchemaMigrationTest {
     private static final Set<String> DOMAIN_TABLES = java.util.stream.Stream.concat(
             LEGACY_DOMAIN_TABLES.stream(), java.util.stream.Stream.of("personal_ai_setting", "personal_ai_usage", "user_session",
                     "vocabulary_book", "vocabulary_word", "vocabulary_profile", "vocabulary_progress", "vocabulary_question", "personal_recognition_result", "contact_link", "chat_message", "personal_ai_memory", "note_version", "learning_record", "user_permission_override", "admin_audit", "workspace_shortcut", "workspace_notice", "workspace_preference", "account_security", "account_challenge", "group_invitation", "group_report", "note_link", "vocabulary_skill", "personal_preference", "note_reminder", "account_activity", "account_closure", "account_cleanup", "moderation_report", "moderation_penalty", "moderation_event",
-                    "learning_event", "learning_day", "learning_clock", "study_document", "document_passage", "ai_diagnostic", "offline_study_pack", "study_plan", "practice_followup", "workspace_job", "reading_clip"))
+                    "learning_event", "learning_day", "learning_clock", "study_document", "document_passage", "ai_diagnostic", "offline_study_pack", "study_plan", "practice_followup", "workspace_job", "reading_clip", "mailbox_preference", "runtime_operation_lock", "code_run"))
             .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     @Test
@@ -242,7 +242,7 @@ class MySqlSchemaMigrationTest {
         assertThat(scalar(c, "SELECT balance_cny FROM user_wallet WHERE user_id = 101")).isEqualTo("12.3456");
         assertThat(scalar(c, "SELECT cost_cny FROM inference_task WHERE id = 'task-1'")).isEqualTo("0.123456");
         assertThat(scalar(c, "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE()"))
-                .isEqualTo("95");
+                .isEqualTo("98"); // V45 adds the private code-run owner foreign key.
         assertThatThrownBy(() -> execute(c,
                 "INSERT INTO learning_record (id,owner_id,kind,title,payload,created_at,updated_at) VALUES ('orphan-record',999999,'CARD','orphan','{}',CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))"))
                 .isInstanceOf(SQLException.class).satisfies(error -> assertThat(((SQLException) error).getErrorCode()).isEqualTo(1452));
@@ -272,6 +272,15 @@ class MySqlSchemaMigrationTest {
 
     private static void assertIndexes(Connection c) throws SQLException {
         Map<String, String> expected = Map.ofEntries(
+                Map.entry("idx_vocabulary_term_book", "term_key,book_id"),
+                Map.entry("idx_mailbox_state", "user_id,state,message_id"),
+                Map.entry("idx_group_invitation_actor", "actor_id,created_at,id"),
+                Map.entry("ft_note_search", "title,body,tags"),
+                Map.entry("ft_entry_search", "title,body,tags"),
+                Map.entry("ft_passage_search", "body"),
+                Map.entry("ft_message_search", "subject,body"),
+                Map.entry("ft_file_search", "original_name"),
+                Map.entry("ft_recognition_search", "file_name,result_text"),
                 Map.entry("idx_job_owner_created", "owner_id,created_at,id"),
                 Map.entry("idx_job_queued_created", "status,created_at,id"),
                 Map.entry("idx_message_workspace_created", "workspace_id,created_at,id"),
@@ -312,6 +321,7 @@ class MySqlSchemaMigrationTest {
         for (String table : new TreeSet<>(LEGACY_DOMAIN_TABLES)) {
             // Compare original columns across V13 message and V14/V15 note additions.
             String columns = table.equals("internal_message") ? "id,sender_id,subject,body,created_at"
+                    : table.equals("file_asset") ? "id,original_name,stored_name,content_type,size_bytes,sha256,storage_path,owner_id,source,scan_status,scan_engine,scanned_at,created_at"
                     : table.equals("app_user") ? "id,username,password_hash,display_name,email,status,role_id,created_at,updated_at"
                     : table.equals("workspace") ? "id,name,slug,color,owner_id,created_at,updated_at"
                     : table.equals("note") ? "id,owner_id,title,body,tags,status,created_at,updated_at" : "*";

@@ -26,33 +26,42 @@ public class KnowledgeSearchService {
         String type=input.type()==null||input.type().isBlank()?"ALL":input.type().toUpperCase(Locale.ROOT);
         String tag=input.tag()==null?"":input.tag().trim();
         String sort=input.sort()==null||input.sort().isBlank()?"relevance":input.sort();
-        if(q.length()>160||tag.length()>80||!KINDS.contains(type)||!Set.of("relevance","recent","natural","semantic").contains(sort)
+        if(q.length()>160||tag.length()>80||!KINDS.contains(type)||!Set.of("relevance","recent","natural","semantic","indexed").contains(sort)
                 ||(!q.isEmpty()&&q.split(" ").length>10)||input.group()!=null&&input.group()<1)
             throw new BusinessException(HttpStatus.BAD_REQUEST,"SEARCH_INVALID","搜索最多 10 个关键词，请检查资料类型、排序或群组编号");
         return new Filters(q,type,tag,input.since(),input.group(),sort);
     }
-    private Scope scope(String type,Long group) {
+    private Scope scope(String type,Long group){return scope(type,group,null);}
+    private volatile Boolean mysql;
+    private boolean indexedAvailable(){if(mysql==null){try{mysql=jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<Boolean>)c->c.getMetaData().getDatabaseProductName().equalsIgnoreCase("MySQL"));}catch(org.springframework.dao.DataAccessException e){return false;}}return Boolean.TRUE.equals(mysql);}
+    private boolean largeNoteCollection(long owner){
+        // A globally common ngram can match millions of other users' notes. For
+        // a small private collection, its owner index is cheaper and equally scoped.
+        return jdbc.queryForObject("SELECT COUNT(*) FROM (SELECT id FROM note WHERE owner_id=? AND deleted_at IS NULL LIMIT 1001) own_notes",Long.class,owner)>1000;
+    }
+    private Scope scope(String type,Long group,String indexed) {
         UserEntity u=current.requireCurrent();long owner=u.getId(); List<String> sql=new ArrayList<>();List<Object> args=new ArrayList<>();
         if(group==null&&accepts(type,"DOCUMENT")&&current.hasPermission(u,"research:use")){
-            sql.add("SELECT p.id,'DOCUMENT' kind,CONCAT(d.title,' · ',p.locator) title,p.body,d.created_at updated_at,'' tags FROM document_passage p JOIN study_document d ON d.id=p.document_id JOIN file_asset f ON f.id=d.file_id WHERE d.owner_id=? AND p.owner_id=? AND f.owner_id=? AND f.scan_status='CLEAN'");args.add(owner);args.add(owner);args.add(owner);
+            sql.add("SELECT p.id,'DOCUMENT' kind,CONCAT(d.title,' · ',p.locator) title,p.body,d.created_at updated_at,'' tags FROM document_passage p JOIN study_document d ON d.id=p.document_id JOIN file_asset f ON f.id=d.file_id WHERE d.owner_id=? AND p.owner_id=? AND f.owner_id=? AND f.scan_status='CLEAN'"+(indexed==null?"":" AND MATCH(p.body) AGAINST(? IN NATURAL LANGUAGE MODE)"));args.add(owner);args.add(owner);args.add(owner);if(indexed!=null)args.add(indexed);
         }
         if(group==null && accepts(type,"NOTE") && current.hasPermission(u,"note:read")) {
-            sql.add("SELECT id,'NOTE' kind,title,body,updated_at,COALESCE(tags,'') tags FROM note WHERE owner_id=? AND deleted_at IS NULL");args.add(owner);
+            boolean fulltext=indexed!=null&&largeNoteCollection(owner);
+            sql.add("SELECT id,'NOTE' kind,title,body,updated_at,COALESCE(tags,'') tags FROM note WHERE owner_id=? AND deleted_at IS NULL"+(!fulltext?"":" AND MATCH(title,body,tags) AGAINST(? IN NATURAL LANGUAGE MODE)"));args.add(owner);if(fulltext)args.add(indexed);
         }
         if(group==null && accepts(type,"ENTRY") && current.hasPermission(u,"knowledge:read")) {
-            sql.add("SELECT e.id,'ENTRY' kind,e.title,e.body,e.updated_at,COALESCE(e.tags,'') tags FROM knowledge_entry e JOIN knowledge_topic t ON t.id=e.topic_id WHERE (e.owner_id IS NULL OR e.owner_id=?) AND (t.owner_id IS NULL OR t.owner_id=?)");args.add(owner);args.add(owner);
+            sql.add("SELECT e.id,'ENTRY' kind,e.title,e.body,e.updated_at,COALESCE(e.tags,'') tags FROM knowledge_entry e JOIN knowledge_topic t ON t.id=e.topic_id WHERE (e.owner_id IS NULL OR e.owner_id=?) AND (t.owner_id IS NULL OR t.owner_id=?)"+(indexed==null?"":" AND MATCH(e.title,e.body,e.tags) AGAINST(? IN NATURAL LANGUAGE MODE)"));args.add(owner);args.add(owner);if(indexed!=null)args.add(indexed);
         }
         if(group==null && accepts(type,"FILE") && (current.hasPermission(u,"file:read") || current.hasPermission(u,"file:read:any"))) {
-            sql.add("SELECT id,'FILE' kind,original_name title,original_name body,created_at updated_at,'' tags FROM file_asset WHERE owner_id=? AND scan_status='CLEAN'");args.add(owner);
+            sql.add("SELECT id,'FILE' kind,original_name title,original_name body,created_at updated_at,'' tags FROM file_asset WHERE owner_id=? AND deleted_at IS NULL AND source<>'MESSAGE_ATTACHMENT' AND scan_status='CLEAN'"+(indexed==null?"":" AND MATCH(original_name) AGAINST(? IN NATURAL LANGUAGE MODE)"));args.add(owner);if(indexed!=null)args.add(indexed);
         }
         if(group==null && accepts(type,"RESULT") && current.hasPermission(u,"personal-ai:use")) {
-            sql.add("SELECT id,'RESULT' kind,file_name title,result_text body,created_at updated_at,'' tags FROM personal_recognition_result WHERE owner_id=?");args.add(owner);
+            sql.add("SELECT id,'RESULT' kind,file_name title,result_text body,created_at updated_at,'' tags FROM personal_recognition_result WHERE owner_id=?"+(indexed==null?"":" AND MATCH(file_name,result_text) AGAINST(? IN NATURAL LANGUAGE MODE)"));args.add(owner);if(indexed!=null)args.add(indexed);
         }
         if(group==null && accepts(type,"TASK") && (current.hasPermission(u,"experiment:read") || current.hasPermission(u,"experiment:read:any"))) {
             sql.add("SELECT t.id,'TASK' kind,f.original_name title,CONCAT(COALESCE(t.baseline_result,''),' ',COALESCE(t.optimized_result,'')) body,t.created_at updated_at,'' tags FROM inference_task t JOIN file_asset f ON f.id=t.input_file_id WHERE t.requested_by=? AND f.owner_id=?");args.add(owner);args.add(owner);
         }
         if(accepts(type,"GROUP") && current.hasPermission(u,"group:use") && current.hasPermission(u,"message:read")) {
-            sql.add("SELECT m.id,'GROUP' kind,m.subject title,m.body,m.created_at updated_at,'' tags FROM internal_message m JOIN workspace_member wm ON wm.workspace_id=m.workspace_id WHERE wm.user_id=? AND EXISTS (SELECT 1 FROM workspace_member_permission p WHERE p.workspace_member_id=wm.id AND p.permission_code='CONTENT_READ')"+(group==null?"":" AND m.workspace_id=?"));args.add(owner);if(group!=null)args.add(group);
+            sql.add("SELECT m.id,'GROUP' kind,m.subject title,m.body,m.created_at updated_at,'' tags FROM internal_message m JOIN workspace_member wm ON wm.workspace_id=m.workspace_id WHERE wm.user_id=? AND EXISTS (SELECT 1 FROM workspace_member_permission p WHERE p.workspace_member_id=wm.id AND p.permission_code='CONTENT_READ')"+(group==null?"":" AND m.workspace_id=?")+(indexed==null?"":" AND MATCH(m.subject,m.body) AGAINST(? IN NATURAL LANGUAGE MODE)"));args.add(owner);if(group!=null)args.add(group);if(indexed!=null)args.add(indexed);
         }
         if(sql.isEmpty()) return new Scope("SELECT id,'NOTE' kind,title,body,updated_at,'' tags FROM note WHERE 1=0",List.of());
         return new Scope(String.join(" UNION ALL ",sql),args);
@@ -65,7 +74,7 @@ public class KnowledgeSearchService {
     }
     @Transactional(readOnly=true)
     public Page search(Filters input,int page) {
-        Filters f=validate(input);validPage(page);Scope s=scope(f.type(),f.group());
+        Filters f=validate(input);validPage(page);Scope s=scope(f.type(),f.group(),f.sort().equals("indexed")&&f.q().codePointCount(0,f.q().length())>=2&&indexedAvailable()?f.q():null);
         if(f.sort().equals("semantic")&&!f.q().isBlank())return semantic(f,s,page);
         if(f.sort().equals("natural")&&!f.q().isBlank())return natural(f,s,page);
         List<String> terms=f.q().isEmpty()?List.of():Arrays.stream(f.q().toLowerCase(Locale.ROOT).split(" ")).distinct().toList();

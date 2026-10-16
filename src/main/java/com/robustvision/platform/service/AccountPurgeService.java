@@ -7,9 +7,11 @@ import java.time.Instant;
 import java.util.*;
 @Service
 public class AccountPurgeService {
+    @org.springframework.beans.factory.annotation.Autowired private DestructiveOperationGuard deletionGuard;
     private final JdbcTemplate db; private final FileService files;private final PersonalTrainingService training;
     public AccountPurgeService(JdbcTemplate db,FileService files,PersonalTrainingService training){this.db=db;this.files=files;this.training=training;}
     public void erasePrivate(long owner){
+        deletionGuard.requireAvailable();
         // Dissolved groups and delivered conversations remain shared history.
         db.update("DELETE FROM workspace_member_permission WHERE workspace_member_id IN (SELECT id FROM workspace_member WHERE user_id=?)",owner);
         db.update("DELETE FROM workspace_member WHERE user_id=?",owner);
@@ -22,7 +24,7 @@ public class AccountPurgeService {
         db.update("DELETE FROM vocabulary_question WHERE owner_id=?",owner);
         db.update("DELETE FROM vocabulary_progress WHERE owner_id=?",owner);
         db.update("DELETE FROM vocabulary_word WHERE book_id IN (SELECT id FROM vocabulary_book WHERE owner_id=?)",owner);
-        for(String table:List.of("practice_followup","reading_clip","study_plan","workspace_job","document_passage","study_document","learning_event","learning_day","learning_clock","ai_diagnostic","offline_study_pack","note_reminder","note_link","note_version","note","knowledge_entry","knowledge_topic","learning_record","workspace_shortcut","personal_ai_setting","personal_ai_memory","personal_ai_usage","personal_recognition_result","vocabulary_skill","vocabulary_profile","vocabulary_book","workspace_preference","personal_preference","account_challenge","account_security"))db.update("DELETE FROM "+table+" WHERE owner_id=?",owner);
+        for(String table:List.of("code_run","practice_followup","reading_clip","study_plan","workspace_job","document_passage","study_document","learning_event","learning_day","learning_clock","ai_diagnostic","offline_study_pack","note_reminder","note_link","note_version","note","knowledge_entry","knowledge_topic","learning_record","workspace_shortcut","personal_ai_setting","personal_ai_memory","personal_ai_usage","personal_recognition_result","vocabulary_skill","vocabulary_profile","vocabulary_book","workspace_preference","personal_preference","account_challenge","account_security"))db.update("DELETE FROM "+table+" WHERE owner_id=?",owner);
         db.update("DELETE FROM inference_task WHERE requested_by=?",owner);
         db.update("INSERT INTO account_cleanup(id,owner_id,kind,resource,attempts,retry_at) VALUES (?,?, 'TRAINING',?,0,?)",UUID.randomUUID().toString(),owner,Long.toString(owner),java.sql.Timestamp.from(Instant.now()));
         // Already delivered messages and shared files belong to conversation history.
@@ -32,6 +34,7 @@ public class AccountPurgeService {
     }
     @Scheduled(fixedDelay=60000,initialDelay=60000) @Transactional
     public void cleanup(){
+        if(deletionGuard.paused())return;
         var jobs=db.queryForList("SELECT id,owner_id,kind,resource,attempts FROM account_cleanup WHERE retry_at<=? ORDER BY retry_at LIMIT 20 FOR UPDATE",java.sql.Timestamp.from(Instant.now()));
         for(var job:jobs)try{if("TRAINING".equals(job.get("kind")))training.purgeOwner(((Number)job.get("owner_id")).longValue());else files.deletePrivateObject(job.get("resource").toString());db.update("DELETE FROM account_cleanup WHERE id=?",job.get("id"));}
         catch(RuntimeException e){db.update("UPDATE account_cleanup SET attempts=attempts+1,retry_at=? WHERE id=?",java.sql.Timestamp.from(Instant.now().plusSeconds(300)),job.get("id"));org.slf4j.LoggerFactory.getLogger(getClass()).warn("Private object cleanup deferred");}

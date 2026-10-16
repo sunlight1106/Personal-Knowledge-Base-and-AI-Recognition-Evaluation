@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FileLifecyclePanel from '@/components/FileLifecyclePanel.vue'
 import DialogPanel from '@/components/DialogPanel.vue'
 import { uiText, uiLocale } from '@/i18n'
 
@@ -20,6 +21,9 @@ const error = ref('')
 const query = ref('')
 const source = ref<'ALL' | 'UPLOAD' | 'ENHANCED'>('ALL')
 const selected = ref<FileView | null>(null)
+const manageFile=ref<FileView>(),showStorage=ref(false)
+function manage(file?:FileView){manageFile.value=file;selected.value=null;showStorage.value=true}
+async function storageChanged(){showStorage.value=false;manageFile.value=undefined;await load()}
 
 const filtered = computed(() => files.value)
 const page=ref(0),total=ref(0)
@@ -81,7 +85,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat(uiLocale(), { mont
 
 <template>
   <div class="page-stack images-page">
-    <section class="page-intro page-intro--split">
+    <div class="media-list-actions"><button v-if="authStore.has('file:write')" class="button button--ghost" @click="manage()">{{uiText('空间与回收站')}}</button></div><section class="page-intro page-intro--split">
       <div><p class="page-kicker">MEDIA LIBRARY</p><h2>Images & Video</h2><p>{{ uiText('真实图片、视频、增强输出、病毒扫描与对象存储状态集中在同一个媒体库。') }}</p></div>
       <RouterLink v-if="authStore.has('file:write')" to="/app/upload" class="button button--dark"><AppIcon name="upload" :size="17" /> {{ uiText('上传媒体') }}</RouterLink>
     </section>
@@ -109,8 +113,9 @@ const formatDate = (value: string) => new Intl.DateTimeFormat(uiLocale(), { mont
     </section>
 
     <nav class="research-pagination" :aria-label="uiText('素材分页')"><button class="button button--ghost" :disabled="!page||loading" @click="page--">{{uiText('上一页')}}</button><span>{{page+1}} / {{Math.max(1,Math.ceil(total/24))}}</span><button class="button button--ghost" :disabled="(page+1)*24>=total||loading" @click="page++">{{uiText('下一页')}}</button></nav>
+    <DialogPanel v-if="showStorage" :title="uiText('空间与回收站')" @close="showStorage=false"><FileLifecyclePanel :file="manageFile" @changed="storageChanged" /></DialogPanel>
     <DialogPanel v-if="selected" :title="selected.originalName" wide @close="selected = null">
-      <div class="media-preview"><p class="field-hint">{{ selected.ownerName }} · {{ selected.scanStatus }} · {{ formatSize(selected.sizeBytes) }}</p><div v-if="previewErrors[selected.id]" role="alert"><p>{{ uiText('预览加载失败，原文件仍可尝试下载。') }}</p><button class="button button--ghost" @click="preview(selected)">{{ uiText('重试') }}</button></div><p v-else-if="!previews[selected.id]" role="status">{{ uiText('正在加载…') }}</p><video v-else-if="selected.contentType.startsWith('video/')" :src="previews[selected.id]" controls playsinline /><img v-else :src="previews[selected.id]" :alt="selected.originalName" /><footer><StatusBadge :status="selected.source" /><button class="button button--ghost" :disabled="downloading.has(selected.id)" @click="download(selected)"><AppIcon name="download" :size="16" /> {{ uiText('下载原文件') }}</button></footer></div>
+      <div class="media-preview"><p class="field-hint">{{ selected.ownerName }} · {{ selected.scanStatus }} · {{ formatSize(selected.sizeBytes) }}</p><div v-if="previewErrors[selected.id]" role="alert"><p>{{ uiText('预览加载失败，原文件仍可尝试下载。') }}</p><button class="button button--ghost" @click="preview(selected)">{{ uiText('重试') }}</button></div><p v-else-if="!previews[selected.id]" role="status">{{ uiText('正在加载…') }}</p><video v-else-if="selected.contentType.startsWith('video/')" :src="previews[selected.id]" controls playsinline /><img v-else :src="previews[selected.id]" :alt="selected.originalName" /><footer><button v-if="authStore.has('file:write')" class="button button--ghost" @click="manage(selected)">{{uiText('引用与删除')}}</button><StatusBadge :status="selected.source" /><button class="button button--ghost" :disabled="downloading.has(selected.id)" @click="download(selected)"><AppIcon name="download" :size="16" /> {{ uiText('下载原文件') }}</button></footer></div>
     </DialogPanel>
   </div>
 </template>

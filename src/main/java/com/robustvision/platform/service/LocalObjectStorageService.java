@@ -53,6 +53,12 @@ public class LocalObjectStorageService implements ObjectStorageService {
     }
 
     @Override
+    public void deleteChecked(String key) {
+        try { Files.deleteIfExists(resolve(key)); }
+        catch (IOException failure) { throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,"OBJECT_STORE_DELETE_FAILED","文件清理暂时失败，将稍后重试"); }
+    }
+
+    @Override
     public String backendName() { return "filesystem"; }
 
     private Path resolve(String key) {

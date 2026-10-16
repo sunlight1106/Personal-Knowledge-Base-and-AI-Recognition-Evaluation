@@ -1,4 +1,4 @@
-﻿param([int]$Port = 4173, [switch]$SkipBuild, [switch]$Build, [switch]$FullBuild)
+﻿param([int]$Port = 4173, [switch]$SkipBuild, [switch]$Build, [switch]$FullBuild, [switch]$Training)
 New-Item -ItemType Directory -Path "$PSScriptRoot\.runtime" -Force | Out-Null
 $startupGuard = $null
 function Write-StartupStatus([string]$Phase,[string]$Step,[string]$State='running',[string]$Url='') {
@@ -24,7 +24,7 @@ function New-Secret {
     }
 if (-not (Test-Path -LiteralPath '.env')) {
     $config = Get-Content -LiteralPath '.env.example' -Raw
-    foreach ($key in @('BOOTSTRAP_ADMIN_PASSWORD','MYSQL_PASSWORD','MYSQL_ROOT_PASSWORD','MINIO_ROOT_PASSWORD','JWT_SECRET','CREDENTIAL_MASTER_KEY','TRAINING_SERVICE_TOKEN')) {
+    foreach ($key in @('BOOTSTRAP_ADMIN_PASSWORD','MYSQL_PASSWORD','MYSQL_ROOT_PASSWORD','MINIO_ROOT_PASSWORD','JWT_SECRET','CREDENTIAL_MASTER_KEY','TRAINING_SERVICE_TOKEN','CODE_LAB_SERVICE_TOKEN')) {
         $config = $config.Replace("$key=", "$key=$(New-Secret)")
     }
     $config = $config.Replace('WEB_PORT=4173', "WEB_PORT=$Port")
@@ -37,8 +37,13 @@ if (-not $trainingLine) {
     $config = $config.TrimEnd() + "`nTRAINING_SERVICE_TOKEN=$(New-Secret)`n"
     [IO.File]::WriteAllText((Join-Path $PSScriptRoot '.env'), $config, (New-Object Text.UTF8Encoding($false)))
 }
+if (-not (Get-Content '.env' | Where-Object { $_ -match '^CODE_LAB_SERVICE_TOKEN=.+$' })) {
+    $config = (Get-Content '.env' -Raw) -replace '(?m)^CODE_LAB_SERVICE_TOKEN=.*\r?\n?', ''
+    $config = $config.TrimEnd() + "`nCODE_LAB_SERVICE_TOKEN=$(New-Secret)`n"
+    [IO.File]::WriteAllText((Join-Path $PSScriptRoot '.env'), $config, (New-Object Text.UTF8Encoding($false)))
+}
 Write-StartupStatus '正在启动并检查项目服务' 'project'
-Start-Platform -Build:$Build -FullBuild:$FullBuild -SkipBuild:$SkipBuild
+Start-Platform -Build:$Build -FullBuild:$FullBuild -SkipBuild:$SkipBuild -Training:$Training
 $readySeconds = $startupWatch.Elapsed.TotalSeconds
 $portLine = Get-Content '.env' | Where-Object { $_ -match '^WEB_PORT=' } | Select-Object -First 1
 $actualPort = if ($portLine) { $portLine.Split('=',2)[1] } else { '4173' }

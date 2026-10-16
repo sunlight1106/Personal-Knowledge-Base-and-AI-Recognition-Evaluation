@@ -1,0 +1,15 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./.runtime/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./scripts/ops/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - monitoring_data:/prometheus
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=30d"]
+    mem_limit: 512m
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+volumes:
+  monitoring_data:

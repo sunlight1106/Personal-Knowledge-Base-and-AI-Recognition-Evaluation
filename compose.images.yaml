@@ -6,6 +6,8 @@ services:
     image: pkb-backend:${PKB_RELEASE_TAG:?Select a verified release}
   frontend:
     image: pkb-frontend:${PKB_RELEASE_TAG:?Select a verified release}
+  code-lab:
+    image: pkb-code-lab:${PKB_RELEASE_TAG:?Select a verified release}
   training:
     image: pkb-training:${PKB_RELEASE_TAG:?Select a verified release}
   minio:

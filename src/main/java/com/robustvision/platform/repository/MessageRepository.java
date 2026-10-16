@@ -8,6 +8,16 @@ import java.time.Instant;
 import java.util.List;
 
 public interface MessageRepository extends JpaRepository<MessageEntity, String> {
+    @Query("""
+        select m.id as id, m.sender.id as senderId, m.sender.displayName as senderName,
+        m.subject as subject, substring(m.body,1,240) as body, m.createdAt as createdAt,
+        m.workspaceId as workspaceId, m.replyToId as replyToId
+        from MessageEntity m where m.workspaceId is null
+        and (m.sender.id=:userId or exists (select r.id from MessageRecipientEntity r where r.message.id=m.id and r.recipient.id=:userId))
+        and exists (select p.id from MailboxPreferenceEntity p where p.userId=:userId and p.messageId=m.id and p.state=:state)
+        order by m.createdAt desc,m.id
+        """)
+    org.springframework.data.domain.Page<MessageRow> pageState(@Param("userId") Long userId,@Param("state") String state,org.springframework.data.domain.Pageable pageable);
     List<MessageEntity> findBySenderIdOrderByCreatedAtDesc(Long senderId);
 
     // Scalar projections avoid fetching users, roles and permissions for each row.
@@ -27,6 +37,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
                    m.subject as subject, m.body as body, m.createdAt as createdAt,
                    m.workspaceId as workspaceId, m.replyToId as replyToId
             from MessageEntity m where m.sender.id = :userId and m.workspaceId is null
+            and not exists (select p.id from MailboxPreferenceEntity p where p.userId=:userId and p.messageId=m.id and p.state<>'ACTIVE')
             order by m.createdAt desc, m.id asc
             """)
     List<MessageRow> findSentRows(@Param("userId") Long userId);
@@ -36,6 +47,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
                    m.subject as subject, m.body as body, m.createdAt as createdAt,
                    m.workspaceId as workspaceId, m.replyToId as replyToId
             from MessageRecipientEntity r join r.message m where r.recipient.id = :userId and m.workspaceId is null
+            and not exists (select p.id from MailboxPreferenceEntity p where p.userId=:userId and p.messageId=m.id and p.state<>'ACTIVE')
             order by m.createdAt desc, m.id asc
             """)
     List<MessageRow> findInboxRows(@Param("userId") Long userId);
@@ -53,6 +65,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
                    m.subject as subject, substring(m.body,1,240) as body, m.createdAt as createdAt,
                    m.workspaceId as workspaceId, m.replyToId as replyToId
             from MessageEntity m where m.sender.id = :userId and m.workspaceId is null
+            and not exists (select p.id from MailboxPreferenceEntity p where p.userId=:userId and p.messageId=m.id and p.state<>'ACTIVE')
             order by m.createdAt desc, m.id asc
             """)
     org.springframework.data.domain.Page<MessageRow> pageSent(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
@@ -62,6 +75,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
                    m.subject as subject, substring(m.body,1,240) as body, m.createdAt as createdAt,
                    m.workspaceId as workspaceId, m.replyToId as replyToId
             from MessageRecipientEntity r join r.message m where r.recipient.id = :userId and m.workspaceId is null
+            and not exists (select p.id from MailboxPreferenceEntity p where p.userId=:userId and p.messageId=m.id and p.state<>'ACTIVE')
             order by m.createdAt desc, m.id asc
             """)
     org.springframework.data.domain.Page<MessageRow> pageInbox(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);

@@ -42,6 +42,7 @@
 | [预构建安装与更新](RELEASE_INSTALL.md) | 下载已构建镜像、校验、升级前备份和失败恢复 |
 | [启动与耗时排查](STARTUP.md) | 日常启动、更新构建、启动失败和耗时检查 |
 | [完整备份与恢复](COMPOSE_BACKUP.md) | 备份整套数据，恢复或迁移部署 |
+| [启动、监控与恢复](OPERATIONS_UPGRADE.md) | 按需训练、长期监控、在线快照、日志重放与 API 版本回退 |
 | [公网部署](PUBLIC_DEPLOYMENT.md) | 准备服务器、域名、HTTPS 与多人访问 |
 | [部署结构](STACK.md) | 了解各服务的关系和配置 |
 | [队列与任务恢复](QUEUE_RECOVERY.md) | 排查任务排队与中断恢复 |
@@ -58,5 +59,8 @@
 | [权限检查](PERMISSION_TESTS.md) | 验证角色、个人授权和账户隔离 |
 | [交互检查](INTERACTION_CHECKS.md) | 复查点击、切换、重复提交与失败恢复 |
 | [验证记录](VALIDATION.md) | 已执行的检查、结果和适用范围 |
+| [2026-10-16 全站回归](PLATFORM_UPGRADE_VALIDATION.md) | 本次功能、权限、恢复、启动和多用户容量实测 |
 
 没有找到需要的步骤时，可在网站的「操作文档」页面按 **Ctrl + K** 搜索。
+
+- [代码可视化：入口、参数、逐步回放与支持范围](CODE_LAB.md)

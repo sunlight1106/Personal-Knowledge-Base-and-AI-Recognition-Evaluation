@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\start-project.ps1"
-$script:required = @('mysql','redis','minio','clamav','backend','model-worker','training','frontend')
+$script:required = @('mysql','redis','minio','clamav','backend','model-worker','code-lab','training','frontend')
 $script:installed = $script:required
 $script:calls = New-Object 'Collections.Generic.List[string]'
 $script:fail = ''
@@ -19,19 +19,19 @@ function Assert-Startup($condition, $message) {
     Write-Host "PASS: $message"
 }
 Start-Platform
-Assert-Startup ($script:calls -contains 'compose start --wait --wait-timeout 600') 'Existing installation uses start with health verification'
+Assert-Startup ($script:calls -contains 'compose start --wait --wait-timeout 240 mysql redis backend frontend') 'Existing installation uses start with health verification'
 Assert-Startup (-not ($script:calls | Where-Object { $_ -match ' compose |^compose (build|up|pull|down|rm)' })) 'Daily start performs no image build, pull or container recreation'
 $script:calls.Clear()
 Start-Platform -Build
-Assert-Startup ($script:calls -contains 'compose build backend frontend training') 'Explicit update builds all application images'
+Assert-Startup ($script:calls -contains 'compose build backend frontend code-lab') 'Explicit update builds core application images without optional training'
 Assert-Startup (-not ($script:calls | Where-Object { $_ -match '^compose up.* (mysql|minio|redis|clamav)' })) 'Application update preserves installed storage services'
-Assert-Startup ($script:calls.IndexOf('compose stop frontend model-worker backend') -lt $script:calls.IndexOf('compose up -d --no-deps --no-build --wait --wait-timeout 240 backend model-worker training')) 'Old application processes stop before schema updates'
-Assert-Startup ($script:calls -contains 'compose up -d --no-deps --no-build --wait --wait-timeout 240 backend model-worker training') 'API and worker initialize together with migration locking'
+Assert-Startup ($script:calls.IndexOf('compose stop frontend model-worker backend') -lt $script:calls.IndexOf('compose up -d --no-deps --no-build --wait --wait-timeout 240 backend model-worker code-lab')) 'Old application processes stop before schema updates'
+Assert-Startup ($script:calls -contains 'compose up -d --no-deps --no-build --wait --wait-timeout 240 backend model-worker code-lab') 'API and worker initialize together with migration locking'
 Assert-Startup ($script:calls[$script:calls.Count - 1] -eq 'compose up -d --no-deps --no-build --wait --wait-timeout 240 frontend') 'Frontend restarts after backend readiness to refresh upstream DNS'
 $script:installed = @()
 $script:calls.Clear()
 Start-Platform
-Assert-Startup ($script:calls -contains 'compose up -d --build --wait --wait-timeout 600') 'First deployment installs the full stack'
+Assert-Startup ($script:calls -contains 'compose up -d --build mysql redis minio clamav backend model-worker code-lab frontend') 'First deployment installs the full stack'
 $rejected=$false
 try { Start-Platform -SkipBuild } catch { $rejected=$true }
 Assert-Startup $rejected 'SkipBuild never silently compiles missing services'
@@ -46,4 +46,6 @@ Assert-Startup $rejected 'Conflicting startup options are rejected'
 $script:fail=''; $script:healthy=$true; $script:calls.Clear()
 Start-Platform
 Assert-Startup (-not ($script:calls | Where-Object { $_ -match '^compose (start|up|build)' })) 'An already healthy stack is not started again'
+$script:calls.Clear(); Start-Platform -Build -Training
+Assert-Startup ($script:calls -contains 'compose build backend frontend code-lab training') 'Training is built only when requested'
 Remove-Item Function:docker

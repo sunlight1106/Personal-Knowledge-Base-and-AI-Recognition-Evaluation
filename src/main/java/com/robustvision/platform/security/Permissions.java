@@ -32,6 +32,7 @@ public final class Permissions {
             new Definition("contacts:use", "查找联系人与私聊", "协作"),
             new Definition("group:use", "进入群组与参与协作", "协作"),
             new Definition("vocabulary:use", "背单词、导入词书与备份", "学习"),
+            new Definition("code-lab:use", "代码执行与可视化", "学习"),
             new Definition("research:use", "使用学习中心与全库搜索", "学习"),
             new Definition("personal-ai:manage", "设置自己的 AI 与共享记忆", "个人 AI"),
             new Definition("personal-ai:use", "调用个人 AI", "个人 AI"),
@@ -57,7 +58,7 @@ public final class Permissions {
                 "experiment:run", "report:download", "model:read", "billing:read", "billing:recharge",
                 "workspace:manage", "message:read",
                 "knowledge:read", "knowledge:write", "note:read", "note:write",
-                "contacts:use", "group:use", "vocabulary:use", "research:use", "personal-ai:manage", "personal-ai:use", "training:use"
+                "contacts:use", "group:use", "vocabulary:use", "research:use", "code-lab:use", "personal-ai:manage", "personal-ai:use", "training:use"
         ));
     }
 
@@ -65,7 +66,7 @@ public final class Permissions {
         return new LinkedHashSet<>(List.of(
                 "dashboard:read", "file:read", "experiment:read", "report:download", "model:read", "billing:read",
                 "workspace:manage", "message:read",
-                "knowledge:read", "note:read", "contacts:use", "group:use", "vocabulary:use", "research:use", "personal-ai:manage"
+                "knowledge:read", "note:read", "contacts:use", "group:use", "vocabulary:use", "research:use", "code-lab:use", "personal-ai:manage"
         ));
     }
 

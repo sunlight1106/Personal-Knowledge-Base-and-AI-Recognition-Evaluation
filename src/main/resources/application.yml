@@ -66,6 +66,10 @@ spring:
       write-dates-as-timestamps: false
 
 management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
   health:
     # Email is optional. A provider outage must not mark the entire platform down.
     mail:
@@ -76,17 +80,21 @@ management:
         enabled: true
       group:
         readiness:
-          include: readinessState,db,redis,stackDependencies
+          include: readinessState,db,redis
+        capabilities:
+          include: stackDependencies
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,startup,prometheus
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
 app:
+  monitoring:
+    token: ${MONITORING_TOKEN:}
   mail:
     from: ${SMTP_FROM:}
   jwt:

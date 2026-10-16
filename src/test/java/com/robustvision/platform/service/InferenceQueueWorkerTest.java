@@ -19,9 +19,9 @@ class InferenceQueueWorkerTest {
         when(queue.poll()).thenReturn("first", "second", "third", null);
         new InferenceQueueWorker(queue, inference, 32).poll();
         InOrder order = inOrder(queue, inference);
-        order.verify(queue).poll(); order.verify(inference).processQueuedTask("first");
-        order.verify(queue).poll(); order.verify(inference).processQueuedTask("second");
-        order.verify(queue).poll(); order.verify(inference).processQueuedTask("third");
+        order.verify(queue).poll(); order.verify(inference).processQueuedTask("first"); order.verify(queue).acknowledge();
+        order.verify(queue).poll(); order.verify(inference).processQueuedTask("second"); order.verify(queue).acknowledge();
+        order.verify(queue).poll(); order.verify(inference).processQueuedTask("third"); order.verify(queue).acknowledge();
         order.verify(queue).poll(); order.verifyNoMoreInteractions();
     }
 
@@ -60,6 +60,7 @@ class InferenceQueueWorkerTest {
         when(queue.poll()).thenReturn("first", "second");
         doThrow(new IllegalStateException("test failure")).when(inference).processQueuedTask("first");
         assertThatThrownBy(() -> new InferenceQueueWorker(queue, inference, 32).poll()).isInstanceOf(IllegalStateException.class);
+        verify(queue,never()).acknowledge();
         verify(queue).poll(); verify(inference).processQueuedTask("first"); verifyNoMoreInteractions(inference);
     }
 

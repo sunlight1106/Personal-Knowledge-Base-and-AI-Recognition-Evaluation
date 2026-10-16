@@ -209,6 +209,24 @@ public class MessageService {
 
 
     public record MailPage(com.robustvision.platform.dto.LibraryPage<ApiDtos.MessageView> results,long unread) {}
+    @Transactional(readOnly=true) public MailPage folder(String folder,int page,int size){
+        if(!Set.of("ARCHIVE","TRASH").contains(folder))throw new BusinessException(HttpStatus.BAD_REQUEST,"MAIL_FOLDER_INVALID","无效的信箱分类");
+        var user=currentUserService.requireCurrent();var rows=messageRepository.pageState(user.getId(),folder,com.robustvision.platform.dto.LibraryPage.request(page,size));
+        return new MailPage(new com.robustvision.platform.dto.LibraryPage<>(toViews(rows.getContent(),user),page,size,rows.getTotalElements()),0);
+    }
+    @Transactional public void organize(List<String> ids,String action){
+        if(ids==null||ids.isEmpty()||ids.size()>100||ids.stream().anyMatch(java.util.Objects::isNull)||!Set.of("ARCHIVE","TRASH","ACTIVE","READ").contains(action))throw new BusinessException(HttpStatus.BAD_REQUEST,"MAIL_ACTION_INVALID","请选择最多 100 封站内信与有效操作");
+        var user=currentUserService.requireCurrent();
+        for(String id:new TreeSet<>(ids)){
+            jdbc.queryForList("SELECT id FROM internal_message WHERE id=? FOR UPDATE",String.class,id);
+            var message=requireAccessible(id,user);
+            if(message.getWorkspaceId()!=null)throw new BusinessException(HttpStatus.BAD_REQUEST,"MAIL_ACTION_INVALID","群组消息不能移动到个人信箱");
+            if(!action.equals("READ")&&jdbc.update("UPDATE mailbox_preference SET state=? WHERE user_id=? AND message_id=?",action,user.getId(),id)==0)
+                jdbc.update("INSERT INTO mailbox_preference(id,user_id,message_id,state) VALUES (?,?,?,?)",UUID.randomUUID().toString(),user.getId(),id,action);
+            jdbc.update("UPDATE message_recipient SET read_at=COALESCE(read_at,?) WHERE message_id=? AND recipient_id=?",java.sql.Timestamp.from(java.time.Instant.now()),id,user.getId());
+        }
+        live.changed(List.of(user.getId()));
+    }
     @Transactional(readOnly=true)
     public MailPage page(boolean sent,int page,int size) {
         var paging=com.robustvision.platform.dto.LibraryPage.request(page,size);

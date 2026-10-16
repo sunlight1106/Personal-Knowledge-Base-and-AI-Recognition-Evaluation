@@ -342,6 +342,14 @@ class VocabularyIntegrationTest {
         var inherited=entries.get(0);assertThat(inherited.path("learningCorrect").asInt()).isEqualTo(1);
         call(json(put("/api/v1/vocabulary/words/{id}/skip",inherited.path("id").asText()),alice,Map.of("skipped",true)));
         var original=call(as(get("/api/v1/vocabulary/books/vocab-daily/words").param("filter","SKIPPED"),alice));assertThat(original.path("total").asInt()).isEqualTo(1);
+        var bookStats=java.util.stream.StreamSupport.stream(dash(alice).path("books").spliterator(),false)
+                .filter(b->b.path("id").asText().equals(imported.path("id").asText())).findFirst().orElseThrow();
+        assertThat(bookStats.path("totalWords").asInt()).isEqualTo(4);
+        assertThat(bookStats.path("learning").asInt()).isEqualTo(1);
+        assertThat(bookStats.path("skipped").asInt()).isEqualTo(1);
+        assertThat(bookStats.path("shared").asInt()).isEqualTo(1);
+        assertThat(java.util.stream.StreamSupport.stream(dash(bob).path("books").spliterator(),false)
+                .mapToLong(b->b.path("learning").asLong()+b.path("skipped").asLong()+b.path("shared").asLong()).sum()).isZero();
         assertThat(original.path("items").get(0).path("learningCorrect").asInt()).isEqualTo(result.path("learningCorrect").asInt());
         mvc.perform(json(put("/api/v1/vocabulary/words/{id}/skip",inherited.path("id").asText()),bob,Map.of("skipped",false))).andExpect(status().isNotFound());
         assertThat(call(as(get("/api/v1/vocabulary/books/vocab-daily/words").param("filter","SKIPPED"),bob)).path("total").asInt()).isZero();

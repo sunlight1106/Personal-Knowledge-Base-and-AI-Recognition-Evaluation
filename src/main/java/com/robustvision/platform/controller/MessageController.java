@@ -15,6 +15,9 @@ import java.util.List;
 @PreAuthorize("isAuthenticated()")
 public class MessageController {
     private final MessageService service;
+    public record OrganizeRequest(@jakarta.validation.constraints.NotEmpty @jakarta.validation.constraints.Size(max=100) List<@jakarta.validation.constraints.NotBlank String> ids,@jakarta.validation.constraints.NotBlank String action){}
+    @PostMapping("/organize") public ApiResponse<Void> organize(@jakarta.validation.Valid @RequestBody OrganizeRequest request){service.organize(request.ids(),request.action());return ApiResponse.ok(null);}
+    @GetMapping("/folders/{folder}") public ApiResponse<MessageService.MailPage> folder(@PathVariable String folder,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="30") int size){return ApiResponse.ok(service.folder(folder,page,size));}
     public MessageController(MessageService service) { this.service = service; }
     @GetMapping("/directory") public ApiResponse<List<ApiDtos.MessageContactView>> directory(
             @RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "0") int page,

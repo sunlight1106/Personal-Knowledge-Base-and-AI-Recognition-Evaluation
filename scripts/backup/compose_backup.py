@@ -71,6 +71,14 @@ def crypt(source, target, secret, decrypt=False):
     os.chmod(target, 0o600)
 
 
+def deployment_images(root, by_service):
+    images={k:v['Image'] for k,v in by_service.items() if k in ('mysql','redis','minio','clamav','backend','model-worker','training','code-lab','frontend')}
+    state=root/'.runtime/releases/state.json'
+    if state.exists():
+        active=json.loads(state.read_text()).get('active')
+        if active in by_service:images['backend']=by_service[active]['Image']
+    return images
+
 def snapshot(root, destination, secret):
     destination = destination.resolve()
     if destination.exists(): raise ValueError('Destination already exists')
@@ -80,17 +88,18 @@ def snapshot(root, destination, secret):
     if not ids: raise ValueError('Create the installation before taking a backup')
     containers = docker_json('inspect', *ids)
     by_service = {c['Config']['Labels'].get('com.docker.compose.service'): c for c in containers}
-    if not set(VOLUMES).issubset(by_service): raise ValueError('Database, object storage, Redis and training containers are required')
+    if not {'mysql','redis','minio','backend'}.issubset(by_service): raise ValueError('Database, object storage, Redis and backend containers are required')
+    components={s:mount for s,mount in VOLUMES.items() if s in by_service}
     running = [c['Id'] for c in containers if c['State']['Running']]
     helper = by_service['backend']['Image']
     # Verify tooling before any downtime.
     run(['docker','run','--rm','--network','none','--entrypoint','tar',helper,'--version'],stdout=subprocess.DEVNULL)
-    manifest = {'format':1,'createdAt':datetime.now(timezone.utc).isoformat(),'files':{},'images':{k:v['Image'] for k,v in by_service.items()},'project':config['name']}
+    manifest = {'format':1,'components':list(components),'createdAt':datetime.now(timezone.utc).isoformat(),'files':{},'images':deployment_images(root,by_service),'project':config['name']}
     with tempfile.TemporaryDirectory(prefix='pkb-backup-',dir=destination.parent) as temp:
         stage=Path(temp);os.chmod(stage,0o700)
         try:
             if running: run(['docker','stop','-t','60',*running],stdout=subprocess.DEVNULL)
-            for service,mount in VOLUMES.items():
+            for service,mount in components.items():
                 volume=next((m['Name'] for m in by_service[service]['Mounts'] if m['Destination']==mount and m['Type']=='volume'),None)
                 if not volume: raise ValueError('Expected named volume missing: '+service)
                 path=stage/(service+'.tar.gz')
@@ -115,7 +124,7 @@ def snapshot(root, destination, secret):
         finally:
             if partial.exists():partial.unlink()
         status=root/'.runtime'/'backups'/'status.json';status.parent.mkdir(parents=True,exist_ok=True)
-        status.write_text(json.dumps({'lastSuccess':manifest['createdAt'],'bytes':destination.stat().st_size,'sha256':digest(destination),'components':['MySQL','MinIO','Redis','训练数据','加密配置']}),encoding='utf-8')
+        status.write_text(json.dumps({'lastSuccess':manifest['createdAt'],'bytes':destination.stat().st_size,'sha256':digest(destination),'components':list(components)+['加密配置']}),encoding='utf-8')
     print('Encrypted backup completed; previously running containers restarted.')
 
 
@@ -124,7 +133,10 @@ def inspect_archive(archive, secret, root, restore_name=None):
         stage=Path(temp);os.chmod(stage,0o700);payload=stage/'payload.zip'
         crypt(archive,payload,secret,decrypt=True)  # Authenticate before reading any archive content.
         with zipfile.ZipFile(payload) as z:
-            expected={'manifest.json','installation.env',*(s+'.tar.gz' for s in VOLUMES)}
+            manifest=json.loads(z.read('manifest.json'))
+            components=manifest.get('components',list(VOLUMES))
+            if not {'mysql','redis','minio'}.issubset(components) or not set(components).issubset(VOLUMES):raise ValueError('Invalid component list')
+            expected={'manifest.json','installation.env',*(s+'.tar.gz' for s in components)}
             if set(z.namelist())!=expected or len(z.namelist())!=len(expected):raise ValueError('Archive members do not match format')
             manifest=json.loads(z.read('manifest.json'))
             if manifest.get('format')!=1:raise ValueError('Unsupported backup version')
@@ -140,7 +152,7 @@ def inspect_archive(archive, secret, root, restore_name=None):
             if not re.fullmatch(r'pkb-restore-[a-z0-9-]{6,40}',restore_name):raise ValueError('Use a new name: pkb-restore- followed by 6-40 lowercase letters/digits/hyphens')
             destination=root/'.runtime'/restore_name
             if destination.exists():raise ValueError('Restore directory already exists')
-            names={s:restore_name+'_'+ENV_NAMES[s] for s in VOLUMES}
+            names={s:restore_name+'_'+ENV_NAMES[s] for s in components}
             existing=run(['docker','volume','ls','--format','{{.Name}}'],stdout=subprocess.PIPE).stdout.decode().split()
             if any(n in existing for n in names.values()):raise ValueError('Target volumes already exist; no overwrite allowed')
             helper=manifest['images']['backend']

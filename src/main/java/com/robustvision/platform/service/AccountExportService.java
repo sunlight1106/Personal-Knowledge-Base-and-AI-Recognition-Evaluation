@@ -27,6 +27,7 @@ public class AccountExportService {
         data.put("schemaVersion", 5);
         data.put("exportedAt", Instant.now());
         data.put("profile", profile);
+        data.put("codeRuns", rows("SELECT id, language, entry_name, source, arguments_json, result_json, status, created_at FROM code_run WHERE owner_id=? ORDER BY created_at,id", id));
         data.put("notes", rows("SELECT id, title, body, tags, status, library, content_format, parent_id, revision, deleted_at, created_at, updated_at FROM note WHERE owner_id = ? ORDER BY created_at, id", id));
         data.put("noteVersions", rows("SELECT id,note_id,revision,title,body,tags,library,content_format,status,created_at FROM note_version WHERE owner_id=? ORDER BY created_at,id",id));
         for(String table:List.of("practice_followup","reading_clip","study_plan","workspace_job","learning_event","learning_day","study_document","document_passage"))data.put(table,rows("SELECT * FROM "+table+" WHERE owner_id=?",id));

@@ -13,13 +13,13 @@ import java.util.*;
 public class ModerationGuard {
     public static final Map<String,String> FEATURES = Map.of(
             "CHAT","私聊与站内信", "GROUP","群组协作", "NOTES","笔记与知识库", "VOCABULARY","背单词",
-            "AI","个人 AI", "TRAINING","模型训练", "UPLOAD","文件上传", "EXPERIMENT","识别实验");
+            "AI","个人 AI", "CODE","代码执行", "TRAINING","模型训练", "UPLOAD","文件上传", "EXPERIMENT","识别实验");
     private final JdbcTemplate db;
     private static final Map<String,Set<String>> DENIED_PERMISSIONS=Map.of(
             "CHAT",Set.of("contacts:use"),"GROUP",Set.of("group:use","workspace:manage"),
             "NOTES",Set.of("note:read","note:write","knowledge:read","knowledge:write"),
             "VOCABULARY",Set.of("vocabulary:use"),"AI",Set.of("personal-ai:use","personal-ai:manage"),
-            "TRAINING",Set.of("training:use"),"UPLOAD",Set.of("file:write"),
+            "CODE",Set.of("code-lab:use"),"TRAINING",Set.of("training:use"),"UPLOAD",Set.of("file:write"),
             "EXPERIMENT",Set.of("experiment:run","experiment:read","experiment:read:any","report:download"));
     public ModerationGuard(JdbcTemplate db) { this.db = db; }
 
@@ -63,6 +63,7 @@ public class ModerationGuard {
         if(p.startsWith("/api/v1/workspaces") || p.startsWith("/api/v1/messages/groups/"))return "GROUP";
         if(p.startsWith("/api/v1/notes") || p.startsWith("/api/v1/knowledge") || p.startsWith("/api/v1/note-")
                 ||p.startsWith("/api/v1/research/documents")||p.startsWith("/api/v1/learning/cards"))return "NOTES";
+        if(p.startsWith("/api/v1/code-lab"))return "CODE";
         if(p.startsWith("/api/v1/vocabulary"))return "VOCABULARY";
         if(p.startsWith("/api/v1/personal-ai/training"))return "TRAINING";
         if(p.startsWith("/api/v1/personal-ai") || p.startsWith("/api/v1/research/answers"))return "AI";

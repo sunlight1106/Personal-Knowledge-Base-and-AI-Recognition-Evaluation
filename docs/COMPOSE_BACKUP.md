@@ -69,3 +69,7 @@ python scripts/backup/restore_drill.py backups/my-backup.pkb
 ```
 
 密码通过终端隐藏输入，或由现有自动备份计划安全传入。运行状态在 `.runtime/backups/drill.json`，不记录密码、令牌、笔记正文或附件内容。自动备份脚本的 `--drill-every-days 0` 可以关闭定期演练；默认是 7 天。
+
+## 在线快照与数据库日志
+
+不希望停机时，可使用 [在线快照](OPERATIONS_UPGRADE.md#在线备份)。数据库时间点恢复单独提供，恢复后的附件覆盖范围必须核对；它不能替代包含训练检查点的完整备份。训练服务从未启用时，完整备份只包含实际存在的数据组件。

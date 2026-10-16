@@ -5,7 +5,7 @@ import { uiText, uiLocale } from '@/i18n'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useUnsavedDraft } from '@/lib/useUnsavedDraft'
-import { api, ApiClientError } from '@/api/client'
+import { api, request, ApiClientError } from '@/api/client'
 import type { MessageView, MessageContactView } from '@/types/api'
 import AppIcon from '@/components/AppIcon.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -15,8 +15,9 @@ import { toastStore } from '@/stores/toast'
 import { authStore } from '@/stores/auth'
 
 const route = useRoute()
+const checked=ref<string[]>([])
 const page=ref(0), total=ref(0), unreadTotal=ref(0)
-const tab = ref<'inbox' | 'sent'>('inbox')
+const tab = ref<'inbox' | 'sent' | 'archive' | 'trash'>('inbox')
 const messages = ref<MessageView[]>([]), directory = ref<MessageContactView[]>([])
 const selected = ref<MessageView | null>(null), composing = ref(false)
 const selectedContacts = ref<MessageContactView[]>([]), subject = ref(''), body = ref('')
@@ -63,15 +64,22 @@ function clearDraft() { selectedContacts.value = []; subject.value = ''; body.va
 function reset() { page.value=0;total.value=0;unreadTotal.value=0;releaseComposer(); composeOpener = null; epoch++; detailEpoch++; messages.value = []; directory.value = []; selected.value = null; composing.value = false; clearDraft(); error.value = ''; busy.value = false; loading.value = false }
 async function load() {
   const version = ++epoch
-  loading.value = true; error.value = ''
+  loading.value = true; error.value = ''; checked.value=[]
   try {
     const [items, users] = await Promise.all([api.mailPage(tab.value,page.value), api.messageDirectory()])
     if (version !== epoch) return
+    if (!items.results.items.length && page.value>0) { page.value--; await load(); return }
     messages.value = items.results.items; total.value=items.results.total; unreadTotal.value=items.unread; directory.value = users
   } catch (reason) { if (version === epoch) { error.value = reasonText(reason); messages.value = []; directory.value = [] } }
   finally { if (version === epoch) loading.value = false }
 }
-async function switchTab(next: 'inbox' | 'sent') { if (busy.value) return; detailEpoch++; tab.value = next; page.value=0; selected.value = null; await load() }
+async function switchTab(next: 'inbox' | 'sent' | 'archive' | 'trash') { if (busy.value) return; detailEpoch++; tab.value = next; page.value=0; selected.value = null; await load() }
+async function organize(action:string,ids=checked.value){
+  if(busy.value||!ids.length)return
+  busy.value=true;error.value=''
+  try{await request('/messages/organize',{method:'POST',body:JSON.stringify({ids,action})});selected.value=null;await load();window.dispatchEvent(new Event('personal-platform:notifications-changed'))}
+  catch(reason){error.value=reasonText(reason)}finally{busy.value=false}
+}
 async function openNotification() {
   const id = route.query.message
   if (typeof id !== 'string' || composing.value || busy.value) return
@@ -163,17 +171,18 @@ onBeforeUnmount(reset)
     <div class="mail-shortcuts"><RouterLink to="/app/groups">{{ uiText('打开群组协作 →') }}</RouterLink><button type="button" :disabled="loading || busy" @click="load">{{ uiText('刷新联系人与消息') }}</button><button v-for="admin in directory.filter(user => user.relationship === 'ADMIN')" :key="admin.id" type="button" :disabled="loading || busy" @click="compose(admin.id)">{{ uiText('联系管理员 ·') }} {{ admin.displayName }}</button></div>
     <section class="mail-layout panel">
       <aside class="mail-list water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
-        <header><div><button :class="{ active: tab === 'inbox' }" @click="switchTab('inbox')">{{ uiText('收件箱') }} <b>{{ unread }}</b></button><button :class="{ active: tab === 'sent' }" @click="switchTab('sent')">{{ uiText('已发送') }}</button></div></header>
+        <header><div><button :class="{ active: tab === 'inbox' }" @click="switchTab('inbox')">{{ uiText('收件箱') }} <b>{{ unread }}</b></button><button :class="{ active: tab === 'sent' }" @click="switchTab('sent')">{{ uiText('已发送') }}</button><button :class="{active:tab==='archive'}" @click="switchTab('archive')">{{uiText('归档')}}</button><button :class="{active:tab==='trash'}" @click="switchTab('trash')">{{uiText('回收站')}}</button></div></header>
+        <div class="mail-batch"><label><input type="checkbox" :checked="messages.length>0 && checked.length===messages.length" :disabled="loading||busy||!messages.length" @change="checked=checked.length===messages.length?[]:messages.map(m=>m.id)" /> {{uiText('选择本页')}}</label><button :disabled="busy||!checked.length" @click="organize('READ')">{{uiText('标为已读')}}</button><button v-if="tab==='inbox'||tab==='sent'" :disabled="busy||!checked.length" @click="organize('ARCHIVE')">{{uiText('归档')}}</button><button v-if="tab==='trash'||tab==='archive'" :disabled="busy||!checked.length" @click="organize('ACTIVE')">{{uiText('恢复')}}</button><button v-if="tab!=='trash'" :disabled="busy||!checked.length" @click="organize('TRASH')">{{uiText('移入回收站')}}</button></div>
         <div v-if="loading" class="table-skeleton" />
         <EmptyState v-else-if="!messages.length" :title="uiText('暂无消息')" :description="uiText('新消息会出现在这里。')" icon="mail" />
-        <button v-for="item in messages" v-else :key="item.id" class="mail-row" :class="{ active: selected?.id === item.id, unread: !item.read }" @click="open(item)">
+        <div v-for="item in messages" v-else :key="item.id" class="mail-selection-row"><input v-model="checked" type="checkbox" :value="item.id" :aria-label="uiText('选择')+' '+item.subject" :disabled="busy" /><button class="mail-row" :class="{ active: selected?.id === item.id, unread: !item.read }" @click="open(item)">
           <span>{{ item.senderName.slice(0, 1) }}</span><div><strong>{{ item.subject }}</strong><small>{{ tab === 'inbox' ? item.senderName : (uiText('发送给 ') + (item.recipients.map(r => r.displayName).join('、'))) }}</small></div><time>{{ new Date(item.createdAt).toLocaleDateString(uiLocale()) }}</time>
-        </button>
+        </button></div>
         <p v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</p>
       <nav class="research-pagination" :aria-label="uiText('消息分页')"><button class="button button--ghost" :disabled="!page||loading" @click="page--;load()">{{uiText('上一页')}}</button><span>{{page+1}} / {{Math.max(1,Math.ceil(total/30))}}</span><button class="button button--ghost" :disabled="(page+1)*30>=total||loading" @click="page++;load()">{{uiText('下一页')}}</button></nav>
       </aside>
       <article class="mail-reader">
-        <template v-if="selected"><p class="page-kicker">{{ tab === 'inbox' ? 'INBOX' : 'SENT' }}</p><h3>{{ selected.subject }}</h3><div class="mail-meta"><b>{{ selected.senderName }}</b><span>{{ uiText('发送给') }} {{ selected.recipients.map(r => r.displayName).join('、') }}</span><time>{{ new Date(selected.createdAt).toLocaleString(uiLocale()) }}</time></div><button v-if="tab === 'inbox' && selected.senderId !== authStore.state.user?.id" class="button button--ghost" :disabled="busy || loading" @click="compose(selected.senderId, selected)">{{ uiText('回复这封信') }}</button><p class="mail-body">{{ selected.body }}</p><ReportButton v-if="selected.senderId !== authStore.state.user?.id" type="MESSAGE" :source-id="selected.id" /><div v-if="selected.attachments.length" class="mail-attachments"><button v-for="file in selected.attachments" :key="file.id" @click="download(file)"><AppIcon name="file" :size="18" /><span>{{ file.fileName }}<small>{{ Math.ceil(file.sizeBytes / 1024) }} KB</small></span><AppIcon name="download" :size="16" /></button></div></template>
+        <template v-if="selected"><div class="mail-batch"><button v-if="tab!=='trash'" :disabled="busy" @click="organize('TRASH',[selected.id])">{{uiText('移入回收站')}}</button><small>{{uiText('仅整理自己的信箱，不影响其他人的消息。')}}</small></div><p class="page-kicker">{{ tab === 'inbox' ? 'INBOX' : 'SENT' }}</p><h3>{{ selected.subject }}</h3><div class="mail-meta"><b>{{ selected.senderName }}</b><span>{{ uiText('发送给') }} {{ selected.recipients.map(r => r.displayName).join('、') }}</span><time>{{ new Date(selected.createdAt).toLocaleString(uiLocale()) }}</time></div><button v-if="tab === 'inbox' && selected.senderId !== authStore.state.user?.id" class="button button--ghost" :disabled="busy || loading" @click="compose(selected.senderId, selected)">{{ uiText('回复这封信') }}</button><p class="mail-body">{{ selected.body }}</p><ReportButton v-if="selected.senderId !== authStore.state.user?.id" type="MESSAGE" :source-id="selected.id" /><div v-if="selected.attachments.length" class="mail-attachments"><button v-for="file in selected.attachments" :key="file.id" @click="download(file)"><AppIcon name="file" :size="18" /><span>{{ file.fileName }}<small>{{ Math.ceil(file.sizeBytes / 1024) }} KB</small></span><AppIcon name="download" :size="16" /></button></div></template>
         <EmptyState v-else :title="uiText('选择一封消息')" :description="uiText('邮件内容和附件会显示在这里。')" icon="mail" />
       </article>
     </section>
@@ -197,6 +206,8 @@ onBeforeUnmount(reset)
 </template>
 
 <style scoped>
+.mail-batch{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px;font-size:12px}.mail-batch button{background:var(--paper);color:var(--green);border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer}.mail-batch button:disabled{opacity:.45;cursor:default}.mail-selection-row{display:flex;align-items:center;padding-left:12px;gap:8px}.mail-selection-row .mail-row{flex:1;min-width:0}.mail-batch small{color:var(--muted)}
+
 .mail-shortcuts{display:flex;flex-wrap:wrap;gap:20px;font-size:13px}.mail-shortcuts a,.mail-shortcuts button{border:0;background:none;color:var(--green);padding:0;text-decoration:underline;cursor:pointer}
 .mail-compose-backdrop{background:rgba(29,43,54,.2);backdrop-filter:blur(3px);padding:28px}
 .compose-modal{width:min(880px,calc(100vw - 56px));height:min(690px,calc(100dvh - 56px));max-height:none;padding:0;gap:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid var(--line);border-radius:6px;background:var(--paper);box-shadow:0 24px 80px #20304024;overflow:hidden;color:var(--ink)}

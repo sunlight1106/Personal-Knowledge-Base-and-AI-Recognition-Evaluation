@@ -8,7 +8,6 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.StatObjectArgs;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -21,6 +20,7 @@ import java.io.ByteArrayInputStream;
 public class MinioObjectStorageService implements ObjectStorageService {
     private final MinioClient client;
     private final String bucket;
+    private volatile boolean bucketReady;
 
     public MinioObjectStorageService(
             @Value("${app.storage.s3.endpoint}") String endpoint,
@@ -31,12 +31,13 @@ public class MinioObjectStorageService implements ObjectStorageService {
         this.bucket = bucket;
     }
 
-    @PostConstruct
-    void initializeBucket() {
+    synchronized void initializeBucket() {
+        if (bucketReady) return;
         try {
             if (!client.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
                 client.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
             }
+            bucketReady = true;
         } catch (Exception exception) {
             throw new IllegalStateException("无法初始化对象存储 bucket", exception);
         }
@@ -45,6 +46,7 @@ public class MinioObjectStorageService implements ObjectStorageService {
     @Override
     public void put(String key, byte[] content, String contentType) {
         try (ByteArrayInputStream stream = new ByteArrayInputStream(content)) {
+            initializeBucket();
             client.putObject(PutObjectArgs.builder().bucket(bucket).object(key)
                     .stream(stream, content.length, -1).contentType(contentType).build());
         } catch (Exception exception) {
@@ -71,8 +73,14 @@ public class MinioObjectStorageService implements ObjectStorageService {
 
     @Override
     public void delete(String key) {
-        try { client.removeObject(RemoveObjectArgs.builder().bucket(bucket).object(key).build()); }
+        try { deleteChecked(key); }
         catch (Exception ignored) { }
+    }
+
+    @Override
+    public void deleteChecked(String key) {
+        try { client.removeObject(RemoveObjectArgs.builder().bucket(bucket).object(key).build()); }
+        catch (Exception failure) { throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,"OBJECT_STORE_DELETE_FAILED","对象存储暂时不可用，清理将稍后重试"); }
     }
 
     @Override

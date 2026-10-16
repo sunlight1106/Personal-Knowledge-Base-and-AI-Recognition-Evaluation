@@ -21,6 +21,8 @@ public class GroupLifecycleController {
  @PostMapping("/{id}/dissolve") Object dissolve(@PathVariable long id,@Valid @RequestBody Dissolve r){service.dissolve(id,r.name(),r.password());return ApiResponse.ok(null);}
  @PostMapping("/{id}/invitations") Object invite(@PathVariable long id,@Valid @RequestBody Invite r){service.invite(id,r.targetId(),r.role());return ApiResponse.ok(null);}
  @GetMapping("/invitations") Object invitations(){return ApiResponse.ok(service.invitations(null));}
+ @GetMapping("/invitations/history") Object history(@RequestParam(defaultValue="0") int page){return ApiResponse.ok(service.invitationHistory(page));}
+ @PostMapping("/invitations/{invitation}/cancel") Object cancel(@PathVariable String invitation){service.cancelInvitation(invitation);return ApiResponse.ok(null);}
  @GetMapping("/{id}/invitations") Object pending(@PathVariable long id){return ApiResponse.ok(service.invitations(id));}
  @PostMapping("/invitations/{invitation}/decision") Object decide(@PathVariable String invitation,@RequestBody Decision r){service.decide(invitation,r.accept());return ApiResponse.ok(null);}
  @PostMapping("/{id}/join-request") Object join(@PathVariable long id){service.request(id);return ApiResponse.ok(null);}

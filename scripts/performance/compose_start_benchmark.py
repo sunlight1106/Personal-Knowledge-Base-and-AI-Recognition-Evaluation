@@ -43,7 +43,8 @@ def main():
             if process.poll() is not None:
                 break
             time.sleep(.5)
-    report = {'method': 'Existing containers stopped then compose start --wait; Docker engine already running; no image build or download', 'allReadySeconds': round(time.perf_counter() - started, 2), 'apiSeconds': web, 'healthySeconds': ready, 'exitCode': process.returncode}
+    core=('mysql','redis','backend','frontend')
+    report = {'method': 'Existing containers stopped then compose start --wait; Docker engine already running; no image build or download', 'coreReadySeconds':max(ready[s] for s in core) if all(s in ready for s in core) else None, 'allReadySeconds': round(time.perf_counter() - started, 2), 'apiSeconds': web, 'healthySeconds': ready, 'exitCode': process.returncode}
     output.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report), flush=True)
     if process.returncode or set(ready) != set(expected):

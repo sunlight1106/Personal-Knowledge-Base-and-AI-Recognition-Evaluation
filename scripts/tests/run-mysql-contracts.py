@@ -30,9 +30,12 @@ def main():
     })
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tests", nargs="+", choices=sorted(classes), help="Rerun selected contract classes")
+    parser.add_argument("--skip-load", action="store_true", help="Run capacity measurements separately from correctness checks")
     args = parser.parse_args()
     if args.tests:
         classes = set(args.tests)
+    if args.skip_load:
+        classes.discard("MultiUserLoadMySqlIntegrationTest")
     name = "pkb-contracts-" + uuid.uuid4().hex[:12]
     env = os.environ.copy()
     env.update(MYSQL_ROOT_PASSWORD=secrets.token_urlsafe(32), MYSQL_ROOT_HOST="%")
@@ -43,11 +46,15 @@ def main():
 
     started = False
     try:
-        docker("run", "--rm", "-d", "--name", name, "--memory=768m", "--pids-limit=256",
+        # Correctness checks repeatedly create and drop complete schemas. RAM-backed
+        # disposable storage avoids paying host disk fsync latency for every fixture.
+        # Capacity measurements always retain Docker's disk-backed MySQL storage.
+        storage = ["--tmpfs", "/var/lib/mysql:rw,size=1g"] if args.skip_load else []
+        docker("run", "--rm", "-d", "--name", name, "--memory=2g", "--pids-limit=256", *storage,
                "-e", "MYSQL_ROOT_PASSWORD", "-e", "MYSQL_ROOT_HOST",
                "-p", "127.0.0.1::3306", "mysql:8.4")
         started = True
-        print("Waiting for disposable MySQL...", flush=True)
+        print("Waiting for disposable MySQL (" + ("RAM-backed correctness fixture" if args.skip_load else "disk-backed fixture") + ")...", flush=True)
         for _ in range(90):
             probe = docker("exec", name, "sh", "-c",
                            'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -h127.0.0.1 -uroot -e "SELECT 1"',

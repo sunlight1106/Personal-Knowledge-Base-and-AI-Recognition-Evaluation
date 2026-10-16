@@ -53,7 +53,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: isolated-ci-only
         ports: ["3306:3306"]
         options: >-
-          --health-cmd="mysqladmin ping -h127.0.0.1 -pisolated-ci-only"
+          --health-cmd="mysql -h127.0.0.1 -uroot -pisolated-ci-only -e 'SELECT 1'"
           --health-interval=5s --health-timeout=3s --health-retries=30
     steps:
       - uses: actions/checkout@v4
@@ -62,11 +62,22 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - run: ./mvnw -B -Dtest=PermissionMatrixMySqlIntegrationTest,ModerationMySqlIntegrationTest,AccountSecurityMySqlIntegrationTest,GroupLifecycleMySqlIntegrationTest,GroupCommunicationMySqlIntegrationTest,PersonalWorkflowMySqlIntegrationTest,ResearchWorkspaceMySqlIntegrationTest,AdministrationMySqlIntegrationTest,MySqlSchemaMigrationTest,BillingConcurrencyIntegrationTest,NoteReferenceBatchQueryTest,VocabularyMySqlIntegrationTest,AdminMutationConcurrencyIntegrationTest,PersonalPlatformHttpIntegrationTest,InferenceRecoveryIntegrationTest,PersonalAiPersistenceIntegrationTest test
+      - run: ./mvnw -B -Dtest=PermissionMatrixMySqlIntegrationTest,ModerationMySqlIntegrationTest,AccountSecurityMySqlIntegrationTest,GroupLifecycleMySqlIntegrationTest,GroupCommunicationMySqlIntegrationTest,PersonalWorkflowMySqlIntegrationTest,ResearchWorkspaceMySqlIntegrationTest,AdministrationMySqlIntegrationTest,MySqlSchemaMigrationTest,BillingConcurrencyIntegrationTest,NoteReferenceBatchQueryTest,VocabularyMySqlIntegrationTest,AdminMutationConcurrencyIntegrationTest,PersonalPlatformHttpIntegrationTest,InferenceRecoveryIntegrationTest,PersonalAiPersistenceIntegrationTest,PlatformCompletionMySqlIntegrationTest,CodeLabMySqlIntegrationTest test
         env:
           MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&rewriteBatchedStatements=true
           MYSQL_TEST_USERNAME: root
           MYSQL_TEST_PASSWORD: isolated-ci-only
+
+  redis-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: python scripts/tests/run-redis-contracts.py
 
   backup-safety:
     runs-on: ubuntu-latest
@@ -79,6 +90,7 @@ jobs:
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - run: python -m unittest discover -s scripts -p test_startup.py -v
       - run: python scripts/release/test_install.py
+      - run: python scripts/ops/test_rolling_deploy.py
 
   training:
     runs-on: ubuntu-latest
@@ -93,3 +105,15 @@ jobs:
       - run: pip install -r ai/training/requirements.txt
       - run: python -m unittest -v test_training
         working-directory: ai/training
+  code-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: src/code-lab/requirements.txt
+      - run: pip install -r src/code-lab/requirements.txt
+      - run: python -m unittest -v test_engine test_server
+        working-directory: src/code-lab

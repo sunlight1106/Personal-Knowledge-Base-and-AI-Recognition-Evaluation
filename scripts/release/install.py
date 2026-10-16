@@ -5,8 +5,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 REPO = 'sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation'
-COMPONENTS = ('backend', 'frontend', 'training', 'minio')
-SECRET_KEYS = ('BOOTSTRAP_ADMIN_PASSWORD','MYSQL_PASSWORD','MYSQL_ROOT_PASSWORD','MINIO_ROOT_PASSWORD','JWT_SECRET','CREDENTIAL_MASTER_KEY','TRAINING_SERVICE_TOKEN')
+COMPONENTS = ('backend', 'frontend', 'training', 'minio', 'code-lab')
+SECRET_KEYS = ('BOOTSTRAP_ADMIN_PASSWORD','MYSQL_PASSWORD','MYSQL_ROOT_PASSWORD','MINIO_ROOT_PASSWORD','JWT_SECRET','CREDENTIAL_MASTER_KEY','TRAINING_SERVICE_TOKEN','CODE_LAB_SERVICE_TOKEN')
 
 def run(args, env=None):
     result = subprocess.run(args, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -17,7 +17,7 @@ def run(args, env=None):
 def manifest(text):
     result = {}
     for line in text.splitlines():
-        match = re.fullmatch(r'([a-f0-9]{64})  ((?:backend|frontend|training|minio)\.tar\.gz)', line)
+        match = re.fullmatch(r'([a-f0-9]{64})  ((?:backend|frontend|training|minio|code-lab)\.tar\.gz)', line)
         if not match or match[2] in result: raise ValueError('Invalid release manifest')
         result[match[2]] = match[1]
     if set(result) != {x+'.tar.gz' for x in COMPONENTS}: raise ValueError('Incomplete image release')
@@ -46,7 +46,12 @@ def download(url,path,expected):
 
 def configure(port):
     path=ROOT/'.env'
-    if path.exists():return
+    if path.exists():
+        text=path.read_text(encoding='utf-8-sig')
+        if not re.search(r'^CODE_LAB_SERVICE_TOKEN=.+$',text,re.M):
+            text=re.sub(r'^CODE_LAB_SERVICE_TOKEN=.*\n?','',text,flags=re.M).rstrip()+'\nCODE_LAB_SERVICE_TOKEN='+secrets.token_hex(32)+'\n'
+            path.write_text(text,encoding='utf-8')
+        return
     text=(ROOT/'.env.example').read_text(encoding='utf-8')
     for key in SECRET_KEYS:
         text,count=re.subn(r'^'+key+r'=.*$',lambda m:key+'='+secrets.token_hex(32),text,flags=re.M)
@@ -68,7 +73,7 @@ def main():
     info=json.loads(run(['docker','info','--format','{{json .}}']))
     if info.get('OSType')!='linux' or info.get('Architecture') not in ('x86_64','amd64'):raise ValueError('This release requires Linux amd64 containers')
     run(['docker','compose','version'])
-    print('Release available: '+args.version+'; four checksummed images. No source compilation required.')
+    print('Release available: '+args.version+'; five checksummed images. No source compilation required.')
     if not args.apply:return
     from source_manifest import build
     with urllib.request.urlopen(base+'/SOURCE.json',timeout=30) as response:
@@ -84,6 +89,7 @@ def main():
         if shutil.disk_usage(destination).free<8*1024**3:raise ValueError('At least 8 GB free space is needed for download and image import')
         env={**os.environ,'PKB_RELEASE_TAG':args.version}
         compose=['docker','compose','-f','compose.yaml','-f','compose.images.yaml']
+        if (ROOT/'.env').exists():configure(args.port)
         existing=run(['docker','compose','ps','-aq']).split() if (ROOT/'.env').exists() else []
         project=os.environ.get('COMPOSE_PROJECT_NAME','robust-vision')
         volumes=run(['docker','volume','ls','-q','--filter','label=com.docker.compose.project='+project]).split()

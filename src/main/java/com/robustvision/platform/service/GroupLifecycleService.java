@@ -55,6 +55,23 @@ public class GroupLifecycleService {
       ||!membership.getPermissions().containsAll(Set.of("CONTENT_READ","SETTINGS_WRITE","MEMBERS_WRITE")))
     throw bad("邀请人已失去管理权限，请重新申请加入");
  }
+ @Transactional(readOnly=true) public Map<String,Object> invitationHistory(int page){
+  if(page<0||page>10000)throw bad("页码无效");long user=current.requireCurrent().getId();
+  var rows=db.queryForList("SELECT i.id,i.workspace_id AS groupId,w.name AS groupName,i.target_id AS targetId,u.display_name AS displayName,u.identity_code AS identityCode,i.kind,i.role,CASE WHEN i.status='PENDING' AND i.expires_at<=? THEN 'EXPIRED' ELSE i.status END AS status,i.expires_at AS expiresAt,i.created_at AS createdAt FROM group_invitation i JOIN workspace w ON w.id=i.workspace_id JOIN app_user u ON u.id=i.target_id WHERE i.actor_id=? ORDER BY i.created_at DESC,i.id LIMIT 26 OFFSET ?",Timestamp.from(Instant.now()),user,page*25);
+  return Map.of("items",rows.stream().limit(25).toList(),"hasNext",rows.size()>25,"page",page);
+ }
+ @Transactional public void cancelInvitation(String id){
+  var u=current.requireCurrent();var rows=db.queryForList("SELECT workspace_id FROM group_invitation WHERE id=?",id);
+  if(rows.isEmpty())throw bad("邀请或申请不存在");var g=lock(((Number)rows.get(0).get("workspace_id")).longValue());
+  var r=db.queryForMap("SELECT * FROM group_invitation WHERE id=? FOR UPDATE",id);
+  if(((Number)r.get("actor_id")).longValue()!=u.getId()){
+   manager(g,u);if(!permissions.detail(g.getId()).currentPermissions().contains("MEMBERS_WRITE"))throw new BusinessException(HttpStatus.FORBIDDEN,"GROUP_MEMBERS_REQUIRED","需要成员管理权限");
+  }
+  if("CANCELLED".equals(r.get("status")))return;
+  if(!"PENDING".equals(r.get("status"))||!JdbcTime.instant(r.get("expires_at")).isAfter(Instant.now()))throw bad("邀请已经处理或过期");
+  db.update("UPDATE group_invitation SET status='CANCELLED' WHERE id=?",id);
+  notifyGroup(g.getId());live.changed(List.of(((Number)r.get("target_id")).longValue(),((Number)r.get("actor_id")).longValue()));
+ }
  @Transactional public void recall(long id,String messageId){var u=current.requireCurrent();var g=lock(id);permissions.requireContentPermission(id,false);var m=messages.findById(messageId).filter(x->Objects.equals(x.getWorkspaceId(),id)).orElseThrow(()->bad("消息不存在"));if(m.getRecalledAt()!=null)throw bad("消息已经撤回");if(!m.getSender().getId().equals(u.getId())||m.getCreatedAt().isBefore(Instant.now().minusSeconds(600)))manager(g,u);m.recall();messages.saveAndFlush(m);attachments.deleteAll(attachments.findByMessageIdOrderByIdAsc(messageId));notifyGroup(id);}
  @Transactional public void report(long id,String messageId,String reason){var u=current.requireCurrent();lock(id);permissions.requireContentPermission(id,false);messages.findById(messageId).filter(x->Objects.equals(x.getWorkspaceId(),id)).orElseThrow(()->bad("消息不存在"));moderation.report("MESSAGE",messageId,reason);notifyGroup(id);}
  @Transactional(readOnly=true) public List<Map<String,Object>> reports(long id){manager(groups.findById(id).orElseThrow(),current.requireCurrent());return db.queryForList("SELECT r.id,r.message_id AS messageId,r.reason,r.status,r.created_at AS createdAt,u.display_name AS displayName,u.identity_code AS identityCode FROM group_report r JOIN app_user u ON u.id=r.reporter_id WHERE r.workspace_id=? ORDER BY r.created_at DESC LIMIT 100",id);}

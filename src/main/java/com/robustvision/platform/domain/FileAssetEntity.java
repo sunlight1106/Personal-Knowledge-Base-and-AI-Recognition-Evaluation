@@ -64,6 +64,9 @@ public class FileAssetEntity {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+    @Column(name="deleted_at") private Instant deletedAt;
+    public Instant getDeletedAt(){return deletedAt;}
+    public void setDeletedAt(Instant value){deletedAt=value;}
 
     protected FileAssetEntity() {}
 

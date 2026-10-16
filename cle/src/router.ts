@@ -35,6 +35,7 @@ const router = createRouter({
         { path: 'learning', component: () => import('@/views/LearningView.vue') },
         { path: '', redirect: '/app/home' },
         { path: 'home', name: 'app-home', component: () => import('@/views/OverviewView.vue'), meta: { permission: 'dashboard:read' } },
+        { path: 'code-lab', name: 'code-lab', component: () => import('@/views/CodeLabView.vue'), meta: { permission: 'code-lab:use' } },
         { path: 'research', name: 'research', component: () => import('@/views/ResearchView.vue'), meta: { permission: 'research:use' } },
         { path: 'vocabulary', name: 'vocabulary', component: () => import('@/views/VocabularyView.vue'), meta: { permission: 'vocabulary:use' } },
         { path: 'knowledge', name: 'knowledge', component: () => import('@/views/KnowledgeView.vue'), meta: { permission: 'knowledge:read' } },

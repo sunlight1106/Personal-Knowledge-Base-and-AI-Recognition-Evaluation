@@ -25,6 +25,9 @@ jobs:
           - name: frontend
             context: cle
             file: cle/Dockerfile
+          - name: code-lab
+            context: src/code-lab
+            file: src/code-lab/Dockerfile
           - name: training
             context: ai/training
             file: ai/training/Dockerfile
@@ -109,5 +112,5 @@ jobs:
           fi
           gh release upload "$TAG" release/*.tar.gz release/SHA256SUMS release/SOURCE.json release/INSTALL.md release/MINIO-SOURCE.md --clobber
           gh release view "$TAG" --json assets --jq '.assets | map(select(.size > 0) | .name)' > release/uploaded.json
-          python -c 'import json; names=set(json.load(open("release/uploaded.json"))); expected={"backend.tar.gz","frontend.tar.gz","training.tar.gz","minio.tar.gz","minio-sources.tar.gz","SHA256SUMS","SOURCE.json","INSTALL.md","MINIO-SOURCE.md"}; assert expected <= names, "Release assets incomplete"'
+          python -c 'import json; names=set(json.load(open("release/uploaded.json"))); expected={"backend.tar.gz","frontend.tar.gz","training.tar.gz","code-lab.tar.gz","minio.tar.gz","minio-sources.tar.gz","SHA256SUMS","SOURCE.json","INSTALL.md","MINIO-SOURCE.md"}; assert expected <= names, "Release assets incomplete"'
           gh release edit "$TAG" --draft=false --latest

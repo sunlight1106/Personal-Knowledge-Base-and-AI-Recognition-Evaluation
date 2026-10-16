@@ -11,7 +11,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run deploy.ps1 or deploy.sh first}
     volumes: ["mysql_data:/var/lib/mysql"]
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:?Run deploy.ps1 or deploy.sh first}"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysql -h127.0.0.1 -uroot --batch --skip-column-names -e 'SELECT 1' >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -89,6 +89,7 @@ services:
       DB_POOL_MAX: ${DB_POOL_MAX:-10}
       DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-2}
       QUEUE_MODE: redis
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
       JWT_SECRET: ${JWT_SECRET:?Run deploy.ps1 or deploy.sh first}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Run deploy.ps1 or deploy.sh to generate a password}
@@ -98,6 +99,8 @@ services:
       BOOTSTRAP_TEST_EMAIL: ${BOOTSTRAP_TEST_EMAIL:-test@personal-platform.local}
       RESET_TEST_PASSWORD: ${RESET_TEST_PASSWORD:-false}
       MODEL_MODE: ${MODEL_MODE:-demo}
+      CODE_LAB_SERVICE_URL: http://code-lab:8091
+      CODE_LAB_SERVICE_TOKEN: ${CODE_LAB_SERVICE_TOKEN:-}
       TRAINING_SERVICE_URL: http://training:8090
       TRAINING_SERVICE_TOKEN: ${TRAINING_SERVICE_TOKEN:-}
       PERSONAL_AI_REMOTE_ENABLED: ${PERSONAL_AI_REMOTE_ENABLED:-false}
@@ -146,10 +149,10 @@ services:
       redis:
         condition: service_healthy
       minio:
-        condition: service_healthy
+        condition: service_started
       clamav:
-        # Load virus signatures while Spring initializes. Readiness still checks
-        # ClamAV PONG before the backend is declared usable; uploads fail closed.
+        # Load signatures while Spring initializes. Core pages can become ready
+        # independently; uploads still require a successful scan and fail closed.
         condition: service_started
 
   model-worker:
@@ -176,7 +179,28 @@ services:
       SPRING_FLYWAY_ENABLED: "true"
     depends_on: *application-dependencies
 
+  code-lab:
+    image: robust-vision-code-lab:local
+    build: ./src/code-lab
+    restart: unless-stopped
+    environment:
+      CODE_LAB_SERVICE_TOKEN: ${CODE_LAB_SERVICE_TOKEN:?Run deploy.ps1 or deploy.sh first}
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8091/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+
   training:
+    profiles: ["training"]
     image: robust-vision-training:local
     build: ./ai/training
     restart: unless-stopped
@@ -211,7 +235,7 @@ services:
       start_interval: 1s
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
 
 volumes:
   mysql_data:

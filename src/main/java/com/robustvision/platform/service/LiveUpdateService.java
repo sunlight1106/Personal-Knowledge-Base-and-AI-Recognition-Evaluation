@@ -10,6 +10,12 @@ import java.util.concurrent.*;
 /** Events contain no private content; clients re-fetch through normal authorization. */
 @Service
 public class LiveUpdateService {
+    public static final String CHANNEL = "personal:live:changes:v1";
+    private final String origin = UUID.randomUUID().toString();
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private org.springframework.data.redis.core.StringRedisTemplate redis;
+    @org.springframework.beans.factory.annotation.Value("${app.queue.mode:inline}")
+    private String deliveryMode="inline";
     private final Map<Long,Set<SseEmitter>> clients=new ConcurrentHashMap<>();
     public synchronized SseEmitter connect(long user){
         Set<SseEmitter> list=clients.computeIfAbsent(user,k->ConcurrentHashMap.newKeySet());
@@ -22,7 +28,22 @@ public class LiveUpdateService {
     }
     public void changed(Collection<Long> users){
         Set<Long> ids=new HashSet<>(users);
-        Runnable publish=()->{for(long id:ids)for(SseEmitter e:clients.getOrDefault(id,Set.of()))try{e.send(SseEmitter.event().name("refresh").data("changed"));}catch(Exception ex){e.complete();}};
+        Runnable publish=()->{
+            deliver(ids);
+            if(redis!=null&&"redis".equalsIgnoreCase(deliveryMode))try{
+                // IDs only; clients must obtain content through authorized APIs.
+                var batch=new ArrayList<>(ids);
+                for(int start=0;start<batch.size();start+=200)
+                    redis.convertAndSend(CHANNEL,origin+":"+batch.subList(start,Math.min(start+200,batch.size())).stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
+            }catch(RuntimeException unavailable){ /* SSE reconnect also refreshes authoritative unread state. */ }
+        };
         if(TransactionSynchronizationManager.isSynchronizationActive())TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){@Override public void afterCommit(){publish.run();}});else publish.run();
+    }
+    private void deliver(Collection<Long> ids){for(long id:ids)for(SseEmitter e:clients.getOrDefault(id,Set.of()))try{e.send(SseEmitter.event().name("refresh").data("changed"));}catch(Exception ex){e.complete();}}
+    public void receive(String payload){
+        if(payload==null||payload.length()>5000)return;
+        int separator=payload.indexOf(':');
+        if(separator!=36||payload.startsWith(origin+":"))return;
+        try{var ids=Arrays.stream(payload.substring(separator+1).split(",")).limit(200).map(Long::parseLong).filter(id->id>0).toList();deliver(ids);}catch(NumberFormatException invalid){/* Ignore malformed bus events. */}
     }
 }

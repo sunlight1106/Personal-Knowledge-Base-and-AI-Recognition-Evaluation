@@ -4,11 +4,14 @@ function Invoke-Compose([string[]]$ComposeArguments) {
     if ($LASTEXITCODE -ne 0) { throw 'Docker Compose failed. Inspect: docker compose logs --tail 100' }
 }
 
-function Start-Platform([switch]$Build, [switch]$FullBuild, [switch]$SkipBuild) {
+function Start-Platform([switch]$Build, [switch]$FullBuild, [switch]$SkipBuild, [switch]$Training) {
     if (([int]$Build.IsPresent + [int]$FullBuild.IsPresent + [int]$SkipBuild.IsPresent) -gt 1) {
         throw 'Choose only one of -Build, -FullBuild or -SkipBuild.'
     }
-    $required = @(& docker compose config --services)
+    $trainingEnabled = $Training -or ($env:COMPOSE_PROFILES -split ',' -contains 'training')
+    $required = @(& docker compose config --services | Where-Object { $_ -ne 'training' -or $trainingEnabled })
+    if ($trainingEnabled -and 'training' -notin $required) { $required += 'training' }
+    $apps = @('backend','model-worker','code-lab'); if ($trainingEnabled) { $apps += 'training' }
     if ($LASTEXITCODE -ne 0 -or -not $required.Count) { throw 'Cannot read Compose services.' }
     $installed = @(& docker compose ps --all --format '{{.Service}}')
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect installed services.' }
@@ -31,19 +34,24 @@ function Start-Platform([switch]$Build, [switch]$FullBuild, [switch]$SkipBuild) 
     if ($FullBuild -or $missing.Count) {
         if ($SkipBuild) { throw 'This installation is incomplete. Run deploy.ps1 once without -SkipBuild.' }
         Write-Host 'Installing services / applying full configuration. This can download and compile dependencies.'
-        Invoke-Compose -ComposeArguments @('up', '-d', '--build', '--wait', '--wait-timeout', '600')
+        Invoke-Compose -ComposeArguments (@('up', '-d', '--build') + $required)
+        Invoke-Compose -ComposeArguments @('start','--wait','--wait-timeout','240','mysql','redis','backend','frontend')
     } elseif ($Build) {
         Write-Host 'Building application changes; installed storage services are retained.'
-        Invoke-Compose -ComposeArguments @('build', 'backend', 'frontend', 'training')
+        $buildServices=@('backend','frontend','code-lab'); if ($trainingEnabled) { $buildServices += 'training' }
+        Invoke-Compose -ComposeArguments (@('build') + $buildServices)
         # Retire old application processes before migrating, and restart Nginx
         # afterwards so its upstream DNS points at the replacement backend.
         Invoke-Compose -ComposeArguments @('stop', 'frontend', 'model-worker', 'backend')
-        Invoke-Compose -ComposeArguments @('start', '--wait', '--wait-timeout', '600', 'mysql', 'redis', 'minio', 'clamav')
-        Invoke-Compose -ComposeArguments @('up', '-d', '--no-deps', '--no-build', '--wait', '--wait-timeout', '240', 'backend', 'model-worker', 'training')
+        Invoke-Compose -ComposeArguments @('start', 'minio', 'clamav')
+        Invoke-Compose -ComposeArguments @('start', '--wait', '--wait-timeout', '240', 'mysql', 'redis')
+        Invoke-Compose -ComposeArguments (@('up', '-d', '--no-deps', '--no-build', '--wait', '--wait-timeout', '240') + $apps)
         Invoke-Compose -ComposeArguments @('up', '-d', '--no-deps', '--no-build', '--wait', '--wait-timeout', '240', 'frontend')
     } else {
         Write-Host 'Starting installed services without rebuilding, downloading or recreating containers.'
-        Invoke-Compose -ComposeArguments @('start', '--wait', '--wait-timeout', '600')
+        Invoke-Compose -ComposeArguments (@('start') + $required)
+        Invoke-Compose -ComposeArguments @('start','--wait','--wait-timeout','240','mysql','redis','backend','frontend')
+        Write-Host 'Core pages are ready. File scanning, queued jobs and optional training have separate readiness checks.'
         Write-Host 'After changing code, run: .\deploy.ps1 -Build'
     }
 }

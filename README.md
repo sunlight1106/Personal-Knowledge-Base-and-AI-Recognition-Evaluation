@@ -18,6 +18,8 @@
 
 群组支持成员管理、归档恢复、转让和解散；笔记删除后可以在回收站恢复，个人知识主题和卡片也可以继续编辑。具体入口见 [日常使用](docs/USAGE.md) 和 [群组管理](docs/GROUPS.md)。
 
+发出的群组邀请与加入申请可以查看状态、撤回；站内信支持个人归档、回收站和批量已读。素材库可以查看空间占用与文件引用，删除前会检查文件是否仍在使用。
+
 项目运行在你自己的电脑或服务器上。**普通笔记、背单词和交流不需要 AI 密钥；使用 Docker 部署，不需要另外安装 Java、Node.js 或 Maven。**
 
 上传有大小、频率和病毒扫描检查；个人资料按账号隔离。页面增加了脚本加载限制，后台任务也有资源上限。部署前可查看 [安全设置](docs/SECURITY.md) 和 [备份恢复](docs/COMPOSE_BACKUP.md)。
@@ -42,6 +44,7 @@
 | | 日常操作 | 详细说明 |
 | :--- | :--- | :--- |
 | **笔记与知识库** | Markdown / HTML 边写边预览，分类整理、历史版本与回收站；导出 MD、PDF、Word、HTML、TXT | [笔记与资料整理](docs/LEARNING_WORKSPACE.md) |
+| **代码可视化** | C / Python / Java / JavaScript 算法子集，变量与数组图、逐步回放、调用栈、执行计数与私人历史 | [运行一段代码](docs/CODE_LAB.md) |
 | **背单词** | 场景、搭配和拼写练习，美音自动听读；跨词书接续进度，熟词 Skip，导入与备份 | [词书与学习](docs/VOCABULARY.md) |
 | **AI 与图片理解** | 上传图片提问，解释代码，辅助笔记与词汇学习；配置自己的模型和共享记忆 | [个人 AI](docs/PERSONAL_AI.md) |
 | **学习资料** | 导入 PDF / Word，本地识别扫描页、对照校对、划词听读与摘录；复习卡、表格、看板与月历 | [学习中心](docs/LEARNING_WORKSPACE.md) |
@@ -143,6 +146,8 @@ docker compose up -d --no-deps frontend
 | 停止并保留数据 | 在项目目录执行 **`docker compose stop`** |
 
 日常启动会复用已有容器和镜像。Windows 安装了 Python 时会打开启动进度页，没有 Python 也能从终端启动。启动异常或想了解耗时，查看 [启动与排查](docs/STARTUP.md)。
+
+训练服务按需启动，Windows 使用 `deploy.ps1 -Training`，Linux / macOS 使用 `COMPOSE_PROFILES=training sh deploy.sh`。基础页面先就绪，文件上传仍须等待存储与病毒扫描可用。长期监控、在线快照和恢复演练见 [部署维护](docs/OPERATIONS_UPGRADE.md)。
 
 > 普通停止和更新不要使用 `docker compose down -v`，它会删除数据卷。
 
