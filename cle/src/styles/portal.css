@@ -329,6 +329,8 @@ body[data-density=compact] .portal-app .settings-card { padding:20px }
 .code-editor-toolbar,.code-analysis-settings { display:flex; align-items:center; flex-wrap:wrap; gap:16px; padding:12px 16px; border-bottom:1px solid var(--line); font-size:12px; }
 .code-editor-toolbar label,.code-analysis-settings label { display:flex; align-items:center; gap:8px; }
 .code-editor-toolbar select,.code-analysis-settings select { max-width:230px; padding:5px 9px; border:1px solid var(--line); background:var(--paper); color:var(--ink); font:inherit; }
+.code-editor-toolbar .select-field,.code-analysis-settings .select-field { max-width:230px; }
+.research-filters .select-field { max-width:165px; }
 .code-editor-hint { margin:0; padding:8px 16px; color:var(--muted); font-size:12px; }
 .note-block-menu { display:flex; gap:4px; flex-wrap:wrap; padding:10px; background:var(--paper); border:1px solid var(--line); }
 .note-block-menu button { padding:8px 12px; color:var(--ink); background:transparent; border:0; cursor:pointer; }

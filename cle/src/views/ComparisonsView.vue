@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import { uiText } from '@/i18n'
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -113,7 +114,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('zh-CN', {
       <div><p class="page-kicker">{{ uiText('结果分析') }}</p><h2>{{ uiText('优化前后对比') }}</h2><p>{{ uiText('同一输入、同一模型版本下查看识别结果、置信度收益与时延代价。') }}</p></div>
       <div v-if="tasks.length" class="comparison-picker">
         <label>{{ uiText('选择实验') }}</label>
-        <select v-model="selectedId" class="field-input"><option v-for="task in tasks" :key="task.id" :value="task.id">{{ label(task) }}</option></select>
+        <SelectField><select v-model="selectedId" class="field-input"><option v-for="task in tasks" :key="task.id" :value="task.id">{{ label(task) }}</option></select></SelectField>
       </div>
     </section>
 

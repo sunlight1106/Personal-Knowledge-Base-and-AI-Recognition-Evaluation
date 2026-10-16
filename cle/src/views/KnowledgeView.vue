@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiText, uiLocale } from '@/i18n'
 
@@ -354,9 +355,9 @@ onMounted(load)
         <div class="form-grid">
           <label class="field-label">
             {{ uiText('所属主题') }}
-            <select v-model.number="entryForm.topicId" class="field-input" required>
+            <SelectField><select v-model.number="entryForm.topicId" class="field-input" required>
               <option v-for="topic in writableTopics" :key="topic.id" :value="topic.id">{{ topic.domain }} · {{ topic.name }}</option>
-            </select>
+            </select></SelectField>
           </label>
           <label class="field-label">{{ uiText('标签（逗号分隔）') }}<input v-model="entryForm.tags" class="field-input" maxlength="500" :placeholder="uiText('糖酵解, PFK-1, 代谢调控')" /></label>
         </div>

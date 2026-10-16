@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import HelpHint from '@/components/HelpHint.vue'
 import { uiText, uiLocale } from '@/i18n'
 
@@ -577,12 +578,12 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
         <input v-model="title" :disabled="loading || !ready" class="field-input note-title-input" maxlength="180" :placeholder="uiText('无标题笔记')" />
         <div class="note-editor-row">
           <label class="field-label">{{ uiText('学习库') }}<input v-model="library" :disabled="loading || !ready" class="field-input" list="note-libraries" maxlength="40" :placeholder="uiText('选择或输入自定义库名')" /><datalist id="note-libraries"><option v-for="name in noteLibraries" :key="name" :value="name" /></datalist></label>
-          <label class="field-label">{{ uiText('编写格式') }}<select v-model="contentFormat" :disabled="loading || !ready" class="field-input"><option value="MARKDOWN">Markdown</option><option value="HTML">HTML</option></select></label>
+          <label class="field-label">{{ uiText('编写格式') }}<SelectField><select v-model="contentFormat" :disabled="loading || !ready" class="field-input"><option value="MARKDOWN">Markdown</option><option value="HTML">HTML</option></select></SelectField></label>
           <label class="field-label note-status-field">
             {{ uiText('状态') }}
-            <select v-model="status" :disabled="loading || !ready" class="field-input">
+            <SelectField><select v-model="status" :disabled="loading || !ready" class="field-input">
               <option v-for="option in statusOptions" :key="option.code" :value="option.code">{{ uiText(option.label) }}</option>
-            </select>
+            </select></SelectField>
           </label>
           <label class="field-label note-tags-field">
             {{ uiText('标签（逗号分隔）') }}
@@ -591,7 +592,7 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
         </div>
       </div>
       <label class="field-label note-parent-field">{{ uiText('父页面') }}
-        <select v-model="parentId" class="field-input" :disabled="loading || !ready"><option value="">{{ uiText('无 · 顶层页面') }}</option><option v-for="page in pageOptions.filter(page => page.id !== currentId)" :key="page.id" :value="page.id">{{ page.title }} · {{ page.library }}</option></select>
+        <SelectField><select v-model="parentId" class="field-input" :disabled="loading || !ready"><option value="">{{ uiText('无 · 顶层页面') }}</option><option v-for="page in pageOptions.filter(page => page.id !== currentId)" :key="page.id" :value="page.id">{{ page.title }} · {{ page.library }}</option></select></SelectField>
         <span v-if="pageOptionsError" class="field-hint">{{ uiText(pageOptionsError) }}</span>
       </label>
       <div class="note-editor-stats">
@@ -622,8 +623,8 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
           </div>
         </header>
         <div v-if="contentFormat === 'MARKDOWN'" class="code-editor-toolbar">
-          <label>{{ uiText('编辑范围') }}<select v-model.number="selectedCodeIndex" :disabled="loading || !ready" :aria-label="uiText('选择代码块')"><option :value="-1">{{ uiText('整篇笔记') }}</option><option v-for="(block, index) in blocks" :key="index" :value="index">{{ uiText('代码块') }} {{ index + 1 }} · {{ block.language }}</option></select></label>
-          <label v-if="selectedBlock">{{ uiText('语言') }}<select :value="selectedBlock.language" :disabled="saving || loading" :aria-label="uiText('代码语言')" @change="setCodeLanguage"><option v-for="[value, label] in codeLanguages" :key="value" :value="value">{{ uiText(label) }}</option></select></label>
+          <label>{{ uiText('编辑范围') }}<SelectField><select v-model.number="selectedCodeIndex" :disabled="loading || !ready" :aria-label="uiText('选择代码块')"><option :value="-1">{{ uiText('整篇笔记') }}</option><option v-for="(block, index) in blocks" :key="index" :value="index">{{ uiText('代码块') }} {{ index + 1 }} · {{ block.language }}</option></select></SelectField></label>
+          <label v-if="selectedBlock">{{ uiText('语言') }}<SelectField><select :value="selectedBlock.language" :disabled="saving || loading" :aria-label="uiText('代码语言')" @change="setCodeLanguage"><option v-for="[value, label] in codeLanguages" :key="value" :value="value">{{ uiText(label) }}</option></select></SelectField></label>
           <button type="button" class="button button--ghost button--small" :disabled="saving || loading || !ready" @click="blockMenuOpen = !blockMenuOpen">{{ uiText('＋ 插入块') }} <small>/</small></button>
         </div>
         <div v-if="blockMenuOpen" class="note-block-menu" :aria-label="uiText('插入内容块')"><button v-for="(label, kind) in { heading: '标题', list: '列表', todo: '待办', quote: '引用', table: '表格', divider: '分割线', code: '代码块' }" :key="kind" @click="insertBlock(kind)">{{ uiText(label) }}</button><button @click="blockMenuOpen = false">{{ uiText('取消') }}</button></div>
@@ -658,7 +659,7 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
       </aside>
     </section>
 
-    <div v-if="selectedBlock" class="code-analysis-settings"><label>{{ uiText('AI 注释方式') }}<select v-model="commentStyle"><option value="auto">{{ uiText('按语言自动选择') }}</option><option value="line">{{ uiText('单行注释') }}</option><option value="block">{{ uiText('多行注释') }}</option></select></label><span>{{ uiText('不支持多行注释的语言使用连续单行注释；JSON 注释后标为 JSONC。') }}</span><button v-if="annotationUndo && body === annotationUndo.after" class="button button--ghost button--small" @click="body = annotationUndo.before; annotationUndo = null">{{ uiText('撤销本次注释') }}</button></div>
+    <div v-if="selectedBlock" class="code-analysis-settings"><label>{{ uiText('AI 注释方式') }}<SelectField><select v-model="commentStyle"><option value="auto">{{ uiText('按语言自动选择') }}</option><option value="line">{{ uiText('单行注释') }}</option><option value="block">{{ uiText('多行注释') }}</option></select></SelectField></label><span>{{ uiText('不支持多行注释的语言使用连续单行注释；JSON 注释后标为 JSONC。') }}</span><button v-if="annotationUndo && body === annotationUndo.after" class="button button--ghost button--small" @click="body = annotationUndo.before; annotationUndo = null">{{ uiText('撤销本次注释') }}</button></div>
     <NotePersonalTools v-if="contentFormat === 'MARKDOWN'" :key="`${currentId || 'new'}:${selectedCodeIndex}`" :title="title" :body="selectedBlock?.code ?? body" :code-language="selectedBlock?.language" :comment-style="commentStyle" :disabled="loading || saving || !ready || !canWrite" @append="appendToBody" @replace="applyAssisted" @tags="applyTags" />
 
     <section class="panel note-refs-panel">
@@ -698,13 +699,13 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
         <input v-model="shareLabel" class="field-input" maxlength="120" :placeholder="uiText('备注（可选）')" />
         <label class="note-share-days">
           {{ uiText('有效期') }}
-          <select v-model.number="shareDays" class="field-input">
+          <SelectField><select v-model.number="shareDays" class="field-input">
             <option :value="7">{{ uiText('7 天') }}</option>
             <option :value="30">{{ uiText('30 天') }}</option>
             <option :value="90">{{ uiText('90 天') }}</option>
             <option :value="365">{{ uiText('365 天') }}</option>
             <option :value="null">{{ uiText('永久') }}</option>
-          </select>
+          </select></SelectField>
         </label>
         <button class="button button--dark" :disabled="shareBusy" @click="createShare">
           <AppIcon name="share" :size="15" /> {{ shareBusy ? uiText('创建中…') : uiText('创建分享链接') }}
@@ -729,16 +730,16 @@ onBeforeUnmount(() => { clearTimeout(autoTimer); window.removeEventListener('onl
         </header>
         <label class="field-label">
           {{ uiText('引用类型') }}
-          <select v-model="refType" class="field-input">
+          <SelectField><select v-model="refType" class="field-input">
             <option v-for="option in refTypeOptions" :key="option.code" :value="option.code">{{ uiText(option.label) }}</option>
-          </select>
+          </select></SelectField>
         </label>
         <label class="field-label">
           {{ uiText('选择对象') }}
-          <select v-model="refPick" class="field-input" required>
+          <SelectField><select v-model="refPick" class="field-input" required>
             <option value="" disabled>{{ uiText('请选择') }}</option>
             <option v-for="option in refOptions" :key="option.value" :value="option.value">{{ uiText(option.label) }}</option>
-          </select>
+          </select></SelectField>
         </label>
         <label class="field-label">{{ uiText('备注（可选）') }}<input v-model="refLabel" class="field-input" maxlength="180" :placeholder="uiText('说明该引用在本文中的作用')" /></label>
         <p class="field-hint">{{ uiText('引用会以卡片形式展示，并标明来源；目标不可访问时会明确提示。') }}</p>

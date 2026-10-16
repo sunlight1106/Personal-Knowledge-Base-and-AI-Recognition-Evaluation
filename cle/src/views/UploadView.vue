@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import { uiText } from '@/i18n'
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -146,7 +147,7 @@ async function run() {
           <div class="experiment-tasks">
             <button v-for="option in taskOptions" :key="option.id" type="button" :aria-pressed="taskType === option.id" @click="taskType = option.id"><span>{{ uiText(option.title) }}</span><small>{{ uiText(option.hint) }}</small></button>
           </div>
-          <label class="field-label">{{ uiText('识别模型') }}<select v-model.number="modelId" class="field-input"><option v-if="!availableModels.length" :value="null" disabled>{{ uiText('暂无可用模型') }}</option><option v-for="model in availableModels" :key="model.id" :value="model.id">{{ model.name }} · v{{ model.version }}</option></select></label>
+          <label class="field-label">{{ uiText('识别模型') }}<SelectField><select v-model.number="modelId" class="field-input"><option v-if="!availableModels.length" :value="null" disabled>{{ uiText('暂无可用模型') }}</option><option v-for="model in availableModels" :key="model.id" :value="model.id">{{ model.name }} · v{{ model.version }}</option></select></SelectField></label>
         </fieldset>
       </template>
     </DocRow>

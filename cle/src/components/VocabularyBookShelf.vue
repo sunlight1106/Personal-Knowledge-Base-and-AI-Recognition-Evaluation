@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import { computed, ref, watch } from 'vue'
@@ -38,7 +39,7 @@ function clear() { query.value = ''; category.value = '全部' }
 <template>
   <div class="book-shelf">
     <header class="shelf-heading"><div><p class="shelf-eyebrow">FIND YOUR NEXT WORDS</p><h3>{{ uiText('从你的目标，找到一本词书。') }}</h3><p>{{ publicBooks.length }} {{ uiText('本内置词书 ·') }} {{ totalEntries.toLocaleString(uiLocale()) }} {{ uiText('个词条收录 · 学习进度独立保存') }}</p></div><button class="button button--light" :disabled="busy" @click="emit('import')"><AppIcon name="plus" :size="16" />{{ uiText('导入自己的词书') }}</button></header>
-    <div class="shelf-tools"><label class="shelf-search"><AppIcon name="search" :size="17" /><input v-model="query" type="search" maxlength="80" :placeholder="uiText('搜索考研、雅思、高中、计算机…')" :aria-label="uiText('搜索词书')" /></label><label class="shelf-sort">{{ uiText('排序') }}<select v-model="sort" :aria-label="uiText('词书排序')"><option value="recommended">{{ uiText('推荐顺序') }}</option><option value="words">{{ uiText('词量从少到多') }}</option><option value="progress">{{ uiText('学习进度') }}</option></select></label></div>
+    <div class="shelf-tools"><label class="shelf-search"><AppIcon name="search" :size="17" /><input v-model="query" type="search" maxlength="80" :placeholder="uiText('搜索考研、雅思、高中、计算机…')" :aria-label="uiText('搜索词书')" /></label><label class="shelf-sort">{{ uiText('排序') }}<SelectField><select v-model="sort" :aria-label="uiText('词书排序')"><option value="recommended">{{ uiText('推荐顺序') }}</option><option value="words">{{ uiText('词量从少到多') }}</option><option value="progress">{{ uiText('学习进度') }}</option></select></SelectField></label></div>
     <nav class="shelf-categories" :aria-label="uiText('词书分类')"><button v-for="item in categories" :key="item" :aria-pressed="category === item" @click="category = item">{{ uiText(item) }}<small>{{ item === '全部' ? books.length : books.filter(book => group(book) === item).length }}</small></button></nav>
     <div class="shelf-result"><span role="status">{{ uiText(category) }} · {{ filtered.length }} {{ uiText('本词书') }}</span><span>{{ uiText('同一单词可能收录于不同词书') }}</span></div>
     <div v-if="visible.length" class="shelf-grid">

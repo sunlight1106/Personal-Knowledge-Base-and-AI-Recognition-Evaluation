@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import AmbientWaves from '@/components/AmbientWaves.vue'
 import { uiRoleName, uiText, uiLocale, uiLanguage, setUiLanguage } from '@/i18n'
 
@@ -159,10 +160,10 @@ onBeforeUnmount(() => { active = false; loadVersion++; clearSecrets() })
           <header><div><h3>{{ uiText('外观') }}</h3><p>{{ uiText('更改即时生效，仅保存在此浏览器的当前账户下。') }}</p></div><AppIcon name="eye" :size="22" /></header>
           <div class="settings-form">
             <label class="field-label">{{ uiText('界面语言') }}
-              <select class="field-input" :value="uiLanguage" @change="setUiLanguage(($event.target as HTMLSelectElement).value)">
+              <SelectField><select class="field-input" :value="uiLanguage" @change="setUiLanguage(($event.target as HTMLSelectElement).value)">
                 <option value="zh" lang="zh-CN">简体中文</option>
                 <option value="en" lang="en">English</option>
-              </select>
+              </select></SelectField>
               <small>{{ uiText('即时切换并记住此浏览器的选择。笔记、消息和学习资料保留原文。') }}</small>
             </label>
             <fieldset class="theme-palettes">
@@ -181,8 +182,8 @@ onBeforeUnmount(() => { active = false; loadVersion++; clearSecrets() })
               </div>
             </fieldset>
             <div class="appearance-options">
-              <label class="field-label">{{ uiText('明暗模式') }}<select :value="themeStore.state.preference" class="field-input" @change="themeStore.setPreference(($event.target as HTMLSelectElement).value as ThemePreference)"><option value="system">{{ uiText('跟随系统') }}</option><option value="light">{{ uiText('浅色') }}</option><option value="dark">{{ uiText('深色') }}</option></select></label>
-              <label class="field-label">{{ uiText('内容密度') }}<select :value="themeStore.state.density" class="field-input" @change="themeStore.setDensity(($event.target as HTMLSelectElement).value as Density)"><option value="comfortable">{{ uiText('舒适') }}</option><option value="compact">{{ uiText('紧凑') }}</option></select></label>
+              <label class="field-label">{{ uiText('明暗模式') }}<SelectField><select :value="themeStore.state.preference" class="field-input" @change="themeStore.setPreference(($event.target as HTMLSelectElement).value as ThemePreference)"><option value="system">{{ uiText('跟随系统') }}</option><option value="light">{{ uiText('浅色') }}</option><option value="dark">{{ uiText('深色') }}</option></select></SelectField></label>
+              <label class="field-label">{{ uiText('内容密度') }}<SelectField><select :value="themeStore.state.density" class="field-input" @change="themeStore.setDensity(($event.target as HTMLSelectElement).value as Density)"><option value="comfortable">{{ uiText('舒适') }}</option><option value="compact">{{ uiText('紧凑') }}</option></select></SelectField></label>
             </div>
             <button class="button button--ghost" @click="themeStore.reset">{{ uiText('恢复默认外观') }}</button>
           </div>

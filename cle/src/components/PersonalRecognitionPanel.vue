@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import { uiText, uiLocale } from '@/i18n'
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -105,7 +106,7 @@ onBeforeUnmount(() => { cancel(); loadGuard.cancel(); historyGuard.cancel(); win
     <div class="note-tool-content">
       <p class="settings-notice">{{ uiText('图片会先上传到本平台。只有你确认后，原图及下方指令才会发送到选定供应商，并使用你的个人 API 额度。此入口暂不支持视频或 DeepSeek 视觉识别。') }}</p>
       <p v-if="error" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }}</p>
-      <div class="settings-fields"><label class="field-label">{{ uiText('我的供应商 / 模型') }}<select v-model="provider" class="field-input" :disabled="loading || !!busy"><option value="" disabled>{{ uiText('请选择已启用的个人配置') }}</option><option v-for="item in available" :key="item.provider" :value="item.provider">{{ item.provider }} · {{ item.model }}</option></select></label><label class="field-label">{{ uiText('识别任务') }}<select v-model="taskType" class="field-input" :disabled="!!busy"><option value="IMAGE_UNDERSTANDING">{{ uiText('图片内容理解') }}</option><option value="RECEIPT">{{ uiText('票据识别') }}</option><option value="LICENSE_PLATE">{{ uiText('车牌识别') }}</option></select></label></div>
+      <div class="settings-fields"><label class="field-label">{{ uiText('我的供应商 / 模型') }}<SelectField><select v-model="provider" class="field-input" :disabled="loading || !!busy"><option value="" disabled>{{ uiText('请选择已启用的个人配置') }}</option><option v-for="item in available" :key="item.provider" :value="item.provider">{{ item.provider }} · {{ item.model }}</option></select></SelectField></label><label class="field-label">{{ uiText('识别任务') }}<SelectField><select v-model="taskType" class="field-input" :disabled="!!busy"><option value="IMAGE_UNDERSTANDING">{{ uiText('图片内容理解') }}</option><option value="RECEIPT">{{ uiText('票据识别') }}</option><option value="LICENSE_PLATE">{{ uiText('车牌识别') }}</option></select></SelectField></label></div>
       <div class="settings-button-row"><button class="button button--ghost button--small" :disabled="loading || !!busy" @click="load">{{ uiText('刷新个人配置') }}</button><span v-if="loading" role="status">{{ uiText('正在加载…') }}</span><span v-else-if="!available.length">{{ uiText('尚未启用个人配置，请先前往设置。') }}</span></div>
       <p v-if="!authStore.has('file:write')" role="status">{{ uiText('当前账号没有上传图片的权限，请联系管理员开放文件上传。') }}</p>
       <label class="field-label">{{ uiText('选择图片（JPEG / PNG / WEBP，最多 5 MB）') }}<input ref="fileInput" class="field-input" type="file" accept="image/jpeg,image/png,image/webp" :disabled="!!busy || !authStore.has('file:write')" @change="chooseFile" /></label>

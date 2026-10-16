@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SelectField from '@/components/SelectField.vue'
 import AmbientWaves from '@/components/AmbientWaves.vue'
 import HelpHint from '@/components/HelpHint.vue'
 import { uiText, uiLocale } from '@/i18n'
@@ -101,7 +102,7 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
           <nav :aria-label="uiText('笔记状态')"><button v-for="tab in tabs" :key="tab.code" :class="{ selected: status === tab.code }" :aria-pressed="status === tab.code" @click="status = tab.code">{{ uiText(tab.label) }} <small>{{ tabCount(tab.code) }}</small></button></nav>
           <label class="learning-search"><AppIcon name="search" :size="16" /><input v-model="keyword" type="search" :placeholder="uiText('搜索标题、正文、标签')" :aria-label="uiText('搜索笔记')" /></label>
         </div>
-        <div class="note-list-options"><label>{{ uiText('排列方式') }}<select v-model="sort" class="field-input"><option value="updated">{{ uiText('最近更新') }}</option><option value="oldest">{{ uiText('最早更新') }}</option><option value="title">{{ uiText('标题') }}</option></select></label><button v-if="canWrite && treeRows.length" class="table-action" :disabled="batchBusy" @click="selectPage">{{ uiText('选择当前页') }}</button><span>{{ uiText('每页最多 50 篇') }}</span></div><NoteBatchTools :selected="selectedNotes" @clear="clearSelection" @busy="batchBusy=$event" @changed="organized" />
+        <div class="note-list-options"><label>{{ uiText('排列方式') }}<SelectField><select v-model="sort" class="field-input"><option value="updated">{{ uiText('最近更新') }}</option><option value="oldest">{{ uiText('最早更新') }}</option><option value="title">{{ uiText('标题') }}</option></select></SelectField></label><button v-if="canWrite && treeRows.length" class="table-action" :disabled="batchBusy" @click="selectPage">{{ uiText('选择当前页') }}</button><span>{{ uiText('每页最多 50 篇') }}</span></div><NoteBatchTools :selected="selectedNotes" @clear="clearSelection" @busy="batchBusy=$event" @changed="organized" />
         <p v-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }} <button class="button button--ghost" @click="load">{{ uiText('重试') }}</button></p>
         <div v-if="loading" class="table-skeleton" :aria-label="uiText('正在加载笔记')" />
         <template v-else-if="!filteredNotes.length">
@@ -124,4 +125,6 @@ onBeforeUnmount(() => { active = false; version++; clearTimeout(timer) })
   </div>
 </template>
 
-<style scoped>.note-list-options{display:flex;align-items:center;gap:18px;padding:12px 0;font-size:12px;color:var(--muted)}.note-list-options label{display:flex;align-items:center;gap:8px}.note-list-options select{width:130px;padding:8px}.note-row-selection{margin-right:12px}.note-pagination{display:flex;gap:18px;align-items:center;justify-content:flex-end;margin:20px 0;font-size:12px}</style>
+<style scoped>.note-list-options{display:flex;align-items:center;gap:18px;padding:12px 0;font-size:12px;color:var(--muted)}.note-list-options label{display:flex;align-items:center;gap:8px}.note-list-options select{width:130px;padding:8px}.note-row-selection{margin-right:12px}.note-pagination{display:flex;gap:18px;align-items:center;justify-content:flex-end;margin:20px 0;font-size:12px}
+.note-list-options .select-field{width:130px}
+</style>
