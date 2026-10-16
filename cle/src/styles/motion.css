@@ -27,3 +27,13 @@
 }
 @media(max-width:900px){.learning-sidebar.water-surface{position:relative}}
 @media(max-width:700px){.settings-navigation.water-surface{position:relative}.water-surface>.surface-watermark{opacity:.25}}
+
+/* Pointer light stays decorative; card and control hit areas never move. */
+:is(.workspace-action-grid>a,.home-chapter,.shelf-book,.learning-library-links>a,.theme-palette){position:relative;isolation:isolate}
+.surface-light{position:absolute;inset:0;border-radius:inherit;pointer-events:none!important;z-index:1;background:radial-gradient(ellipse 240px 170px at var(--surface-x,50%) var(--surface-y,50%),color-mix(in srgb,var(--green) 10%,transparent),transparent 75%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--green) 14%,transparent)}
+.ambient-waves>svg{translate:var(--surface-water-x,0px) var(--surface-water-y,0px);transition:translate .7s cubic-bezier(.2,.7,.2,1)}
+[data-motion=off] .surface-light{display:none}
+[data-motion=off] .ambient-waves>svg{translate:none;transition:none}
+@media(prefers-reduced-motion:reduce),(hover:none),(pointer:coarse){.surface-light{display:none}.ambient-waves>svg{translate:none;transition:none}}
+
+[data-motion=off] .preview-recall{transition:none}

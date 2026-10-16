@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { uiText } from '@/i18n'
 
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, useId } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppIcon from './AppIcon.vue'
 
@@ -10,6 +10,15 @@ const tabs = [
   { id: 'words', label: '学习', icon: 'book', to: '/app/vocabulary', action: '开始每日学习' },
   { id: 'images', label: '探索', icon: 'images', to: '/app/upload', action: '进入识别实验' },
 ]
+const practiceItems = [
+  { phrase: 'make progress', meaning: '取得进步', example: 'We make progress by practising every day.' },
+  { phrase: 'pay attention to', meaning: '注意；留意', example: 'Pay attention to the details in your notes.' },
+  { phrase: 'put into practice', meaning: '付诸实践', example: 'Put what you learn into practice.' },
+]
+const practiceIndex = ref(0), revealed = ref(false)
+const practice = computed(() => practiceItems[practiceIndex.value]!)
+const answerId = useId()
+function nextPractice() { practiceIndex.value = (practiceIndex.value + 1) % practiceItems.length; revealed.value = false }
 const selected = ref(0)
 const active = computed(() => tabs[selected.value]!)
 const tablist = ref<HTMLElement>()
@@ -43,10 +52,14 @@ async function navigate(event: KeyboardEvent) {
       <template v-else-if="tab.id === 'words'">
         <div class="preview-path"><AppIcon name="book" :size="13" />{{ uiText('每日学习') }}<span>/</span>{{ uiText('场景与搭配') }}</div>
         <span class="preview-overline">{{ uiText('从一个词，走进一种表达') }}</span>
-        <h2 class="preview-word">a little, every day.</h2>
-        <p>{{ uiText('每天一点，慢慢积累。') }}</p>
-        <blockquote><strong>make progress</strong><br />{{ uiText('取得进步 · We make progress by practising.') }}</blockquote>
-        <div class="preview-tags"><span>{{ uiText('听读') }}</span><span>{{ uiText('搭配回忆') }}</span><span>{{ uiText('间隔复习') }}</span></div>
+        <h2 class="preview-word" aria-live="polite">{{ practice.phrase }}</h2>
+        <button type="button" class="preview-recall" :aria-expanded="revealed" :aria-controls="answerId" @click="revealed = !revealed">
+          <span v-show="revealed" :id="answerId" class="preview-answer"><strong>{{ uiText(practice.meaning) }}</strong><span>{{ practice.example }}</span></span>
+          <span v-if="!revealed" class="preview-recall-hint">{{ uiText('先回忆含义，再点击揭晓。') }}</span>
+          <small>{{ revealed ? uiText('收起解释') : uiText('查看用法') }} <AppIcon name="chevron" :size="13" /></small>
+        </button>
+        <div class="preview-practice-actions"><span>{{ practiceIndex + 1 }} / {{ practiceItems.length }}</span><button type="button" @click="nextPractice">{{ uiText('换一个搭配') }}<AppIcon name="arrow" :size="14" /></button></div>
+        <p class="preview-practice-note">{{ uiText('试一试即可，不计入学习记录。') }}</p>
       </template>
       <template v-else>
         <div class="preview-path"><AppIcon name="spark" :size="13" />{{ uiText('识别实验') }}<span>/</span>{{ uiText('从观察开始') }}</div>
@@ -85,11 +98,17 @@ async function navigate(event: KeyboardEvent) {
 .preview-tags span{padding:4px 9px;background:var(--canvas);border:1px solid var(--line-soft);border-radius:5px;font-size:10px;color:var(--muted)}
 .preview-flow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;color:var(--muted)}
 .preview-flow>span{display:flex;align-items:center;justify-content:center;gap:8px;flex:1;padding:14px 8px;border:1px solid var(--line);border-radius:8px;color:var(--green);background:var(--code-paper);font-size:12px}
+.preview-recall{display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;gap:12px;width:100%;min-height:124px;text-align:left;padding:16px 18px;border:1px solid var(--line);border-radius:10px;background:var(--code-paper);color:var(--ink-soft);font:inherit;cursor:pointer;transition:background .2s,border-color .2s}
+.preview-recall:hover{border-color:var(--green);background:var(--green-soft)}
+.preview-recall-hint{font-size:13px;line-height:1.9}.preview-recall small{display:flex;align-items:center;justify-content:space-between;color:var(--green);font-size:11px}.preview-recall[aria-expanded=true] small svg{rotate:90deg}
+.preview-answer{display:grid;gap:8px;min-height:44px;font-size:12px;line-height:1.8}.preview-answer strong{font-size:14px;font-weight:500;color:var(--ink-strong)}
+.preview-practice-actions{display:flex;align-items:center;justify-content:space-between;margin-top:13px;color:var(--muted);font:11px ui-monospace,monospace}.preview-practice-actions button{display:flex;align-items:center;gap:9px;border:0;background:none;padding:7px 0;color:var(--green);font:inherit;font-size:12px;cursor:pointer}.preview-page .preview-practice-note{font-size:10px;color:var(--muted);margin-top:5px}
+.preview-recall:focus-visible,.preview-practice-actions button:focus-visible{outline:2px solid var(--green);outline-offset:3px}
 .preview-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px 28px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--muted)}
 .preview-footer a{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--green);text-decoration:none}
 .preview-footer a:hover{color:var(--ink-strong)}
 @media(prefers-reduced-motion:no-preference){:global([data-motion=on]) .preview-page{animation:preview-appear .25s ease-out}@keyframes preview-appear{from{opacity:.5;translate:0 4px}to{opacity:1;translate:0 0}}}
-@media(prefers-reduced-motion:reduce){.preview-tabs button{transition:none}}
+@media(prefers-reduced-motion:reduce){.preview-tabs button,.preview-recall{transition:none}}
 :global([data-motion=off]) .preview-tabs button{transition:none}
 @media(max-width:800px){.preview-page{padding-inline:24px}.preview-caption,.preview-tabs,.preview-footer{padding-inline:24px}}
 </style>

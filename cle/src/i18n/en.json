@@ -3171,5 +3171,13 @@
   "保存后卡片出现在列表；完成评分后会显示下次复习时间。": "The saved card appears in the list. After you rate it, its next review time is shown.",
   "新手 入门 开始 操作 步骤 beginner first steps help 问号 说明": "beginner onboarding start instructions first steps help question mark",
   "按已保存学习时区的下一个本地日历日期到期。之后按回忆记录和目标记忆率动态安排复习，可在单词本查看实际到期日期。": "Due on the next calendar day in your saved study time zone. Later reviews adapt to your recall history and target retention; check the actual due date in the word list.",
-  "导入词书和进度仅本人可见，管理员也不例外；更换词书保留进度。无需 AI 密钥。发音使用浏览器语音；学习中心可准备加密离线词汇包，联网后再合并进度。没有口语评分。": "Imported books and progress are private, including from administrators. Changing books preserves progress. No AI key is needed. Pronunciation uses browser speech; prepare encrypted offline vocabulary packs in the learning center and merge progress when online. Speaking assessment is not provided."
+  "导入词书和进度仅本人可见，管理员也不例外；更换词书保留进度。无需 AI 密钥。发音使用浏览器语音；学习中心可准备加密离线词汇包，联网后再合并进度。没有口语评分。": "Imported books and progress are private, including from administrators. Changing books preserves progress. No AI key is needed. Pronunciation uses browser speech; prepare encrypted offline vocabulary packs in the learning center and merge progress when online. Speaking assessment is not provided.",
+  "取得进步": "Make progress",
+  "注意；留意": "Pay attention; take notice",
+  "付诸实践": "Put into practice",
+  "先回忆含义，再点击揭晓。": "Recall the meaning, then click to reveal.",
+  "收起解释": "Hide explanation",
+  "查看用法": "Reveal usage",
+  "换一个搭配": "Try another phrase",
+  "试一试即可，不计入学习记录。": "A quick preview. Your learning record stays unchanged."
 }

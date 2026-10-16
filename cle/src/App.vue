@@ -4,8 +4,10 @@ import LanguageToggle from '@/components/LanguageToggle.vue'
 import ToastStack from '@/components/ToastStack.vue'
 import { useMotionPreferences } from '@/lib/motion'
 import { useSurfaceRipples } from '@/lib/useSurfaceRipples'
+import { useSurfaceInteraction } from '@/lib/useSurfaceInteraction'
 useMotionPreferences()
 useSurfaceRipples()
+useSurfaceInteraction()
 const route = useRoute()
 </script>
 

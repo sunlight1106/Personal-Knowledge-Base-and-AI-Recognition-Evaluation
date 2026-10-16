@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router'
 import { motionEnabled, motionState } from './motion'
 
 // Only surfaces, never fields, editor text, or arbitrary document links.
-const surfaces = '.button,.home-primary,.home-enter,.home-folio>a,.home-chapter-links a,.workspace-action-grid>a,.workspace-quick a,.workspace-directory>summary,.directory-item>a,.vocab-tabs button,.learning-toolbar nav button,.learning-sidebar>a,.learning-library-links>a,.shelf-actions button,.shelf-categories button,.settings-navigation button,.research-tabs>a,.experiment-tasks button,.mail-list>header button,.people-tabs button,.preview-tabs button,.ai-setting-tabs button,.theme-palette,.guide-step-link,.guide-step-detail>summary,.beginner-walkthrough>details>summary'
+const surfaces = '.button,.home-primary,.home-enter,.home-folio>a,.home-chapter-links a,.workspace-action-grid>a,.workspace-quick a,.workspace-directory>summary,.directory-item>a,.vocab-tabs button,.learning-toolbar nav button,.learning-sidebar>a,.learning-library-links>a,.shelf-actions button,.shelf-categories button,.settings-navigation button,.research-tabs>a,.experiment-tasks button,.mail-list>header button,.people-tabs button,.preview-tabs button,.preview-recall,.preview-practice-actions button,.ai-setting-tabs button,.theme-palette,.guide-step-link,.guide-step-detail>summary,.beginner-walkthrough>details>summary'
 
 export function useSurfaceRipples() {
   const route = useRoute()
