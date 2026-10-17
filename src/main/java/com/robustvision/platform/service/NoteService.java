@@ -88,6 +88,11 @@ public class NoteService {
                 if (!existing.get().getOwner().getId().equals(user.getId())) throw new BusinessException(HttpStatus.CONFLICT, "NOTE_CREATE_CONFLICT", "创建标识已被使用，请重新新建笔记");
                 return toView(existing.get());
             }
+            var storedOwner = noteRepository.storedOwner(request.clientId());
+            if (storedOwner.isPresent()) {
+                if (!storedOwner.get().equals(user.getId())) throw new BusinessException(HttpStatus.CONFLICT,"NOTE_CREATE_CONFLICT","创建标识已被使用，请重新新建笔记");
+                throw new BusinessException(HttpStatus.CONFLICT,"NOTE_CREATE_TRASHED","对应笔记在回收站中，请先恢复，或永久删除后再保存。");
+            }
         }
         NoteEntity note = new NoteEntity(user, request.title().trim(), request.body(), trimToNull(request.tags()), parseStatusOrDefault(request.status()));
         if (request.clientId() != null) note.assignClientId(request.clientId());

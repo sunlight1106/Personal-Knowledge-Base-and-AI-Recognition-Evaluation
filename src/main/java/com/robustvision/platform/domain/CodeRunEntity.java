@@ -16,5 +16,8 @@ public class CodeRunEntity {
     @Column(name="result_json",nullable=false,columnDefinition="MEDIUMTEXT") private String resultJson;
     @Column(nullable=false,length=16) private String status;
     @Column(name="created_at",nullable=false) private Instant createdAt;
+    @Column(nullable=false) private boolean archived;
+    @Column(nullable=false,length=120) private String title="";
+    @Column(nullable=false,length=2000) private String memo="";
     protected CodeRunEntity() {}
 }

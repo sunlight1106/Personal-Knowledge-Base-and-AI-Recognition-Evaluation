@@ -17,4 +17,5 @@ public class CodeLabController {
     @GetMapping("/runs") public ApiResponse<List<Map<String,Object>>> list(){return ApiResponse.ok(service.list());}
     @GetMapping("/runs/{id}") public ApiResponse<Map<String,Object>> get(@PathVariable UUID id){return ApiResponse.ok(service.get(id));}
     @DeleteMapping("/runs/{id}") public ApiResponse<Void> delete(@PathVariable UUID id){service.delete(id);return ApiResponse.ok(null);}
+    @PatchMapping("/runs/{id}/archive") public ApiResponse<Map<String,Object>> archive(@PathVariable UUID id,@Valid @RequestBody CodeLabService.ArchiveInput input){return ApiResponse.ok(service.archive(id,input));}
 }

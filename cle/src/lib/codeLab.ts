@@ -11,8 +11,8 @@ export interface Trace {
   complexity?:{estimate:string;loopDepth:number;basis:string;measured:string}
   analysis?:MathAnalysis
 }
-export interface Run {id:string;source:string;entry:string;arguments:Value[];result:Trace}
-export interface RunSummary {id:string;language:string;entry:string;status:string;createdAt:string}
+export interface Run {id:string;source:string;entry:string;arguments:Value[];result:Trace;title?:string;memo?:string;archived?:boolean;createdAt?:string}
+export interface RunSummary {id:string;language:string;entry:string;status:string;createdAt:string;title?:string;memo?:string;archived?:boolean}
 export const languageNames:Record<Language,string>={auto:'自动识别',c:'C',python:'Python',java:'Java',javascript:'JavaScript'}
 
 // This is an editor hint, never an execution parser or an automatic rewrite.
@@ -106,7 +106,11 @@ export function functionPlot(coefficients:number[],minimum:number,maximum:number
 }
 export function functionSvg(record:CountFormula,minimum:number,maximum:number){
   const plot=functionPlot(record.coefficients,minimum,maximum)
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" width="660" height="300"><rect width="660" height="300" fill="#ffffff"/><g fill="#24483e" font-family="sans-serif" font-size="12"><text x="30" y="25">T(n) = ${escapeXml(record.formula)} · L${record.line}</text><g transform="translate(0,30)"><path d="M52 24V204H608" fill="none" stroke="#b6c9c2"/><path d="${plot.path}" fill="none" stroke="#396c5c" stroke-width="2.5"/><text x="12" y="30">${plot.ceiling}</text><text x="32" y="208">0</text><text x="52" y="225">${plot.min}</text><text x="608" y="225" text-anchor="end">${plot.max}</text><text x="625" y="208">n</text></g><text x="30" y="285">Symbolic count model; not elapsed time or CPU instructions.</text></g></svg>`
+  const formula=record.formula.replace(/\^([234])/g,(_,n:string)=>({'2':'²','3':'³','4':'⁴'}[n]||n))
+  const fraction=formula.match(/^(.+)\/(\d+)$/)
+  const width=Math.max(90,Math.min(530,(fraction?.[1].length||0)*9)),center=96+width/2
+  const heading=fraction?`<text x="30" y="34">T(n) =</text><text x="${center}" y="22" text-anchor="middle">${escapeXml(fraction[1])}</text><path d="M96 29h${width}" stroke="#24483e"/><text x="${center}" y="47" text-anchor="middle">${escapeXml(fraction[2])}</text>`:`<text x="30" y="34">T(n) = ${escapeXml(formula)}</text>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 330" width="660" height="330"><title>${escapeXml(record.formula)} · L${record.line}</title><rect width="660" height="330" fill="#ffffff"/><g fill="#24483e" font-family="Cambria Math,serif" font-size="16">${heading}</g><g fill="#24483e" font-family="sans-serif" font-size="12"><g transform="translate(0,60)"><path d="M52 24V204H608" fill="none" stroke="#b6c9c2"/><path d="${plot.path}" fill="none" stroke="#396c5c" stroke-width="2.5"/><text x="12" y="30">${plot.ceiling}</text><text x="32" y="208">0</text><text x="52" y="225">${plot.min}</text><text x="608" y="225" text-anchor="end">${plot.max}</text><text x="625" y="208">n</text></g><text x="30" y="315">Symbolic count model; not elapsed time or CPU instructions.</text></g></svg>`
 }
 export function traceSvg(trace:Trace,stepIndex:number){
   const step=trace.steps[stepIndex];if(!step)return ''

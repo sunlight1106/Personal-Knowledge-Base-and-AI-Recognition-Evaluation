@@ -27,6 +27,7 @@ class CodeLabIntegrationTest extends GroupCommunicationIntegrationTest {
         for(String token:List.of(memberToken,adminToken)){
             mvc.perform(auth(get("/api/v1/code-lab/runs/{id}",id),token)).andExpect(status().isNotFound());
             mvc.perform(auth(delete("/api/v1/code-lab/runs/{id}",id),token)).andExpect(status().isNotFound());
+            mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",id),token,Map.of("archived",true,"title","Not mine","memo",""))).andExpect(status().isNotFound());
             assertThat(data(mvc.perform(auth(get("/api/v1/code-lab/runs"),token)).andReturn())).isEmpty();
         }
         mvc.perform(auth(get("/api/v1/code-lab/runs/{id}",id),ownerToken)).andExpect(status().isOk());
@@ -38,6 +39,7 @@ class CodeLabIntegrationTest extends GroupCommunicationIntegrationTest {
         grant(owner.getId());success();mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,input())).andExpect(status().isOk());
         db.update("UPDATE user_permission_override SET allowed=false WHERE user_id=? AND permission_code='code-lab:use'",owner.getId());
         mvc.perform(auth(get("/api/v1/code-lab/runs"),ownerToken)).andExpect(status().isForbidden());
+        mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",UUID.randomUUID()),ownerToken,Map.of("archived",true,"title","Denied","memo",""))).andExpect(status().isForbidden());
         verify(runner,times(1)).run(any());
     }
     @Test void badRequestsNeverReachExecutionService()throws Exception{
@@ -67,5 +69,48 @@ class CodeLabIntegrationTest extends GroupCommunicationIntegrationTest {
                 UUID.randomUUID().toString(),report,owner.getId(),admin.getId(),java.sql.Timestamp.from(java.time.Instant.now().plusSeconds(3600)));
         mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,input())).andExpect(status().isForbidden());
         verifyNoInteractions(runner);
+    }
+    @Test void archivesSurviveHistoryTrimmingAndCanBeRenamedAndDeleted()throws Exception{
+        grant(owner.getId());success();
+        String id=data(mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,input())).andReturn()).path("id").asText();
+        var body=Map.of("archived",true,"title","  Triangular loop  ","memo","Boundary n=1");
+        mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",id),ownerToken,body)).andExpect(status().isOk());
+        for(int i=0;i<24;i++)mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,input())).andExpect(status().isOk());
+        var record=data(mvc.perform(auth(get("/api/v1/code-lab/runs/{id}",id),ownerToken)).andExpect(status().isOk()).andReturn());
+        assertThat(record.path("archived").asBoolean()).isTrue();
+        assertThat(record.path("title").asText()).isEqualTo("Triangular loop");
+        assertThat(record.path("memo").asText()).isEqualTo("Boundary n=1");
+        assertThat(record.path("source").asText()).isEqualTo("print(1)");
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM code_run WHERE owner_id=?",Integer.class,owner.getId())).isEqualTo(21);
+        mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",id),ownerToken,Map.of("archived",true,"title","Renamed","memo","Updated"))).andExpect(status().isOk());
+        assertThat(data(mvc.perform(auth(get("/api/v1/code-lab/runs"),ownerToken)).andReturn())).hasSize(21);
+        mvc.perform(auth(delete("/api/v1/code-lab/runs/{id}",id),ownerToken)).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/code-lab/runs/{id}",id),ownerToken)).andExpect(status().isNotFound());
+    }
+    @Test void archiveQuotaAndMetadataValidationAreEnforced()throws Exception{
+        grant(owner.getId());success();
+        String id=data(mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,input())).andReturn()).path("id").asText();
+        for(String title:List.of(" ","x".repeat(121)))mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",id),ownerToken,Map.of("archived",true,"title",title,"memo",""))).andExpect(status().isBadRequest());
+        mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",id),ownerToken,Map.of("archived",true,"title","ok","memo","x".repeat(2001)))).andExpect(status().isBadRequest());
+        String existing=UUID.randomUUID().toString();
+        for(int i=0;i<50;i++)db.update("INSERT INTO code_run(id,owner_id,language,entry_name,source,arguments_json,result_json,status,created_at,archived,title,memo) SELECT ?,owner_id,language,entry_name,source,arguments_json,result_json,status,created_at,true,'archive','' FROM code_run WHERE id=?",i==0?existing:UUID.randomUUID().toString(),id);
+        mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",id),ownerToken,Map.of("archived",true,"title","over limit","memo",""))).andExpect(status().isConflict());
+        mvc.perform(json(patch("/api/v1/code-lab/runs/{id}/archive",existing),ownerToken,Map.of("archived",true,"title","rename at capacity","memo",""))).andExpect(status().isOk());
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM code_run WHERE owner_id=? AND archived=true",Integer.class,owner.getId())).isEqualTo(50);
+    }
+    @Test void noteSnapshotsRequireNotePermissionAndDeduplicateRetries()throws Exception{
+        grant(owner.getId());
+        String clientId=UUID.randomUUID().toString();
+        String body="# Code note\n\n```python\nprint(1)\n```\n\n<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" aria-label=\"n^2\"><msup><mi>n</mi><mn>2</mn></msup></math>";
+        var input=Map.of("clientId",clientId,"title","Code snapshot","body",body,"library","计算机学习","contentFormat","MARKDOWN","status","DRAFT");
+        mvc.perform(json(post("/api/v1/notes"),ownerToken,input)).andExpect(status().isForbidden());
+        db.update("INSERT INTO user_permission_override(user_id,permission_code,allowed) VALUES (?,'note:write',true)",owner.getId());
+        for(int i=0;i<2;i++)assertThat(data(mvc.perform(json(post("/api/v1/notes"),ownerToken,input)).andExpect(status().isOk()).andReturn()).path("id").asText()).isEqualTo(clientId);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM note WHERE id=?",Integer.class,clientId)).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM note_share WHERE note_id=?",Integer.class,clientId)).isZero();
+        mvc.perform(auth(get("/api/v1/notes/{id}",clientId),adminToken)).andExpect(status().isNotFound());
+        mvc.perform(auth(delete("/api/v1/notes/{id}",clientId),ownerToken)).andExpect(status().isOk());
+        mvc.perform(json(post("/api/v1/notes"),ownerToken,input)).andExpect(status().isConflict()).andExpect(jsonPath("$.error.code").value("NOTE_CREATE_TRASHED"));
+        assertThat(db.queryForObject("SELECT body FROM note WHERE id=?",String.class,clientId)).isEqualTo(body);
     }
 }

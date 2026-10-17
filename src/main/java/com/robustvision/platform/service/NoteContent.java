@@ -13,7 +13,9 @@ final class NoteContent {
     static String safeHtml(String source) {
         return Jsoup.clean(source == null ? "" : source, new Safelist()
                 .addTags("p", "br", "h1", "h2", "h3", "h4", "h5", "h6", "strong", "b", "em", "i",
-                        "ul", "ol", "li", "blockquote", "pre", "code", "hr", "table", "thead", "tbody", "tr", "th", "td", "a", "div", "span")
+                        "ul", "ol", "li", "blockquote", "pre", "code", "hr", "table", "thead", "tbody", "tr", "th", "td", "a", "div", "span",
+                        "math", "mrow", "mi", "mn", "mo", "mfrac", "msup", "munderover")
+                .addAttributes("math", "display", "xmlns", "aria-label")
                 .addAttributes("a", "href").addProtocols("a", "href", "https", "http", "mailto"));
     }
 
@@ -86,6 +88,7 @@ final class NoteContent {
     }
 
     private static String inline(String source) {
+        if (source.strip().startsWith("<math ") && source.strip().endsWith("</math>")) return safeHtml(source);
         StringBuilder html = new StringBuilder();
         for (var run : MarkdownDocument.parseInline(source)) {
             String value = escape(run.text());

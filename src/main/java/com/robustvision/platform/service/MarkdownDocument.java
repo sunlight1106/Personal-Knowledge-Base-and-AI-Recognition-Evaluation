@@ -37,10 +37,13 @@ public final class MarkdownDocument {
             // 代码块
             if (trimmed.startsWith("```")) {
                 flushParagraph(blocks, paragraph);
-                String lang = trimmed.length() > 3 ? trimmed.substring(3).trim() : "";
+                int fenceLength = 3;
+                while (fenceLength < trimmed.length() && trimmed.charAt(fenceLength) == '`') fenceLength++;
+                String lang = trimmed.substring(fenceLength).trim();
                 List<String> code = new ArrayList<>();
                 i++;
-                while (i < rawLines.length && !rawLines[i].trim().startsWith("```")) {
+                while (i < rawLines.length && !(rawLines[i].trim().length() >= fenceLength
+                        && rawLines[i].trim().chars().allMatch(c -> c == '`'))) {
                     code.add(rawLines[i]);
                     i++;
                 }
@@ -158,6 +161,11 @@ public final class MarkdownDocument {
      * 链接 [text](url) 只保留 text，导出文档中不承载可点击跳转。
      */
     public static List<InlineRun> parseInline(String text) {
+        if (text != null && text.strip().startsWith("<math ") && text.strip().endsWith("</math>")) {
+            var formula = org.jsoup.Jsoup.parseBodyFragment(text).selectFirst("math");
+            if (formula != null) text = (formula.hasAttr("aria-label") ? formula.attr("aria-label") : formula.text())
+                    .replace("^2", "²").replace("^3", "³").replace("^4", "⁴");
+        }
         List<InlineRun> runs = new ArrayList<>();
         if (text == null || text.isEmpty()) return runs;
 

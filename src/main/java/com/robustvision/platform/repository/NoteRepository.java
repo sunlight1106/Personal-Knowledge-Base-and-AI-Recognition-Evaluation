@@ -11,6 +11,8 @@ import java.util.Collection;
 import java.util.Optional;
 
 public interface NoteRepository extends JpaRepository<NoteEntity, String> {
+    @Query(value="SELECT owner_id FROM note WHERE id=:id",nativeQuery=true)
+    Optional<Long> storedOwner(@Param("id") String id);
 
     List<NoteEntity> findByOwnerIdOrderByUpdatedAtDesc(Long ownerId);
 

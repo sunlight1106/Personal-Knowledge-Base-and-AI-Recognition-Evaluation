@@ -22,6 +22,8 @@ public class CodeLabService {
                         @NotNull @Pattern(regexp="auto|c|python|java|javascript") String language,
                         @NotNull @Pattern(regexp="(?:[A-Za-z_]\\w{0,59})?") String entry,
                         @NotNull JsonNode arguments) {}
+    public record ArchiveInput(@NotNull Boolean archived, @NotBlank @Size(max=120) String title,
+                               @NotNull @Size(max=2000) String memo) {}
     private final CurrentUserService current;
     private final CodeLabRunner runner;
     private final JdbcTemplate db;
@@ -49,24 +51,43 @@ public class CodeLabService {
                 // Serialize history trimming with account deletion and concurrent API instances.
                 var users=db.queryForList("SELECT status FROM app_user WHERE id=? FOR UPDATE",String.class,owner);
                 if(users.isEmpty()||!"ACTIVE".equals(users.get(0)))throw new BusinessException(HttpStatus.FORBIDDEN,"ACCOUNT_INACTIVE","账号当前不可用。");
-                db.update("INSERT INTO code_run(id,owner_id,language,entry_name,source,arguments_json,result_json,status,created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                db.update("INSERT INTO code_run(id,owner_id,language,entry_name,source,arguments_json,result_json,status,created_at,archived,title,memo) VALUES (?,?,?,?,?,?,?,?,?,false,'','')",
                         id,owner,language,input.entry(),input.source(),input.arguments().toString(),encoded,status,Timestamp.from(Instant.now()));
-                var stale=db.queryForList("SELECT id FROM code_run WHERE owner_id=? ORDER BY created_at DESC,id DESC LIMIT 100 OFFSET 20",String.class,owner);
-                for(String old:stale)db.update("DELETE FROM code_run WHERE id=? AND owner_id=?",old,owner);
+                trim(owner);
             });
-            return Map.of("id",id,"result",result,"source",input.source(),"arguments",input.arguments(),"entry",input.entry());
+            return get(UUID.fromString(id));
         }finally{slots.release();active.remove(owner);}
     }
     public List<Map<String,Object>> list(){
-        return db.query("SELECT id,language,entry_name,status,created_at FROM code_run WHERE owner_id=? ORDER BY created_at DESC,id DESC LIMIT 20",
-                (r,n)->Map.of("id",r.getString(1),"language",r.getString(2),"entry",r.getString(3),"status",r.getString(4),"createdAt",r.getTimestamp(5).toInstant()),current.requireCurrent().getId());
+        return db.query("SELECT id,language,entry_name,status,created_at,archived,title,memo FROM code_run WHERE owner_id=? ORDER BY created_at DESC,id DESC LIMIT 70",
+                (r,n)->Map.of("id",r.getString(1),"language",r.getString(2),"entry",r.getString(3),"status",r.getString(4),"createdAt",r.getTimestamp(5).toInstant(),"archived",r.getBoolean(6),"title",r.getString(7),"memo",r.getString(8)),current.requireCurrent().getId());
     }
     public Map<String,Object> get(UUID id){
-        var rows=db.query("SELECT source,entry_name,arguments_json,result_json FROM code_run WHERE id=? AND owner_id=?",(r,n)->
-                Map.<String,Object>of("id",id.toString(),"source",r.getString(1),"entry",r.getString(2),"arguments",read(r.getString(3)),"result",read(r.getString(4))),id.toString(),current.requireCurrent().getId());
+        var rows=db.query("SELECT source,entry_name,arguments_json,result_json,archived,title,memo,created_at FROM code_run WHERE id=? AND owner_id=?",(r,n)->
+                Map.<String,Object>of("id",id.toString(),"source",r.getString(1),"entry",r.getString(2),"arguments",read(r.getString(3)),"result",read(r.getString(4)),"archived",r.getBoolean(5),"title",r.getString(6),"memo",r.getString(7),"createdAt",r.getTimestamp(8).toInstant()),id.toString(),current.requireCurrent().getId());
         if(rows.isEmpty())throw missing();return rows.get(0);
     }
     public void delete(UUID id){if(db.update("DELETE FROM code_run WHERE id=? AND owner_id=?",id.toString(),current.requireCurrent().getId())==0)throw missing();}
+    public Map<String,Object> archive(UUID id,ArchiveInput input){
+        long owner=current.requireCurrent().getId();
+        return transaction.execute(tx->{
+            var users=db.queryForList("SELECT status FROM app_user WHERE id=? FOR UPDATE",String.class,owner);
+            if(users.isEmpty()||!"ACTIVE".equals(users.get(0)))throw new BusinessException(HttpStatus.FORBIDDEN,"ACCOUNT_INACTIVE","账号当前不可用。");
+            var owned=db.queryForList("SELECT archived FROM code_run WHERE id=? AND owner_id=?",Boolean.class,id.toString(),owner);
+            if(owned.isEmpty())throw missing();
+            if(input.archived()&&!owned.get(0)&&db.queryForObject("SELECT COUNT(*) FROM code_run WHERE owner_id=? AND archived=true",Integer.class,owner)>=50)
+                throw new BusinessException(HttpStatus.CONFLICT,"CODE_ARCHIVE_LIMIT","存档已达 50 条，请先导出并删除不再需要的存档。");
+            db.update("UPDATE code_run SET archived=?,title=?,memo=? WHERE id=? AND owner_id=?",input.archived(),input.title().trim(),input.memo().trim(),id.toString(),owner);
+            var result=get(id);
+            // Moving an old archive back to recent history may immediately age it out.
+            trim(owner);
+            return result;
+        });
+    }
+    private void trim(long owner){
+        var stale=db.queryForList("SELECT id FROM code_run WHERE owner_id=? AND archived=false ORDER BY created_at DESC,id DESC LIMIT 100 OFFSET 20",String.class,owner);
+        for(String old:stale)db.update("DELETE FROM code_run WHERE id=? AND owner_id=? AND archived=false",old,owner);
+    }
     private JsonNode read(String value){try{return mapper.readTree(value);}catch(java.io.IOException e){throw new IllegalStateException("Invalid code trace",e);}}
     private BusinessException busy(){return new BusinessException(HttpStatus.TOO_MANY_REQUESTS,"CODE_LAB_BUSY","已有代码正在执行，请稍后再试。");}
     private BusinessException missing(){return new BusinessException(HttpStatus.NOT_FOUND,"CODE_RUN_NOT_FOUND","执行记录不存在或已删除。");}

@@ -9,7 +9,7 @@ const analysis=ref({version:1,status:'derived',size:{name:'n',value:8,symbol:'n'
 let app
 try{
  app=createApp({render:()=>h(CodeLabAnalysis,{analysis:analysis.value})});app.mount(fixture);await nextTick()
- assert(fixture.textContent.includes('n(n − 1)/2')&&fixture.textContent.includes('Θ(n²)'),'Triangular formula and derived order are visible')
+ assert(fixture.querySelector('.math-formula mfrac')&&fixture.querySelector('.math-order msup')&&fixture.querySelector('.math-sum munderover'),'Triangular formula and derived order are visible')
  assert(fixture.querySelector('output').textContent.includes('28'),'Current size n=8 gives 28 iterations')
  assert(fixture.textContent.includes('保持常量不变')&&fixture.textContent.includes('始终不成立'),'Fixed-input and unreachable-branch explanations are present')
  const range=fixture.querySelector('input[type=range]');range.value='16';range.dispatchEvent(new Event('input',{bubbles:true}));await nextTick()
@@ -23,7 +23,7 @@ try{
  assert(!!fixture.querySelector('.math-tooltip'),'Chart tooltip appears after one second')
  chart.dispatchEvent(new Event('pointerleave'));await nextTick();assert(!fixture.querySelector('.math-tooltip'),'Leaving the chart clears its tooltip')
  fixture.querySelector('tbody button').click();await nextTick()
- assert(fixture.querySelector('.math-formula').textContent.includes('n − 1'),'Formula rows select the corresponding curve')
+ assert(fixture.querySelector('.math-formula math').getAttribute('aria-label').includes('n − 1'),'Formula rows select the corresponding curve')
  analysis.value={...analysis.value,partial:true,records:analysis.value.records.map(r=>({...r,verification:'partial'}))};await nextTick()
  assert(fixture.textContent.includes('本次执行未完成'),'Partial measured counts are labeled separately from full formula counts')
  analysis.value={version:1,status:'unavailable',reason:'EARLY_EXIT',records:[]};await nextTick()
