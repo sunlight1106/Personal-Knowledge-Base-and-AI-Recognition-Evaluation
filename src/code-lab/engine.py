@@ -103,6 +103,7 @@ class Engine:
         self.root, self.offset = parse(self.source, self.language)
         self.steps, self.frames, self.functions = [], [], {}
         self.counts, self.loops, self.calls = collections.Counter(), collections.Counter(), collections.Counter()
+        self.loop_visits, self.event_counts = collections.Counter(), collections.Counter()
         self.ops = self.trace_bytes = 0
         self.output, self.deadline = '', time.monotonic() + 3
         self.last = self.root
@@ -162,6 +163,7 @@ class Engine:
         self.trace_bytes+=size
         self.steps.append(step)
         self.counts[str(self.line(n))] += 1
+        self.event_counts[(n.start_byte,event)] += 1
 
     def validate(self):
         nodes=list(walk(self.root))
@@ -501,7 +503,7 @@ class Engine:
                 values=self.expr(field(n,'right'))
                 if not isinstance(values,(list,str)):raise Fault('for 仅支持列表、字符串与 range。',n)
                 for value in list(values):
-                    self.assign(field(n,'left'),value);self.loops[str(self.line(n))]+=1;self.emit(n,'loop',True)
+                    self.assign(field(n,'left'),value);self.loops[str(self.line(n))]+=1;self.loop_visits[n.start_byte]+=1;self.emit(n,'loop',True)
                     try:self.stmt(field(n,'body'))
                     except Continue:continue
                     except Break:break
@@ -519,6 +521,7 @@ class Engine:
                     self.tick(n);ok=True if condition is None else bool(self.expr(condition));self.emit(n,'condition',ok)
                     if not ok:break
                     self.loops[str(self.line(n))]+=1
+                    self.loop_visits[n.start_byte]+=1
                     try:self.stmt(field(n,'body'))
                     except Continue:pass
                     except Break:break
@@ -534,36 +537,13 @@ class Engine:
         if t in ('pass_statement','empty_statement'):self.emit(n);return
         raise Fault('暂不支持语句：'+t,n)
 
-    def complexity(self):
-        # Conservative structural bound. Calls, recursion, while and changing
-        # loop bounds invalidate a general estimate; measured traces are separate.
+    def complexity(self, analysis):
         roots=[self.functions[self.entry]] if self.entry in self.functions else [self.root]
-        nodes=[n for root in roots for n in walk(root)]
-        depth=0;unknown=False;variable=False
-        for n in nodes:
-            if n.type=='array_creation_expression' or n.type in ('binary_operator','binary_expression') and self.operator(n)=='**':unknown=True
-            if n.type in ('while_statement','call','call_expression','method_invocation'):
-                name=text(field(n,'function','name'))
-                if n.type=='while_statement' or name in self.functions:unknown=True
-            if n.type=='for_statement':
-                depth=max(depth,1+sum(p.type=='for_statement' for p in self.parents(n)))
-                header=text(field(n,'right','condition'))
-                variable |= bool(re.search(r'\b(?:n|m)\b|len\(|\.length',header))
-                # Even canonical looking loops may modify their bound in body.
-                body=text(field(n,'body'))
-                if re.search(r'\b(?:n|m)\s*(?:[+*/-]?=|\+\+|--)|\.(?:append|push|pop)\(',body):unknown=True
-                if self.language!='python' and not re.fullmatch(r'\s*\w+\+\+\s*|\s*\+\+\w+\s*',text(field(n,'update','increment'))):unknown=True
-                if self.language=='python' and not re.fullmatch(r'range\((?:\w+|len\(\w+\)|\d+)\)',header):unknown=True
-                if self.language!='python' and not re.fullmatch(r'\w+\s*<\s*(?:n|m|\w+\.length|\d+)',header):unknown=True
-                if self.language!='python':
-                    counter=re.match(r'\s*(\w+)\s*<',header)
-                    init=text(field(n,'initializer','init'))
-                    if counter:
-                        key=re.escape(counter[1])
-                        if not re.fullmatch(r'(?:int|let)\s+'+key+r'\s*=\s*0\s*;?',init):unknown=True
-                        if re.search(r'\b'+key+r'\s*(?:[+*/-]?=(?!=)|\+\+|--)|(?:\+\+|--)\s*\b'+key+r'\b',body):unknown=True
-        estimate='unknown' if unknown else ('O(n)' if depth==1 else f'O(n^{depth})') if variable and depth else 'O(1)'
-        return {'estimate':estimate,'loopDepth':depth,'basis':'仅按简单 for 循环结构估算上界，假设边界不变、单步操作为常数；n 表示循环上界，多变量按最大上界计算。函数调用、while 和无法证明的循环返回 unknown。空间复杂度未静态推断。','measured':'steps 是记录的语句与控制事件；operations 是解释器表达式求值次数，不等于 CPU 指令。'}
+        depth=max((1+sum(p.type=='for_statement' for p in self.parents(n))
+                   for root in roots for n in walk(root) if n.type=='for_statement'),default=0)
+        return {'estimate':analysis.get('upperBound','unknown'),'loopDepth':depth,
+                'basis':'从固定边界的单规模 for / range 循环逐层求和；使用单位标量成本模型。详细公式、适用范围与核对结果见 analysis。',
+                'measured':'steps 是记录的语句与控制事件；operations 是解释器表达式求值次数，不等于 CPU 指令。'}
 
     def run(self):
         result=None;error=None;status='completed'
@@ -583,10 +563,13 @@ class Engine:
             error={'code':'RUNTIME','message':'运算失败：'+type(e).__name__+'。请检查类型、除数和下标。','line':self.line(self.last)};status='error'
         except (Return,Break,Continue):
             error={'code':'SYNTAX','message':'return / break / continue 所在位置不正确。','line':self.line(self.last)};status='error'
+        from analysis import analyze
+        analysis=analyze(self,status)
+        complexity=self.complexity(analysis)
         return {'language':self.language,'entry':self.entry,'status':status,'error':error,'steps':self.steps,
                 'output':self.output,'result':self.snapshot(result),'lineCounts':dict(self.counts),
                 'loopCounts':dict(self.loops),'callCounts':dict(self.calls),'operations':self.ops,
-                'complexity':self.complexity(),'limits':LIMITS,'engine':'bounded-interpreter-v1'}
+                'complexity':complexity,'analysis':analysis,'limits':LIMITS,'engine':'bounded-interpreter-v1'}
 
 
 def execute(request):

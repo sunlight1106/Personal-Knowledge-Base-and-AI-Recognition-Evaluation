@@ -44,7 +44,7 @@
 | | 日常操作 | 详细说明 |
 | :--- | :--- | :--- |
 | **笔记与知识库** | Markdown / HTML 边写边预览，分类整理、历史版本与回收站；导出 MD、PDF、Word、HTML、TXT | [笔记与资料整理](docs/LEARNING_WORKSPACE.md) |
-| **代码可视化** | C / Python / Java / JavaScript 算法子集，变量与数组图、逐步回放、调用栈、执行计数与私人历史 | [运行一段代码](docs/CODE_LAB.md) |
+| **代码可视化** | C / Python / Java / JavaScript 算法子集；逐步回放、变量图、循环次数公式、增长曲线与私人历史 | [运行与数学分析](docs/CODE_LAB.md) |
 | **背单词** | 场景、搭配和拼写练习，美音自动听读；跨词书接续进度，熟词 Skip，导入与备份 | [词书与学习](docs/VOCABULARY.md) |
 | **AI 与图片理解** | 上传图片提问，解释代码，辅助笔记与词汇学习；配置自己的模型和共享记忆 | [个人 AI](docs/PERSONAL_AI.md) |
 | **学习资料** | 导入 PDF / Word，本地识别扫描页、对照校对、划词听读与摘录；复习卡、表格、看板与月历 | [学习中心](docs/LEARNING_WORKSPACE.md) |

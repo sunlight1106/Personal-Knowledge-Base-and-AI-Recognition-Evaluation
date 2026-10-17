@@ -2,11 +2,14 @@ export type Language = 'auto' | 'python' | 'c' | 'java' | 'javascript'
 export type Value = null | string | number | boolean | Value[]
 export interface Frame {name:string;variables:Record<string,Value>}
 export interface Step {line:number;event:string;frames:Frame[];outputLength:number;detail?:Value}
+export interface CountFormula {id:string;line:number;kind:'loop'|'condition'|'update'|'branch';summation:string;formula:string;coefficients:number[];measured:number;predicted:number;degree:number;exampleTerms?:number[];verification:'matched'|'partial'}
+export interface MathAnalysis {version:number;status:'derived'|'unavailable';reason?:string;size?:{name:string;value:number;symbol:string;origin:'parameter'|'literal'|'derived'|'length'}|null;minimum?:number;maximum?:number;records:CountFormula[];notes?:{line:number;kind:'always-false'|'data-dependent'}[];complexity?:string;degree?:number;partial?:boolean}
 export interface Trace {
   language?:Language;entry?:string;status:'completed'|'error'|'limited';steps:Step[];output?:string;result?:Value;
   error?:{code:string;message:string;line:number}|null;operations?:number;
   lineCounts?:Record<string,number>;loopCounts?:Record<string,number>;callCounts?:Record<string,number>;
   complexity?:{estimate:string;loopDepth:number;basis:string;measured:string}
+  analysis?:MathAnalysis
 }
 export interface Run {id:string;source:string;entry:string;arguments:Value[];result:Trace}
 export interface RunSummary {id:string;language:string;entry:string;status:string;createdAt:string}
@@ -89,6 +92,22 @@ export function occurrences(trace:Trace,line:number){return trace.steps.flatMap(
 export function valueText(value:Value|undefined){return value===undefined?'—':JSON.stringify(value)}
 export function arrayScale(values:Value[]){return Math.max(1,...values.map(v=>typeof v==='number'?Math.abs(v):0))}
 export function escapeXml(value:unknown){return String(value).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]!))}
+export function formulaValue(coefficients:number[],n:number){
+  if(!Number.isFinite(n)||n<0||n>1024||coefficients.length>5||coefficients.some(c=>!Number.isFinite(c)))return 0
+  const value=coefficients.reduceRight((value,c)=>value*n+c,0)
+  return Number.isFinite(value)?Math.max(0,Math.round(value)):0
+}
+export function functionPlot(coefficients:number[],minimum:number,maximum:number){
+  const min=Math.max(0,Math.min(511,Math.floor(minimum)||0)),max=Math.max(min+1,Math.min(512,Math.floor(maximum)||16))
+  const values=Array.from({length:max-min+1},(_,i)=>({n:min+i,value:formulaValue(coefficients,min+i)}))
+  const peak=Math.max(1,...values.map(p=>p.value)),unit=10**Math.floor(Math.log10(peak)),ceiling=Math.ceil(peak/unit)*unit
+  const x=(n:number)=>52+(n-min)/(max-min)*556,y=(value:number)=>204-value/ceiling*180
+  return {min,max,ceiling,x,y,values,path:values.map((p,i)=>`${i?'L':'M'}${x(p.n).toFixed(2)},${y(p.value).toFixed(2)}`).join(' ')}
+}
+export function functionSvg(record:CountFormula,minimum:number,maximum:number){
+  const plot=functionPlot(record.coefficients,minimum,maximum)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" width="660" height="300"><rect width="660" height="300" fill="#ffffff"/><g fill="#24483e" font-family="sans-serif" font-size="12"><text x="30" y="25">T(n) = ${escapeXml(record.formula)} · L${record.line}</text><g transform="translate(0,30)"><path d="M52 24V204H608" fill="none" stroke="#b6c9c2"/><path d="${plot.path}" fill="none" stroke="#396c5c" stroke-width="2.5"/><text x="12" y="30">${plot.ceiling}</text><text x="32" y="208">0</text><text x="52" y="225">${plot.min}</text><text x="608" y="225" text-anchor="end">${plot.max}</text><text x="625" y="208">n</text></g><text x="30" y="285">Symbolic count model; not elapsed time or CPU instructions.</text></g></svg>`
+}
 export function traceSvg(trace:Trace,stepIndex:number){
   const step=trace.steps[stepIndex];if(!step)return ''
   let y=75
