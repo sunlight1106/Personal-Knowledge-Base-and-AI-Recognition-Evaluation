@@ -1,5 +1,7 @@
 $ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+$launcherBytes=[IO.File]::ReadAllBytes((Join-Path $PSScriptRoot 'start-release.ps1'))
+if($launcherBytes.Length -lt 3 -or $launcherBytes[0] -ne 0xEF -or $launcherBytes[1] -ne 0xBB -or $launcherBytes[2] -ne 0xBF) { throw 'Windows PowerShell 5.1 needs a UTF-8 BOM for localized launcher messages.' }
 $fixture=Join-Path $workspace ('.runtime\desktop-manifest-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path (Join-Path $fixture 'scripts\desktop') | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'start-release.ps1') -Destination (Join-Path $fixture 'scripts\desktop\start-release.ps1')
@@ -16,7 +18,7 @@ function Check-Manifest([bool]$valid,[string]$label) {
     [void]$probe.Start(); $stdout=$probe.StandardOutput.ReadToEndAsync(); $stderr=$probe.StandardError.ReadToEndAsync()
     if(-not $probe.WaitForExit(15000)) { $probe.Kill(); throw 'Manifest validation timed out.' }
     $code=$probe.ExitCode; $probe.Dispose()
-    if(($code -eq 0) -ne $valid) { throw $label }
+    if(($code -eq 0) -ne $valid) { throw ($label+': '+$stdout.Result+' '+$stderr.Result) }
     Write-Host ('PASS: '+$label)
 }
 try {

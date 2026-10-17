@@ -1,4 +1,4 @@
-param([switch]$CheckOnly)
+﻿param([switch]$CheckOnly)
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
