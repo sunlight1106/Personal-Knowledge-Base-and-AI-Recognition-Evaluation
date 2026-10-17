@@ -11,11 +11,13 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 [assembly: System.Reflection.AssemblyVersion("0.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.1.0.__REVISION__")]
 [assembly: System.Reflection.AssemblyProduct("Personal Knowledge Base & AI Evaluation")]
 // Framework 4.8 is included in supported Windows 10/11 systems. No Python/Node/JDK required.
 class Launcher : Form {
     const string Version = "0.1";
     const string RuntimeHash = "__RUNTIME_SHA256__";
+    const string RuntimeFile = "__RUNTIME_FILE__";
     const string BaseUrl = "https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.1/";
     readonly Label status = new Label();
     readonly TextBox log = new TextBox();
@@ -29,7 +31,7 @@ class Launcher : Form {
     Launcher(bool smokeTest=false) {
         smoke=smokeTest;
         if(smoke) { WindowState=FormWindowState.Minimized; ShowInTaskbar=false; }
-        Text="个人知识库 · 0.1 测试版"; ClientSize=new Size(660,430); MinimumSize=new Size(620,440); StartPosition=FormStartPosition.CenterScreen; BackColor=Color.FromArgb(247,248,244); Font=new Font("Microsoft YaHei UI",10); AutoScaleMode=AutoScaleMode.Dpi;
+        Text="个人知识库 · 0.1 测试版 · 修订 __REVISION__"; ClientSize=new Size(660,430); MinimumSize=new Size(620,440); StartPosition=FormStartPosition.CenterScreen; BackColor=Color.FromArgb(247,248,244); Font=new Font("Microsoft YaHei UI",10); AutoScaleMode=AutoScaleMode.Dpi;
         var title=new Label {Text="留下一点思考，开始今天的学习。",Font=new Font("Microsoft YaHei UI",18),Location=new Point(30,28),AutoSize=true}; Controls.Add(title);
         status.SetBounds(32,82,590,50); status.Text="正在准备…"; Controls.Add(status);
         log.SetBounds(32,143,594,198); log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical; log.BorderStyle=BorderStyle.FixedSingle; log.BackColor=Color.White; log.Anchor=AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top|AnchorStyles.Bottom; Controls.Add(log);
@@ -42,11 +44,11 @@ class Launcher : Form {
         string marker=Path.Combine(root,"runtime.verified");
         if(File.Exists(marker) && File.ReadAllText(marker)==RuntimeHash && File.Exists(Path.Combine(root,"release.json")) && File.Exists(Path.Combine(root,"scripts","desktop","start-release.ps1"))) return;
         Directory.CreateDirectory(root);
-        string archive=Path.Combine(root,"runtime-0.1.zip"), supplied=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"runtime-0.1.zip");
-        if(File.Exists(supplied)) { Report("校验安装包…"); File.Copy(supplied,archive,true); }
+        string archive=Path.Combine(root,RuntimeFile), supplied=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,RuntimeFile);
+        if(File.Exists(supplied)) { Report("校验安装包…"); if(!String.Equals(Path.GetFullPath(supplied),Path.GetFullPath(archive),StringComparison.OrdinalIgnoreCase)) File.Copy(supplied,archive,true); }
         else {
             Report("首次安装：正在下载程序文件…");
-            using(var client=new WebClient()) { client.Headers.Add("User-Agent","PKB-Desktop/0.1"); client.DownloadProgressChanged+=(s,e)=>{if(e.ProgressPercentage%10==0) Report("下载程序文件 "+e.ProgressPercentage+"%");}; await client.DownloadFileTaskAsync(new Uri(BaseUrl+"runtime-0.1.zip"),archive+".partial"); }
+            using(var client=new WebClient()) { client.Headers.Add("User-Agent","PKB-Desktop/0.1"); client.DownloadProgressChanged+=(s,e)=>{if(e.ProgressPercentage%10==0) Report("下载程序文件 "+e.ProgressPercentage+"%");}; await client.DownloadFileTaskAsync(new Uri(BaseUrl+RuntimeFile),archive+".partial"); }
             if(File.Exists(archive)) File.Delete(archive); File.Move(archive+".partial",archive);
         }
         if(!String.Equals(await Task.Run(()=>Hash(archive)),RuntimeHash,StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("安装包校验失败。请从本项目 v0.1 发布页重新下载。");

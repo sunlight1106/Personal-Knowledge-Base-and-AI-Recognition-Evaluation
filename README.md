@@ -16,7 +16,7 @@
 
 把笔记、词汇和学习资料放在同一个空间里。需要时，接入自己的 AI 分析图片、解释代码、整理思路；也可以与其他用户聊天、建群和分享资料。
 
-**Windows 直接使用：** 在 [0.1 发布页](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.1) 下载 `PKB-AI-0.1-Windows-x64.zip`，解压后双击 **0.1.exe**。准备好 Docker Desktop 后，启动器会校验镜像、启动服务并打开网页，不需要安装开发环境。首次需要联网下载，日常启动复用现有容器。[安装、登录和故障处理](docs/TEST_RELEASE_0.1.md)
+**Windows 直接使用：** [下载 0.1.exe](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.1/0.1.exe)，或在 [0.1 发布页](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.1) 下载 `PKB-AI-0.1-Windows-x64.zip`，解压后双击 **0.1.exe**。当前为修订 2，包含学习中心断线恢复修复；已安装用户运行新启动器即可更新。准备好 Docker Desktop 后，它会校验程序、启动服务并打开网页，不需要安装开发环境。首次需要联网下载，日常启动复用现有容器。[安装、登录和故障处理](docs/TEST_RELEASE_0.1.md)
 
 群组支持成员管理、归档恢复、转让和解散；笔记删除后可以在回收站恢复，个人知识主题和卡片也可以继续编辑。具体入口见 [日常使用](docs/USAGE.md) 和 [群组管理](docs/GROUPS.md)。
 

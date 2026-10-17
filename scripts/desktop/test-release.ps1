@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $launcherBytes=[IO.File]::ReadAllBytes((Join-Path $PSScriptRoot 'start-release.ps1'))
 if($launcherBytes.Length -lt 3 -or $launcherBytes[0] -ne 0xEF -or $launcherBytes[1] -ne 0xBB -or $launcherBytes[2] -ne 0xBF) { throw 'Windows PowerShell 5.1 needs a UTF-8 BOM for localized launcher messages.' }
@@ -23,6 +23,9 @@ function Check-Manifest([bool]$valid,[string]$label) {
 }
 try {
     Check-Manifest $true 'Complete pinned manifest is accepted without Docker or network'
+    $manifest.revision=2;$manifest.images[1].file='frontend-r2.tar.gz';Check-Manifest $true 'Revision-specific companions are accepted'
+    $manifest.images[1].file='frontend-r3.tar.gz';Check-Manifest $false 'A companion from a different revision is rejected'
+    $manifest.images[1].file='frontend.tar.gz';$manifest.Remove('revision')
     $manifest.version='other';Check-Manifest $false 'Unexpected version is rejected';$manifest.version='0.1'
     $manifest.images[0].file='../outside.tar.gz';Check-Manifest $false 'Path traversal is rejected';$manifest.images[0].file='backend.tar.gz'
     $manifest.images[0].sha256='bad';Check-Manifest $false 'Invalid checksums are rejected';$manifest.images[0].sha256='a'*64

@@ -5,9 +5,11 @@ $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 Set-Location -LiteralPath $root
 $manifest=Get-Content -LiteralPath (Join-Path $root 'release.json') -Raw | ConvertFrom-Json
 if ($manifest.version -ne '0.1' -or $manifest.images.Count -ne 5) { throw 'Invalid release manifest.' }
+$revision=if($null -eq $manifest.revision){1}else{[int]$manifest.revision}
+if($revision -lt 1 -or $revision -gt 999){throw 'Invalid release revision.'}
 $expected=@('backend','frontend','code-lab','training','minio')
 foreach($image in $manifest.images) {
-    if($image.name -notin $expected -or $image.sha256 -notmatch '^[a-f0-9]{64}$' -or $image.id -notmatch '^sha256:[a-f0-9]{64}$' -or $image.file -ne ($image.name+'.tar.gz')) { throw 'Invalid image manifest.' }
+    if($image.name -notin $expected -or $image.sha256 -notmatch '^[a-f0-9]{64}$' -or $image.id -notmatch '^sha256:[a-f0-9]{64}$' -or ($image.file -ne ($image.name+'.tar.gz') -and $image.file -ne ($image.name+'-r'+$revision+'.tar.gz'))) { throw 'Invalid image manifest.' }
 }
 if (@($manifest.images.name | Select-Object -Unique).Count -ne 5) { throw 'Duplicate release image.' }
 $infrastructure=@{mysql='mysql';redis='redis';clamav='clamav/clamav'}
@@ -66,6 +68,9 @@ try {
         if($port -ge 4183) { throw '4173–4182 端口均已占用，请释放一个端口后重试。' }
     }
     & "$root\deploy.ps1" -Port $port *>&1 | Tee-Object -FilePath '.runtime\desktop-startup.log'
+    . "$root\scripts\start-project.ps1"
+    . "$root\scripts\desktop\update-release.ps1"
+    Update-ReleaseApplications -Images $manifest.images -Training:($env:COMPOSE_PROFILES -match '(^|,)training(,|$)')
     $status=Get-Content '.runtime\startup-status.json' -Raw | ConvertFrom-Json
     if($status.state -ne 'ready') { throw '服务尚未就绪，请检查启动日志。' }
     [IO.File]::WriteAllText((Join-Path $root '.runtime\desktop-url.txt'),$status.url,(New-Object Text.UTF8Encoding($false)))
