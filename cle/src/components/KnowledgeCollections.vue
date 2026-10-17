@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import RequestFailure from '@/components/RequestFailure.vue'
 import SelectField from '@/components/SelectField.vue'
 import { uiText } from '@/i18n'
 
@@ -19,7 +20,7 @@ const calendar=computed(()=>{const start=new Date(month.value);start.setDate(1-(
 function removeField(f:Field){if(confirm('删除字段 '+f.name+'？')){fields.value=fields.value.filter(v=>v!==f);dirty.value=true}}
 function addRow(){rows.value.push({id:crypto.randomUUID(),title:'新资料',values:{}});dirty.value=true}
 function changeMonth(n:number){month.value=new Date(month.value.getFullYear(),month.value.getMonth()+n,1)}
-async function load(){try{items.value=await researchApi.records('COLLECTION',page.value)}catch(e){error.value=(e as Error).message}}
+async function load(){error.value='';try{items.value=await researchApi.records('COLLECTION',page.value)}catch(e){error.value=(e as Error).message}}
 function choose(i:RecordItem){if(dirty.value&&!confirm(uiText('当前资料表尚未保存，放弃这些修改？')))return;active.value=i;title.value=i.title;fields.value=structuredClone(i.data.fields);rows.value=structuredClone(i.data.rows);dirty.value=false}
 function create(){if(dirty.value&&!confirm(uiText('放弃当前未保存修改？')))return;active.value=undefined;title.value='新的资料表';rows.value=[];dirty.value=true}
 function addField(){const name=fieldName.value.trim();if(!name||fields.value.some(f=>f.name===name)||fields.value.length>=16){error.value='字段名不能为空、不能重复，最多 16 个字段';return}fields.value.push({name,type:fieldType.value,options:fieldOptions.value});fieldName.value='';fieldOptions.value='';dirty.value=true}
@@ -27,7 +28,7 @@ async function save(){if(busy.value)return;busy.value=true;error.value='';const 
 async function remove(){if(!active.value||!confirm(uiText('永久删除这张资料表？')))return;busy.value=true;try{await researchApi.delete(active.value);active.value=undefined;rows.value=[];dirty.value=false;await load()}catch(e){error.value=(e as Error).message}finally{busy.value=false}}
 onMounted(load)
 </script>
-<template><div><p v-if="error" role="alert" class="inline-alert inline-alert--error">{{ uiText(error) }}</p><div class="collection-top"><SelectField><select class="field-input" :value="active?.id||''" :aria-label="uiText('选择资料表')" @change="choose(items.find(i=>i.id===($event.target as HTMLSelectElement).value)!)"><option value="" disabled>{{ uiText('选择已保存资料表') }}</option><option v-for="i in items" :key="i.id" :value="i.id">{{ i.title }}</option></select></SelectField><button class="button button--ghost" @click="create">{{ uiText('新建资料表') }}</button><button class="button button--dark" :disabled="busy||!title.trim()" @click="save">{{ busy?uiText('保存中…'):dirty?uiText('保存修改'):uiText('保存资料表') }}</button><button v-if="active" class="button button--ghost" :disabled="busy" @click="remove">{{ uiText('删除') }}</button></div>
+<template><div><RequestFailure :message="error" :retry="load" :disabled="!!busy" /><div class="collection-top"><SelectField><select class="field-input" :value="active?.id||''" :aria-label="uiText('选择资料表')" @change="choose(items.find(i=>i.id===($event.target as HTMLSelectElement).value)!)"><option value="" disabled>{{ uiText('选择已保存资料表') }}</option><option v-for="i in items" :key="i.id" :value="i.id">{{ i.title }}</option></select></SelectField><button class="button button--ghost" @click="create">{{ uiText('新建资料表') }}</button><button class="button button--dark" :disabled="busy||!title.trim()" @click="save">{{ busy?uiText('保存中…'):dirty?uiText('保存修改'):uiText('保存资料表') }}</button><button v-if="active" class="button button--ghost" :disabled="busy" @click="remove">{{ uiText('删除') }}</button></div>
  <input v-model="title" class="collection-title" :aria-label="uiText('资料表名称')" maxlength="180" @input="dirty=true"/>
  <p class="research-hint">{{ uiText('同一份资料可以用表格、看板与月历浏览。第一个选项字段用于看板，第一个日期字段用于月历。') }}</p>
  <div class="research-actions"><button v-for="v in [['table','表格'],['board','看板'],['calendar','月历']]" :key="v[0]" class="button" :class="view===v[0]?'button--dark':'button--ghost'" @click="view=v[0]||'table'">{{ uiText(v[1]) }}</button><button class="button button--ghost" :disabled="rows.length>=500" @click="addRow()">{{ uiText('＋ 添加资料') }}</button></div>

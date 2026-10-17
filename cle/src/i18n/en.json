@@ -3448,5 +3448,9 @@
   "选择服务": "Choose service",
   "仅浏览": "View only",
   "密钥仅保存在你的账号下。进入设置后可查询模型目录，选择实际可用的模型。": "Keys belong to your account. In settings, browse the model catalog to select an available model.",
-  "配置说明": "Setup guide"
+  "配置说明": "Setup guide",
+  "暂时无法连接到网站服务。请确认服务已启动，连接恢复后重试。": "Cannot connect to the website service. Check that it is running, then try again.",
+  "连接已中断，无法确认操作是否完成。请先重新加载并核对结果，避免重复提交。": "The connection was interrupted, so the result is unknown. Reload and check before submitting again.",
+  "正在重新加载…": "Reloading…",
+  "重新加载资料": "Reload data"
 }

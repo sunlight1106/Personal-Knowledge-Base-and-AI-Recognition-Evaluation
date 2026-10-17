@@ -48,6 +48,22 @@ export class ApiClientError extends Error {
   }
 }
 
+// A rejected fetch has no HTTP response. Keep cancellation distinct and never
+// replay writes: the server may have committed before the connection broke.
+async function transport(input: string, init: RequestInit): Promise<Response> {
+  try { return await fetch(input, init) }
+  catch (reason) {
+    if (init.signal?.aborted) throw init.signal.reason ?? reason
+    if (reason instanceof TypeError) {
+      const reads = ['GET', 'HEAD'].includes((init.method || 'GET').toUpperCase())
+      throw new ApiClientError('NETWORK_UNAVAILABLE', reads
+        ? '暂时无法连接到网站服务。请确认服务已启动，连接恢复后重试。'
+        : '连接已中断，无法确认操作是否完成。请先重新加载并核对结果，避免重复提交。', 0)
+    }
+    throw reason
+  }
+}
+
 async function deadline<T>(signal: AbortSignal | null | undefined, duration: number, work: (signal: AbortSignal) => Promise<T>) {
   try { return await withRequestDeadline(signal, duration, work) }
   catch (reason) {
@@ -131,7 +147,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   const timeout = path.endsWith('/execute') ? 180000 : init.body instanceof FormData ? 120000 : 30000
   return deadline(init.signal, timeout, async signal => {
-    const response = await fetch(`${API_BASE}${path}`, { ...init, headers, signal })
+    const response = await transport(`${API_BASE}${path}`, { ...init, headers, signal })
     const contentType = response.headers.get('content-type') || ''
     const envelope = contentType.includes('application/json')
       ? await response.json() as ApiEnvelope<T>
@@ -159,7 +175,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 export async function streamRequest<T>(path:string, body:unknown, onDelta:(text:string)=>void, signal?:AbortSignal):Promise<T>{
   const session=captureSession()
   return deadline(signal,150000,async active=>{
-    const response=await fetch(`${API_BASE}${path}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.token||''}`},body:JSON.stringify(body),signal:active})
+    const response=await transport(`${API_BASE}${path}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.token||''}`},body:JSON.stringify(body),signal:active})
     assertSession(session)
     if(!response.ok||!response.body){if(response.status===401)expireSession(session);throw new ApiClientError('STREAM_FAILED',`生成请求失败 (${response.status})`,response.status)}
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',total=0,result:T|undefined
@@ -183,7 +199,7 @@ export async function fetchBlob(path: string): Promise<Blob> {
   const headers = new Headers()
   if (session.token) headers.set('Authorization', `Bearer ${session.token}`)
   return deadline(undefined, 120000, async signal => {
-    const response = await fetch(path.startsWith('/api/') ? path : `${API_BASE}${path}`, { headers, signal })
+    const response = await transport(path.startsWith('/api/') ? path : `${API_BASE}${path}`, { headers, signal })
     signal.throwIfAborted()
     assertSession(session)
     if (!response.ok) {
