@@ -121,6 +121,14 @@ public class MessageService {
         }
         MessageEntity message = new MessageEntity(sender, subject.trim(), body.trim());
         message.setWorkspaceId(workspaceId); message.setReplyToId(replyToId);
+        if (workspaceId != null) {
+            // requireContentPermission(write=true) already holds the group row lock.
+            // Use a current read, including under MySQL REPEATABLE READ, so two
+            // posts in one clock tick cannot reverse UUID order or lose unread state.
+            var previous = jdbc.query("SELECT created_at FROM internal_message WHERE workspace_id=? ORDER BY created_at DESC,id DESC LIMIT 1 FOR UPDATE",
+                    (row, index) -> row.getTimestamp(1).toInstant(), workspaceId).stream().findFirst().orElse(null);
+            message.orderAfter(previous);
+        }
         messageRepository.save(message);
         attachments.forEach(upload -> attachmentRepository.save(new MessageAttachmentEntity(message, fileService.storeMessageAttachment(upload, sender))));
         return message;

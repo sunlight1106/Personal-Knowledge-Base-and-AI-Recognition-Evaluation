@@ -108,9 +108,9 @@ jobs:
               exit 0
             fi
           else
-            gh release create "$TAG" --draft --target "$SHA" --title "Build ${SHA:0:8}" --notes-file release/NOTES.md
+            gh release create "$TAG" --draft --prerelease --target "$SHA" --title "Build ${SHA:0:8}" --notes-file release/NOTES.md
           fi
           gh release upload "$TAG" release/*.tar.gz release/SHA256SUMS release/SOURCE.json release/INSTALL.md release/MINIO-SOURCE.md --clobber
           gh release view "$TAG" --json assets --jq '.assets | map(select(.size > 0) | .name)' > release/uploaded.json
           python -c 'import json; names=set(json.load(open("release/uploaded.json"))); expected={"backend.tar.gz","frontend.tar.gz","training.tar.gz","code-lab.tar.gz","minio.tar.gz","minio-sources.tar.gz","SHA256SUMS","SOURCE.json","INSTALL.md","MINIO-SOURCE.md"}; assert expected <= names, "Release assets incomplete"'
-          gh release edit "$TAG" --draft=false --latest
+          gh release edit "$TAG" --draft=false --prerelease --latest=false

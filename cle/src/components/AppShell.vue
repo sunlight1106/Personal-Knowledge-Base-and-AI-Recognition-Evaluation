@@ -6,6 +6,7 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { sectionLinks as vSectionLinks } from '@/directives/sectionLinks'
 import WorkspaceTools from './WorkspaceTools.vue'
+import WorkspaceQuickNav from './WorkspaceQuickNav.vue'
 import SafetyBanner from './SafetyBanner.vue'
 import LearningActivity from './LearningActivity.vue'
 import AppIcon from './AppIcon.vue'
@@ -15,7 +16,7 @@ import AmbientWaves from './AmbientWaves.vue'
 import { authStore } from '@/stores/auth'
 import { themeStore } from '@/stores/theme'
 import { mainItems, adminItems, supportItems, canVisit, type NavItem } from '@/lib/navigation'
-import { workspaceNavigation } from '@/stores/workspaceNavigation'
+import { PIN_LIMIT, workspaceNavigation } from '@/stores/workspaceNavigation'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +24,7 @@ function handleSessionExpired() { void router.replace('/login') }
 onMounted(() => window.addEventListener('personal-platform:session-expired', handleSessionExpired))
 onBeforeUnmount(() => window.removeEventListener('personal-platform:session-expired', handleSessionExpired))
 const menu = ref<HTMLDetailsElement | null>(null)
+const quickNav = ref<InstanceType<typeof WorkspaceQuickNav> | null>(null)
 function closeMenu() { menu.value?.removeAttribute('open') }
 watch(() => route.fullPath, () => { closeMenu(); pinMessage.value = '' })
 watch(() => [route.path, authStore.state.user?.id], () => workspaceNavigation.visit(route.path), { immediate: true })
@@ -43,7 +45,7 @@ const title = computed(() => {
 const quickItems = workspaceNavigation.pinned
 const pinMessage = ref('')
 function togglePin(item: NavItem) {
-  pinMessage.value = workspaceNavigation.toggle(item.to) ? '常用入口已更新' : '最多固定 5 个入口，请先取消一个'
+  pinMessage.value = workspaceNavigation.toggle(item.to) ? uiText('常用入口已更新') : uiText('最多固定 {count} 个入口，请先取消一个').replace('{count}', String(PIN_LIMIT))
 }
 
 function outside(event: PointerEvent) { if (menu.value?.open && event.target instanceof Node && !menu.value.contains(event.target)) closeMenu() }
@@ -57,23 +59,20 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
     <a class="portal-skip" href="#workspace-content">{{ uiText('跳转到内容') }}</a>
     <header class="workspace-header">
       <nav class="workspace-breadcrumb" :aria-label="uiText('当前位置')"><RouterLink to="/" class="workspace-brand"><BrandMark /><span>{{ uiText('个人知识库') }} <small>PERSONAL WORKSPACE</small></span></RouterLink><span>/</span><span>{{ uiText(title) }}</span></nav>
-      <nav class="workspace-quick" :aria-label="uiText('常用页面')">
-        <RouterLink v-for="item in quickItems" :key="item.to" :to="item.to"><AppIcon :name="item.icon" :size="15" /><span>{{ uiText(item.label) }}</span></RouterLink>
-        <span v-if="!quickItems.length" class="workspace-quick-hint">{{ uiText('在「目录与账户」中固定常用页面') }}</span>
-      </nav>
+      <WorkspaceQuickNav ref="quickNav" :items="quickItems" @open="closeMenu" />
       <div class="workspace-tools"><WorkspaceTools v-if="authStore.state.user" :key="authStore.state.user.id" />
         <LanguageToggle /><MotionToggle />
         <button class="topbar-tool" :aria-label="themeStore.isDark() ? uiText('切换到浅色') : uiText('切换到暗色')" @click="themeStore.toggle()"><AppIcon :name="themeStore.isDark() ? 'sun' : 'moon'" :size="16" /></button>
-        <details ref="menu" class="workspace-directory" @keydown.esc="closeMenu(); menu?.querySelector('summary')?.focus()">
+        <details ref="menu" class="workspace-directory" @toggle="menu?.open && quickNav?.close()" @keydown.esc="closeMenu(); menu?.querySelector('summary')?.focus()">
           <summary><AppIcon name="menu" :size="16" />{{ uiText('目录与账户') }}</summary>
           <div class="workspace-directory-body">
-            <div class="directory-caption"><span>{{ uiText('全部页面') }}</span><small>{{ uiText('固定到顶部 ·') }} {{ quickItems.length }}/5</small></div>
+            <div class="directory-caption"><span>{{ uiText('全部页面') }}</span><small>{{ uiText('固定到顶部 ·') }} {{ quickItems.length }}/{{ PIN_LIMIT }}</small></div>
             <nav :aria-label="uiText('全部页面')">
               <section v-for="group in [...navGroups, {label:'系统管理',items:visible(adminItems)}, {label:'帮助',items:supportItems}].filter(group => group.items.length)" :key="group.label">
                 <p>{{ uiText(group.label) }}</p>
                 <div v-for="item in group.items" :key="item.to" class="directory-item">
                   <RouterLink :to="item.to">{{ uiText(item.label) }}</RouterLink>
-                  <button class="directory-pin" :aria-label="`${quickItems.some(pin => pin.to === item.to) ? uiText('取消固定') : uiText('固定')}${item.label}`" :aria-pressed="quickItems.some(pin => pin.to === item.to)" @click="togglePin(item)"><AppIcon :name="quickItems.some(pin => pin.to === item.to) ? 'check' : 'plus'" :size="13" /></button>
+                  <button class="directory-pin" :aria-label="`${quickItems.some(pin => pin.to === item.to) ? uiText('取消固定') : uiText('固定')}${uiText(item.label)}`" :aria-pressed="quickItems.some(pin => pin.to === item.to)" @click="togglePin(item)"><AppIcon :name="quickItems.some(pin => pin.to === item.to) ? 'check' : 'plus'" :size="13" /></button>
                 </div>
               </section>
             </nav>

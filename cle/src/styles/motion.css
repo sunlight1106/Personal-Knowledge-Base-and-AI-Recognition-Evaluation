@@ -6,8 +6,7 @@
 [data-motion=off] :is(.home-hero-copy,.home-folio-wrap){animation:none}
 [data-motion=off] :is(.home-primary svg,.workspace-action-grid svg){transition:none;transform:none}
 [data-motion=off] .workspace-quick a{transition:none}
-@media(prefers-reduced-motion:reduce){.surface-ripple-layer{display:none}}
-@media(prefers-reduced-motion:reduce){.workspace-quick a{transition:none}}
+@media(prefers-reduced-motion:reduce){html:not([data-motion=on]) .surface-ripple-layer{display:none}html:not([data-motion=on]) .workspace-quick a{transition:none}}
 
 /* Local pools add depth to resting surfaces; their SVG never intercepts input. */
 .water-surface{position:relative;isolation:isolate}
@@ -21,10 +20,8 @@
 .water-surface>.surface-watermark svg{max-width:none}
 .workspace-header{background:var(--surface-sheen);box-shadow:var(--shadow-soft)}
 .workspace-action-grid>a,.home-chapter.water-surface,.learning-library-links>a{background:var(--surface-sheen)}
-@media(prefers-reduced-motion:no-preference){
   [data-motion=on] :is(.workspace-action-grid>a,.home-chapter,.theme-palette,.guide-step-link){transition:background .25s,border-color .25s,box-shadow .25s}
   [data-motion=on] :is(.workspace-action-grid>a,.theme-palette):hover{box-shadow:var(--shadow-raised);border-color:color-mix(in srgb,var(--green) 55%,var(--line))}
-}
 @media(max-width:900px){.learning-sidebar.water-surface{position:relative}}
 @media(max-width:700px){.settings-navigation.water-surface{position:relative}.water-surface>.surface-watermark{opacity:.25}}
 
@@ -34,6 +31,19 @@
 .ambient-waves>svg{translate:var(--surface-water-x,0px) var(--surface-water-y,0px);transition:translate .7s cubic-bezier(.2,.7,.2,1)}
 [data-motion=off] .surface-light{display:none}
 [data-motion=off] .ambient-waves>svg{translate:none;transition:none}
-@media(prefers-reduced-motion:reduce),(hover:none),(pointer:coarse){.surface-light{display:none}.ambient-waves>svg{translate:none;transition:none}}
+@media(prefers-reduced-motion:reduce){html:not([data-motion=on]) .surface-light{display:none}html:not([data-motion=on]) .ambient-waves>svg{translate:none;transition:none}}
+@media(hover:none),(pointer:coarse){.surface-light{display:none}.ambient-waves>svg{translate:none;transition:none}}
 
 [data-motion=off] .preview-recall{transition:none}
+
+/* Shared paper, spacing and water treatment across the desktop workspace. */
+.water-surface>.surface-watermark{opacity:.52;mask-image:linear-gradient(110deg,transparent 3%,#000 62%)}
+.home-chapter.water-surface>.surface-watermark{opacity:.52}
+.app-content :is(.panel,.learning-panel,.code-workbench,.mail-detail,.settings-card){border-radius:20px;box-shadow:var(--shadow-soft)}
+.app-content .page-intro{padding-bottom:30px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.app-content .page-intro h2{font-weight:500;letter-spacing:-.035em}
+.app-content :is(.field-input,.field-textarea){border-radius:12px;background:color-mix(in srgb,var(--paper) 93%,var(--canvas))}
+.app-content :is(.field-input,.field-textarea):focus{border-color:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 9%,transparent)}
+.app-content .button{border-radius:11px}
+.app-content :is(.settings-navigation,.learning-sidebar){border-radius:18px}
+.provider-select{touch-action:manipulation}

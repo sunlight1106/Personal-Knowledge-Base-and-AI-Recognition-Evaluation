@@ -1,13 +1,13 @@
 import { computed, onBeforeUnmount, onMounted, reactive, watchEffect } from 'vue'
 
 const preferenceKey = 'pkb:ambient-motion'
-export const motionState = reactive({ paused: false, reduced: false, visible: true })
-export const motionEnabled = computed(() => !motionState.paused && !motionState.reduced)
+type MotionPreference = 'system' | 'enabled' | 'paused'
+export const motionState = reactive({ preference: 'system' as MotionPreference, reduced: false, visible: true })
+export const motionEnabled = computed(() => motionState.preference === 'enabled' || (motionState.preference === 'system' && !motionState.reduced))
 
 export function toggleMotion() {
-  if (motionState.reduced) return
-  motionState.paused = !motionState.paused
-  try { localStorage.setItem(preferenceKey, motionState.paused ? 'paused' : 'enabled') } catch { /* The current session still honors the choice. */ }
+  motionState.preference = motionEnabled.value ? 'paused' : 'enabled'
+  try { localStorage.setItem(preferenceKey, motionState.preference) } catch { /* The current session still honors the choice. */ }
 }
 
 export function useMotionPreferences() {
@@ -16,7 +16,11 @@ export function useMotionPreferences() {
   const updateVisibility = () => { motionState.visible = document.visibilityState !== 'hidden' }
   watchEffect(() => { document.documentElement.dataset.motion = motionEnabled.value ? 'on' : 'off' })
   onMounted(() => {
-    try { motionState.paused = localStorage.getItem(preferenceKey) === 'paused' } catch { /* Use the system preference. */ }
+    motionState.preference = 'system'
+    try {
+      const saved = localStorage.getItem(preferenceKey)
+      if (saved === 'enabled' || saved === 'paused') motionState.preference = saved
+    } catch { /* Use the system preference. */ }
     media = window.matchMedia('(prefers-reduced-motion: reduce)')
     updateReduced(); updateVisibility()
     media.addEventListener('change', updateReduced)

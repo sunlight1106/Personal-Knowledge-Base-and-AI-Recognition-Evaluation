@@ -1,97 +1,55 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import LanguageToggle from '@/components/LanguageToggle.vue'
-import { uiText } from '@/i18n'
-
-import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import { useRoute } from 'vue-router'
-import { api, ApiClientError } from '@/api/client'
-import type { ModelRuntimeView, ModelView } from '@/types/api'
+import AmbientWaves from '@/components/AmbientWaves.vue'
 import AppIcon from '@/components/AppIcon.vue'
-import EmptyState from '@/components/EmptyState.vue'
-import { toastStore } from '@/stores/toast'
-import { authStore } from '@/stores/auth'
 import AppLogo from '@/components/AppLogo.vue'
+import { uiText } from '@/i18n'
+import { authStore } from '@/stores/auth'
 
-const models = ref<ModelView[]>([])
-const runtime = ref<ModelRuntimeView | null>(null)
-const loading = ref(true)
-const error = ref('')
-const exporting = ref(false)
 const route = useRoute()
 const isPublic = computed(() => route.path === '/models')
-
-onMounted(async () => {
-  try {
-    await authStore.ensureUser()
-    const [modelList, runtimeInfo] = await Promise.all([api.models(), authStore.has('model:read') ? api.modelRuntime() : Promise.resolve(null)])
-    models.value = modelList
-    runtime.value = runtimeInfo
-  } catch (reason) {
-    error.value = reason instanceof ApiClientError ? reason.message : '模型信息加载失败'
-  } finally { loading.value = false }
-})
-
-async function exportDataset() {
-  exporting.value = true
-  try {
-    await api.download('/api/v1/training/dataset', 'pkb-ai-evaluation-training-dataset.zip')
-    toastStore.success('训练数据集已导出；请先人工复核标签')
-  } catch (reason) {
-    toastStore.error(reason instanceof ApiClientError ? reason.message : '数据集导出失败')
-  } finally { exporting.value = false }
+// Provider families, not task-specific demo records or claims about model availability.
+const providers = [
+  { id: 'MOONSHOT', name: 'Kimi', initial: 'K', subtitle: 'Moonshot AI', tone: 'ink' },
+  { id: 'QWEN', name: '千问', initial: 'Q', subtitle: 'Alibaba Cloud', tone: 'violet' },
+  { id: 'DEEPSEEK', name: 'DeepSeek', initial: 'D', subtitle: 'DeepSeek', tone: 'blue' },
+  { id: 'OPENAI', name: 'OpenAI', initial: 'O', subtitle: 'OpenAI', tone: 'sage' },
+  { id: 'GEMINI', name: 'Gemini', initial: 'G', subtitle: 'Google', tone: 'blue' },
+  { id: 'ANTHROPIC', name: 'Claude', initial: 'C', subtitle: 'Anthropic', tone: 'clay' },
+  { id: 'XAI', name: 'Grok', initial: 'x', subtitle: 'xAI', tone: 'ink' },
+  { id: 'LLAMA', name: 'Llama', initial: 'L', subtitle: 'Groq · Together', tone: 'sage' },
+  { id: 'CUSTOM', name: '自定义服务', initial: '+', subtitle: 'OpenAI compatible', tone: 'violet' },
+]
+const canConfigure = computed(() => !authStore.state.user || authStore.has('personal-ai:manage'))
+function target(id: string) {
+  const path = `/app/settings?section=ai&provider=${id}`
+  return authStore.state.user ? path : { path: '/login', query: { redirect: path } }
 }
-
-const taskLabel = (model: ModelView) => model.taskType === 'LICENSE_PLATE' ? '车牌识别 · 质量分析' : model.taskType === 'RECEIPT' ? '票据 OCR · 字段抽取' : '视频理解 · 音轨降噪'
-const modelTarget = (model: ModelView) => authStore.state.user ? `/app/upload?model=${model.id}` : '/login'
-const providerName = (model: ModelView) => model.provider === 'DEEPSEEK' ? 'DeepSeek' : model.provider === 'KIMI' ? 'Kimi' : 'Qwen'
 </script>
-
 <template>
   <div :class="{ 'models-public-shell': isPublic }">
-    <header v-if="isPublic" class="docs-public-nav"><RouterLink to="/"><AppLogo /></RouterLink><nav><RouterLink to="/">{{ uiText('首页') }}</RouterLink><a href="#catalog">{{ uiText('模型') }}</a><RouterLink to="/docs">{{ uiText('文档') }}</RouterLink></nav><div><LanguageToggle /><span v-if="authStore.state.user" class="pp-current-user"><i>{{ authStore.state.user.displayName.slice(0, 1) }}</i>{{ authStore.state.user.displayName }}</span><RouterLink v-else to="/login">{{ uiText('登录') }}</RouterLink><RouterLink :to="authStore.state.user ? '/app/home' : '/login'" class="pp-enter-button">{{ uiText('进入平台') }} <AppIcon name="arrow" :size="15" /></RouterLink></div></header>
-  <div id="catalog" class="page-stack models-page" :role="isPublic ? 'main' : undefined" :class="{ 'models-page--public': isPublic }">
-    <section class="page-intro page-intro--split">
-      <div><p class="page-kicker">MODEL CATALOG</p><h2>Models</h2><p>{{ uiText('查看平台演示模型与数据准备能力。真实笔记整理和图片识别使用你自己的个人 AI 配置。') }}</p></div>
-      <span class="runtime-pill" :class="{ ready: runtime?.credentialConfigured || !authStore.state.user }"><i />{{ runtime?.mode === 'demo' ? uiText('平台演示模式') : uiText('真实调用使用个人 AI') }}</span>
-    </section>
-
-    <p class="settings-notice">{{ uiText('下方为平台演示模型目录，卡片示例数值不是实际性能评测。共享 API 密钥池已停用；个人模型需在设置中配置，并在每次调用前确认发送内容。') }}<RouterLink :to="authStore.state.user ? '/app/settings?section=ai' : '/login'" class="settings-inline-link"> {{ uiText('配置个人 AI →') }}</RouterLink></p>
-    <div v-if="loading" class="loading-grid"><span v-for="i in 3" :key="i" /></div>
-    <div v-else-if="error" class="inline-alert inline-alert--error">{{ uiText(error) }}</div>
-    <EmptyState v-else-if="!models.length" :title="uiText('暂无可用模型')" :description="uiText('管理员接入模型版本后会显示在这里。')" icon="model" />
-
-    <template v-else>
-      <section class="recommended-section">
-        <header><div><p class="page-kicker">RECOMMENDED</p><h3>Recommended models</h3></div><p>{{ uiText('选择模型，查看能力说明与官方文档。') }}</p></header>
-        <div class="recommended-grid">
-          <article class="model-utility-card">
-            <RouterLink :to="authStore.state.user ? '/app/upload' : '/login'"><span><AppIcon name="spark" :size="22" /> {{ uiText('在 Playground 中运行') }}</span><AppIcon name="arrow" :size="18" /></RouterLink>
-            <RouterLink to="/docs#first-request"><span><AppIcon name="docs" :size="22" /> {{ uiText('阅读 API 文档') }}</span><AppIcon name="arrow" :size="18" /></RouterLink>
-            <button v-if="authStore.state.user" type="button" :disabled="exporting" @click="exportDataset"><span><AppIcon name="download" :size="22" /> {{ exporting ? uiText('正在导出…') : uiText('导出训练数据集') }}</span><AppIcon name="arrow" :size="18" /></button>
-            <RouterLink v-else to="/register"><span><AppIcon name="users" :size="22" /> {{ uiText('免费创建账号') }}</span><AppIcon name="arrow" :size="18" /></RouterLink>
-          </article>
-
-          <article v-for="model in models" :key="model.id" class="model-showcase-card" :class="`provider-${model.provider.toLowerCase()}`">
-            <div class="model-showcase-top"><span class="model-cube"><AppIcon :name="model.taskType === 'VIDEO_ANALYSIS' ? 'video' : 'model'" :size="24" /></span><span class="model-badge">{{ providerName(model) }}</span></div>
-            <div class="model-showcase-copy"><p>{{ taskLabel(model) }}</p><h3>{{ model.name }}</h3><span>{{ model.description }}</span></div>
-            <div class="model-showcase-foot"><code>{{ model.code }}</code><span>v{{ model.version }}</span><span class="model-card-actions"><a :href="model.officialDocsUrl" target="_blank" rel="noreferrer">{{ uiText('官方 API 文档') }} <AppIcon name="external" :size="14" /></a><RouterLink :to="modelTarget(model)">{{ uiText('查看实验入口') }} <AppIcon name="arrow" :size="16" /></RouterLink></span></div>
-          </article>
-        </div>
+    <header v-if="isPublic" class="docs-public-nav"><RouterLink to="/"><AppLogo /></RouterLink><nav><RouterLink to="/">{{ uiText('首页') }}</RouterLink><RouterLink to="/docs">{{ uiText('文档') }}</RouterLink></nav><div><LanguageToggle /><RouterLink :to="authStore.state.user ? '/app/home' : '/login'" class="pp-enter-button">{{ uiText('进入平台') }} <AppIcon name="arrow" :size="15" /></RouterLink></div></header>
+    <component :is="isPublic ? 'main' : 'div'" class="page-stack models-page provider-catalog" :class="{ 'models-page--public': isPublic }">
+      <section class="provider-intro water-surface"><AmbientWaves variant="pool" /><div><p class="page-kicker">YOUR MODELS, YOUR SPACE</p><h2>{{ uiText('选择你的 AI') }}</h2><p>{{ uiText('从熟悉的名字开始。选择服务，再连接自己的模型。') }}</p></div><span class="provider-intro-note"><i />{{ uiText('按账号独立配置') }}</span></section>
+      <p v-if="!canConfigure" class="inline-alert" role="status">{{ uiText('当前账号没有个人 AI 配置权限，可联系管理员调整。') }}</p>
+      <section class="provider-grid" :aria-label="uiText('AI 服务')">
+        <article v-for="(item, index) in providers" :key="item.id" class="provider-card" :class="`provider-tone--${item.tone}`">
+          <div class="provider-card-top"><span class="provider-monogram" aria-hidden="true">{{ item.initial }}</span><small>{{ String(index + 1).padStart(2, '0') }}</small></div>
+          <div><h3>{{ uiText(item.name) }}</h3><p>{{ item.subtitle }}</p></div>
+          <RouterLink v-if="canConfigure" :to="target(item.id)" class="provider-select" :aria-label="`${uiText('选择服务')} ${uiText(item.name)}`"><span>{{ uiText('选择服务') }}</span><AppIcon name="arrow" :size="19" /></RouterLink>
+          <span v-else class="provider-readonly">{{ uiText('仅浏览') }}</span>
+        </article>
       </section>
-
-      <section class="model-capability-panel panel">
-        <header class="panel-header"><div><p class="page-kicker">TRAINING & EVALUATION</p><h3>{{ uiText('训练、评测与微调状态') }}</h3><p>{{ uiText('区分已经真正接通的能力与供应商尚未提供的能力。') }}</p></div></header>
-        <div class="model-capability-grid">
-          <article class="is-ready"><span><AppIcon name="terminal" :size="22" /></span><div><small>01 · READY</small><h4>{{ uiText('个人 AI 协议适配') }}</h4><p>{{ uiText('支持 OpenAI 兼容、Gemini 与 Anthropic 协议。按个人账户配置；模型权限及可用性以供应商为准。') }}</p></div><i><AppIcon name="check" :size="16" /></i></article>
-          <article class="is-ready"><span><AppIcon name="download" :size="22" /></span><div><small>02 · READY</small><h4>{{ uiText('数据集与评测准备') }}</h4><p>{{ uiText('导出图片/视频、JSONL 标签、稳定 train/validation/test 划分和 dataset card。') }}</p></div><i><AppIcon name="check" :size="16" /></i></article>
-          <article class="is-ready"><span><AppIcon name="video" :size="22" /></span><div><small>03 · DEMO</small><h4>{{ uiText('本地视频处理演示') }}</h4><p>{{ uiText('演示链路保留视频降噪与对照。个人 AI 目前支持图片识别，不提供真实视频模型调用。') }}</p></div><i><AppIcon name="check" :size="16" /></i></article>
-        </div>
-      </section>
-
-      <section v-if="runtime?.limitations.length" class="model-limitations">
-        <AppIcon name="shield" :size="20" /><div><strong>{{ uiText('模型分析边界') }}</strong><p v-for="item in runtime.limitations" :key="item">{{ item }}</p></div>
-      </section>
-    </template>
-  </div></div>
+      <footer class="provider-footer"><AppIcon name="shield" :size="21" /><p>{{ uiText('密钥仅保存在你的账号下。进入设置后可查询模型目录，选择实际可用的模型。') }}</p><RouterLink to="/docs#model-contract">{{ uiText('配置说明') }} <AppIcon name="arrow" :size="16" /></RouterLink></footer>
+    </component>
+  </div>
 </template>
+<style scoped>
+.provider-catalog{gap:32px}.provider-intro{display:flex;align-items:end;justify-content:space-between;gap:24px;padding:48px 0 38px;border-bottom:1px solid var(--line)}.provider-intro>.ambient-waves{left:35%;opacity:.55}.provider-intro h2{font-size:clamp(32px,3.4vw,52px);font-weight:500;letter-spacing:-.045em;margin:14px 0 20px;line-height:1.2}.provider-intro p{max-width:540px;color:var(--ink-soft)}.provider-intro .page-kicker{font-size:11px;letter-spacing:.18em;color:var(--muted)}.provider-intro-note{display:flex;align-items:center;gap:9px;white-space:nowrap;color:var(--muted);font-size:12px;padding-bottom:6px}.provider-intro-note i{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.provider-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.provider-card{--provider-color:var(--green);position:relative;display:flex;flex-direction:column;gap:24px;min-width:0;padding:30px;border:1px solid var(--line);border-radius:22px;background:var(--surface-sheen);box-shadow:var(--shadow-soft)}.provider-card-top{display:flex;justify-content:space-between;align-items:start}.provider-card-top small{font:12px ui-monospace,monospace;color:var(--muted);opacity:.7}.provider-monogram{display:grid;place-items:center;width:52px;height:52px;border-radius:17px;background:color-mix(in srgb,var(--provider-color) 9%,var(--paper));color:var(--provider-color);font:500 27px Georgia,serif;border:1px solid color-mix(in srgb,var(--provider-color) 16%,var(--line-soft))}.provider-tone--violet{--provider-color:var(--violet)}.provider-tone--blue{--provider-color:var(--blue)}.provider-tone--clay{--provider-color:var(--amber)}.provider-tone--ink{--provider-color:var(--ink)}.provider-card h3{font-size:26px;font-weight:500;letter-spacing:-.03em;line-height:1.3;margin:0 0 5px}.provider-card p{font-size:13px;color:var(--muted);margin:0}.provider-select{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:19px;border-top:1px solid var(--line-soft);text-decoration:none;font-size:13px;color:var(--green)}.provider-select::after{content:'';position:absolute;inset:0;border-radius:22px}.provider-select:focus-visible{outline:none}.provider-card:has(.provider-select:focus-visible){outline:2px solid var(--green);outline-offset:3px}.provider-readonly{font-size:13px;color:var(--muted);padding-top:19px;border-top:1px solid var(--line-soft)}
+.provider-footer{display:flex;align-items:center;gap:14px;padding:12px 0 28px;color:var(--muted);font-size:13px}.provider-footer p{flex:1;line-height:1.8}.provider-footer a{display:flex;gap:8px;align-items:center;white-space:nowrap;text-decoration:none}.provider-footer>svg{flex-shrink:0}
+@media(prefers-reduced-motion:no-preference){[data-motion=on] .provider-card{transition:border-color .3s,box-shadow .3s,background .3s}[data-motion=on] .provider-card:has(a):hover{box-shadow:var(--shadow-raised);border-color:color-mix(in srgb,var(--green) 45%,var(--line))}}
+@media(max-width:900px){.provider-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.provider-intro-note{display:none}}@media(max-width:560px){.provider-grid{grid-template-columns:1fr}.provider-intro{padding-top:24px}.provider-footer{flex-wrap:wrap}.provider-card{padding:24px}}
+</style>

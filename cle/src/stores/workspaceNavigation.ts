@@ -3,6 +3,7 @@ import { authStore } from './auth'
 import { navigationItems, canVisit, type NavItem } from '@/lib/navigation'
 
 const defaults = ['/app/home', '/app/notes', '/app/vocabulary', '/app/knowledge', '/app/upload']
+export const PIN_LIMIT = 12
 const state = reactive({ owner: '', pins: [...defaults], recent: [] as string[], persistent: true })
 const known = new Set(navigationItems.map(item => item.to))
 const clean = (value: unknown, limit: number) => Array.isArray(value)
@@ -19,7 +20,7 @@ watch(() => authStore.state.user?.id, id => {
     if (!raw) return
     const saved = JSON.parse(raw)
     if (saved?.version !== 1) return
-    if (Array.isArray(saved.pins)) state.pins = clean(saved.pins, 5)
+    if (Array.isArray(saved.pins)) state.pins = clean(saved.pins, PIN_LIMIT)
     state.recent = clean(saved.recent, 6)
   } catch { state.persistent = false }
 }, { immediate: true, flush: 'sync' })
@@ -44,7 +45,7 @@ export const workspaceNavigation = {
     // Discard revoked entries when editing so invisible pins never consume capacity.
     const pins = resolve(state.pins).map(item => item.to)
     if (pins.includes(path)) state.pins = pins.filter(value => value !== path)
-    else if (pins.length < 5) state.pins = [...pins, path]
+    else if (pins.length < PIN_LIMIT) state.pins = [...pins, path]
     else return false
     save()
     return true

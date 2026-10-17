@@ -1,0 +1,13 @@
+/* Native cursor asset: no tracking layer, animation loop, or hidden system pointer. */
+@media (hover: hover) and (pointer: fine) and (forced-colors: none) {
+  :root { --site-cursor: url('../assets/cursor-aura.svg') 22 18; }
+  html, body { cursor: var(--site-cursor), auto; }
+
+  /* Keep disabled, busy, resize, drag and text-editing cursors meaningful. */
+  html body :is(a[href], button, summary, select, [role=button], [role=link], [role=tab], [role=option], [role=menuitem], [role=checkbox], [role=radio], [role=switch], label[for], input[type=checkbox], input[type=radio], input[type=submit], input[type=reset], input[type=button], .kb-card, .note-card, .kb-reader-tags i, .notes-tags i):not(:disabled):not([aria-disabled=true]):not([aria-busy=true]) {
+    cursor: var(--site-cursor), pointer !important;
+  }
+  html body :is(textarea, input:not([type=checkbox], [type=radio], [type=submit], [type=reset], [type=button], [type=range], [type=color], [type=file], [type=hidden]), [contenteditable=""], [contenteditable=true], [contenteditable=plaintext-only]) {
+    cursor: text;
+  }
+}

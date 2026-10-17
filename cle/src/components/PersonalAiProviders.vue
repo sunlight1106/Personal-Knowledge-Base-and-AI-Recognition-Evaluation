@@ -11,6 +11,9 @@ import { personalApi } from '@/api/personal'
 import type { PersonalAiProvider, PersonalAiSetting } from '@/types/personal'
 import { toastStore } from '@/stores/toast'
 import { modelFieldError } from '@/lib/personalAiModel'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
 
 const providers = ref<PersonalAiProvider[]>([])
 const settings = ref<PersonalAiSetting[]>([])
@@ -50,7 +53,8 @@ async function load() {
     const [catalog, saved] = await Promise.all([personalApi.providers(), personalApi.settings()])
     if (!active) return
     providers.value = catalog; settings.value = saved
-    if (!provider.value) provider.value = catalog[0]?.provider || ''
+    const requested = route?.query.provider
+    if (!provider.value) provider.value = typeof requested === 'string' && catalog.some(item => item.provider === requested) ? requested : catalog[0]?.provider || ''
     resetForm()
   } catch (reason) { if (active) error.value = reason instanceof ApiClientError ? reason.message : '个人 AI 设置加载失败，请重试' }
   finally { if (active) loading.value = false }

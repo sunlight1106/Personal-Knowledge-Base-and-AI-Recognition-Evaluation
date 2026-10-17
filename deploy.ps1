@@ -1,4 +1,6 @@
 ﻿param([int]$Port = 4173, [switch]$SkipBuild, [switch]$Build, [switch]$FullBuild, [switch]$Training)
+# Desktop releases set this only after verifying their pinned image manifest.
+$prebuiltRelease = $env:PKB_PREBUILT_RELEASE -eq '0.1'
 New-Item -ItemType Directory -Path "$PSScriptRoot\.runtime" -Force | Out-Null
 $startupGuard = $null
 function Write-StartupStatus([string]$Phase,[string]$Step,[string]$State='running',[string]$Url='') {
@@ -43,7 +45,7 @@ if (-not (Get-Content '.env' | Where-Object { $_ -match '^CODE_LAB_SERVICE_TOKEN
     [IO.File]::WriteAllText((Join-Path $PSScriptRoot '.env'), $config, (New-Object Text.UTF8Encoding($false)))
 }
 Write-StartupStatus '正在启动并检查项目服务' 'project'
-Start-Platform -Build:$Build -FullBuild:$FullBuild -SkipBuild:$SkipBuild -Training:$Training
+Start-Platform -Build:$Build -FullBuild:$FullBuild -SkipBuild:$SkipBuild -Training:$Training -Prebuilt:$prebuiltRelease
 $readySeconds = $startupWatch.Elapsed.TotalSeconds
 $portLine = Get-Content '.env' | Where-Object { $_ -match '^WEB_PORT=' } | Select-Object -First 1
 $actualPort = if ($portLine) { $portLine.Split('=',2)[1] } else { '4173' }

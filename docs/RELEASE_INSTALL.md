@@ -1,5 +1,7 @@
 # 不编译源码，直接安装
 
+**Windows 用户优先使用 [0.1 测试版启动器](TEST_RELEASE_0.1.md)**：解压 ZIP 后双击 `0.1.exe`，无需 Python。下面的命令行流程用于按提交编号发布的镜像包。
+
 发布页提供 Linux amd64 容器镜像。Windows 使用 Docker Desktop 的 Linux 容器即可；ARM 电脑暂时使用源码部署。预构建包省去 Java、前端和训练环境的本机构建，第一次仍需下载镜像与病毒库。
 
 ## 第一次安装

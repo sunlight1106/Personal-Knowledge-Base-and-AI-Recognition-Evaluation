@@ -10,6 +10,7 @@ import './styles/research.css'
 import './styles/workspace.css'
 import './styles/workspace-pages.css'
 import './styles/motion.css'
+import './styles/cursor.css'
 
 themeStore.init()
 void initUiLanguage().then(() => createApp(App).use(router).mount('#app'))

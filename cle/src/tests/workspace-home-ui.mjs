@@ -5,7 +5,8 @@ import { api } from '../api/client'
 import { researchApi } from '../api/research'
 import { vocabularyApi } from '../api/vocabulary'
 import { authStore } from '../stores/auth'
-import { workspaceNavigation as navigation } from '../stores/workspaceNavigation'
+import { PIN_LIMIT, workspaceNavigation as navigation } from '../stores/workspaceNavigation'
+import { navigationItems, canVisit } from '../lib/navigation'
 
 const checks = [], fixture = document.getElementById('fixture')
 const assert = (value, message) => { if (!value) throw new Error(message); checks.push(message) }
@@ -32,8 +33,15 @@ try {
   assert(!navigation.toggle('/app/admin'), 'A forbidden destination cannot be pinned')
   authStore.state.user = account(802)
   assert(navigation.recent.value.length === 0 && !navigation.pinned.value.some(item => item.to === '/app/admin'), 'Account switching does not inherit another account navigation')
-  assert(!navigation.toggle('/app/admin'), 'The five-entry limit is enforced')
-  navigation.toggle('/app/home'); assert(navigation.toggle('/app/admin'), 'Removing an entry frees one slot')
+  assert(navigation.toggle('/app/admin') && navigation.pinned.value.length === 6, 'Existing five pins can be expanded without removing a page')
+  for (const item of navigationItems.filter(item => canVisit(item, permissions))) {
+    if (navigation.pinned.value.length < PIN_LIMIT && !navigation.pinned.value.some(pin => pin.to === item.to)) navigation.toggle(item.to)
+  }
+  const nextPin = navigationItems.find(item => canVisit(item, permissions) && !navigation.pinned.value.some(pin => pin.to === item.to))
+  assert(PIN_LIMIT === 12 && navigation.pinned.value.length === 12 && !navigation.toggle(nextPin.to), 'Twelve pins are supported and the next addition respects the limit')
+  authStore.state.user = account(804); authStore.state.user = account(802)
+  assert(navigation.pinned.value.length === 12, 'Returning to an account restores all twelve saved pins without truncation')
+  navigation.toggle('/app/home'); assert(navigation.toggle(nextPin.to), 'Removing a pin frees a slot even at the expanded limit')
   navigation.visit('/app/knowledge'); navigation.clearRecent()
   assert(JSON.parse(localStorage.getItem('pkb:navigation:802')).recent.length === 0, 'Clearing recent pages persists')
   authStore.state.user = account(801)

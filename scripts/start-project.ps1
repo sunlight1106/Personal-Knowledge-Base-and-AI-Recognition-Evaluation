@@ -1,10 +1,18 @@
 # Kept separate from secret generation so startup decisions can be tested without Docker.
 function Invoke-Compose([string[]]$ComposeArguments) {
-    & docker compose @ComposeArguments
-    if ($LASTEXITCODE -ne 0) { throw 'Docker Compose failed. Inspect: docker compose logs --tail 100' }
+    # Compose writes ordinary progress to stderr. Windows PowerShell 5.1 must
+    # decide success from the exit code, not turn progress into a fatal error.
+    $previousPreference=$ErrorActionPreference
+    try {
+        $ErrorActionPreference='Continue'
+        & docker compose @ComposeArguments 2>&1 | ForEach-Object { Write-Host ([string]$_) }
+        $composeExit=$LASTEXITCODE
+    } finally { $ErrorActionPreference=$previousPreference }
+    if ($composeExit -ne 0) { throw 'Docker Compose failed. Inspect: docker compose logs --tail 100' }
 }
 
-function Start-Platform([switch]$Build, [switch]$FullBuild, [switch]$SkipBuild, [switch]$Training) {
+function Start-Platform([switch]$Build, [switch]$FullBuild, [switch]$SkipBuild, [switch]$Training, [switch]$Prebuilt) {
+    if ($Prebuilt -and ($Build -or $FullBuild)) { throw 'Prebuilt installations cannot build source images.' }
     if (([int]$Build.IsPresent + [int]$FullBuild.IsPresent + [int]$SkipBuild.IsPresent) -gt 1) {
         throw 'Choose only one of -Build, -FullBuild or -SkipBuild.'
     }
@@ -32,6 +40,12 @@ function Start-Platform([switch]$Build, [switch]$FullBuild, [switch]$SkipBuild, 
         }
     }
     if ($FullBuild -or $missing.Count) {
+        if ($Prebuilt) {
+            Write-Host 'Installing verified release images without compiling source.'
+            Invoke-Compose -ComposeArguments (@('up', '-d', '--no-build') + $required)
+            Invoke-Compose -ComposeArguments @('start','--wait','--wait-timeout','240','mysql','redis','backend','frontend')
+            return
+        }
         if ($SkipBuild) { throw 'This installation is incomplete. Run deploy.ps1 once without -SkipBuild.' }
         Write-Host 'Installing services / applying full configuration. This can download and compile dependencies.'
         Invoke-Compose -ComposeArguments (@('up', '-d', '--build') + $required)

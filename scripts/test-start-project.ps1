@@ -48,4 +48,11 @@ Start-Platform
 Assert-Startup (-not ($script:calls | Where-Object { $_ -match '^compose (start|up|build)' })) 'An already healthy stack is not started again'
 $script:calls.Clear(); Start-Platform -Build -Training
 Assert-Startup ($script:calls -contains 'compose build backend frontend code-lab training') 'Training is built only when requested'
+$script:installed=@(); $script:calls.Clear()
+Start-Platform -Prebuilt
+Assert-Startup ($script:calls -contains 'compose up -d --no-build mysql redis minio clamav backend model-worker code-lab frontend') 'First desktop release uses imported images without compilation'
+Assert-Startup (-not ($script:calls | Where-Object { $_ -match '--build|compose build' })) 'Prebuilt install cannot silently compile source'
+$rejected=$false
+try { Start-Platform -Prebuilt -Build } catch { $rejected=$true }
+Assert-Startup $rejected 'Desktop release rejects conflicting source build flags'
 Remove-Item Function:docker

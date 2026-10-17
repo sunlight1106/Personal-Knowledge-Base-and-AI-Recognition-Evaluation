@@ -61,7 +61,7 @@ try{
   move(label);flush();window.dispatchEvent(new window.Event('resize'));assert(!light(),'Resize clears old pointer coordinates')
   move(label);flush();window.dispatchEvent(new window.Event('blur'));assert(!light(),'Window blur clears feedback')
   move(label);flush();await router.push('/next');await nextTick();assert(!light(),'Route changes clear feedback')
-  move(label);flush();motionState.paused=true;await nextTick();move(label);flush();assert(!light(),'Pause stops active and future hover feedback');motionState.paused=false
+  move(label);flush();motionState.preference='paused';await nextTick();move(label);flush();assert(!light(),'Pause stops active and future hover feedback');motionState.preference='system'
   move(label);flush();motionState.reduced=true;await nextTick();move(label);flush();assert(!light(),'Reduced motion disables hover decoration');motionState.reduced=false
   move(label);flush();motionState.visible=false;await nextTick();assert(!light(),'A hidden tab releases active feedback');motionState.visible=true
   move(label);flush();media.matches=false;for(const fn of listeners)fn();assert(!light(),'Switching to a coarse pointer clears feedback');media.matches=true

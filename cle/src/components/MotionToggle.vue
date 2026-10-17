@@ -2,10 +2,11 @@
 import { uiText } from '@/i18n'
 import { computed } from 'vue'
 import { motionEnabled, motionState, toggleMotion } from '@/lib/motion'
-const label = computed(() => motionState.reduced ? '系统已开启减少动态效果' : motionEnabled.value ? '暂停动态效果' : '开启动态效果')
+const label = computed(() => motionEnabled.value ? '暂停动态效果' : '开启动态效果')
+const hint = computed(() => !motionEnabled.value && motionState.preference === 'system' && motionState.reduced ? '系统减少了动态效果，点击可仅为本站开启' : label.value)
 </script>
 <template>
-  <button class="motion-toggle" type="button" :aria-label="uiText(label)" :title="uiText(label)" :aria-pressed="motionEnabled" :disabled="motionState.reduced" @click="toggleMotion">
+  <button class="motion-toggle" type="button" :aria-label="uiText(label)" :title="uiText(hint)" :aria-pressed="motionEnabled" @click="toggleMotion">
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7c3-4 6 4 9 0s6 4 9 0M3 12c3-4 6 4 9 0s6 4 9 0M3 17c3-4 6 4 9 0s6 4 9 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" /></svg>
   </button>
 </template>

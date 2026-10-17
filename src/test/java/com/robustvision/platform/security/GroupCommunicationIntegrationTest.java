@@ -40,6 +40,7 @@ class GroupCommunicationIntegrationTest {
     @Autowired MessageAttachmentRepository attachments;
     @Autowired PasswordEncoder encoder;
     @Autowired ContactLinkRepository links;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate groupDatabase;
     @MockBean AntivirusService scanner;
     UserEntity owner, member, outsider, admin;
     String ownerToken, memberToken, outsiderToken, adminToken;
@@ -167,6 +168,29 @@ class GroupCommunicationIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(0));
         mvc.perform(auth(get("/api/v1/messages/directory").param("page", "-1"), adminToken)).andExpect(status().isBadRequest());
         mvc.perform(auth(get("/api/v1/messages/directory").param("q", "a".repeat(81)), adminToken)).andExpect(status().isBadRequest());
+    }
+
+    @Test void groupReadCursorKeepsNewMessagesUnreadWhenWallClockDoesNotAdvance() throws Exception {
+        long id=group(ownerToken);
+        membership(id,ownerToken,member,"MEMBER",Set.of()).andExpect(status().isOk());
+        String first=data(postGroup(id,ownerToken,"clock baseline",null,false).andExpect(status().isOk()).andReturn()).path("id").asText();
+        // A stored timestamp ahead of the wall clock deterministically covers both
+        // coarse clock ticks and clock correction; no timing sleeps or random UUID assumptions.
+        var baseline=java.time.Instant.now().plusSeconds(30).truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        groupDatabase.update("UPDATE internal_message SET created_at=? WHERE id=?",java.sql.Timestamp.from(baseline),first);
+        mvc.perform(json(post("/api/v1/workspaces/{id}/read",id),memberToken,Map.of("messageId",first))).andExpect(status().isOk()).andExpect(jsonPath("$.data.unread").value(0));
+        JsonNode second=data(postGroup(id,ownerToken,"clock second",null,false).andExpect(status().isOk()).andReturn());
+        JsonNode third=data(postGroup(id,ownerToken,"clock third",null,false).andExpect(status().isOk()).andReturn());
+        assertThat(java.time.Instant.parse(second.path("createdAt").asText())).isEqualTo(baseline.plusNanos(1000));
+        assertThat(java.time.Instant.parse(third.path("createdAt").asText())).isEqualTo(baseline.plusNanos(2000));
+        mvc.perform(auth(get("/api/v1/workspaces/{id}/features",id),memberToken)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.unread").value(2)).andExpect(jsonPath("$.data.latestMessageId").value(third.path("id").asText()));
+        mvc.perform(json(post("/api/v1/workspaces/{id}/read",id),memberToken,Map.of("messageId",second.path("id").asText())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.unread").value(1));
+        mvc.perform(json(post("/api/v1/workspaces/{id}/read",id),memberToken,Map.of("messageId",first)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.unread").value(1));
+        mvc.perform(json(post("/api/v1/workspaces/{id}/read",id),memberToken,Map.of("messageId",third.path("id").asText())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.unread").value(0));
     }
 
     @Test void groupNoticesPreferencesReadAndSearchStayWithinMembershipAndRevision() throws Exception {

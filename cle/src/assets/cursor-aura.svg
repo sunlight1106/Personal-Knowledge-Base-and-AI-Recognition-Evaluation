@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="aura">
+      <stop stop-color="#55b5ff" stop-opacity=".24"/>
+      <stop offset=".4" stop-color="#58b6ff" stop-opacity=".12"/>
+      <stop offset=".72" stop-color="#79c5ff" stop-opacity=".04"/>
+      <stop offset="1" stop-color="#9ed5ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="31" cy="31" r="18" fill="url(#aura)"/>
+  <path d="M22 18 Q20.8 17.6 21.2 19.3 L27.9 42.4 Q28.5 44.4 29.7 42.6 L34.3 33.2 L44.2 29.8 Q46.2 29.1 44.3 28.2 Z"
+    fill="#080d12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+</svg>

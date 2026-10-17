@@ -43,4 +43,10 @@ public class MessageEntity {
     public String getReplyToId() { return replyToId; }
     public void setReplyToId(String replyToId) { this.replyToId = replyToId; }
     public Instant getCreatedAt() { return createdAt; }
+    /** Group writes hold the workspace lock; keep their cursor order at database precision. */
+    public void orderAfter(Instant previous) {
+        createdAt = createdAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        if (previous != null && !createdAt.isAfter(previous))
+            createdAt = previous.plus(1, java.time.temporal.ChronoUnit.MICROS);
+    }
 }

@@ -13,7 +13,7 @@
 
     <groupId>com.robustvision</groupId>
     <artifactId>pkb-ai-evaluation-backend</artifactId>
-    <version>0.6.0</version>
+    <version>0.1.0</version>
     <name>Personal Knowledge Base and AI Recognition Evaluation — Backend</name>
     <description>Self-hosted personal knowledge, notes, AI recognition and evaluation API</description>
 

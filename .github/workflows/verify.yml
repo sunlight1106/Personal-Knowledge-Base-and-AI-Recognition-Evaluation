@@ -15,6 +15,7 @@ jobs:
         run: |
           ./scripts/test-docker-preflight.ps1
           ./scripts/test-start-project.ps1
+          ./scripts/desktop/test-release.ps1
       - if: runner.os == 'Linux'
         run: sh scripts/test-start-project.sh
   frontend:

@@ -107,8 +107,8 @@ async function navigate(event: KeyboardEvent) {
 .preview-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px 28px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--muted)}
 .preview-footer a{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--green);text-decoration:none}
 .preview-footer a:hover{color:var(--ink-strong)}
-@media(prefers-reduced-motion:no-preference){:global([data-motion=on]) .preview-page{animation:preview-appear .25s ease-out}@keyframes preview-appear{from{opacity:.5;translate:0 4px}to{opacity:1;translate:0 0}}}
+@media(prefers-reduced-motion:no-preference){[data-motion=on] .preview-page{animation:preview-appear .25s ease-out}@keyframes preview-appear{from{opacity:.5;translate:0 4px}to{opacity:1;translate:0 0}}}
 @media(prefers-reduced-motion:reduce){.preview-tabs button,.preview-recall{transition:none}}
-:global([data-motion=off]) .preview-tabs button{transition:none}
+[data-motion=off] .preview-tabs button{transition:none}
 @media(max-width:800px){.preview-page{padding-inline:24px}.preview-caption,.preview-tabs,.preview-footer{padding-inline:24px}}
 </style>

@@ -35,7 +35,7 @@ try{
   intersection([{isIntersecting:true}]);await nextTick()
   assert(fixture.querySelector('.ambient-waves').dataset.running==='true','Visible waves start when motion is allowed')
   const pool=fixture.querySelector('.ambient-waves--pool')
-  assert(pool.querySelectorAll('.water-contours ellipse').length===5&&!pool.querySelector('.wave-flow'),'Local water pools use contours instead of repeating header waves')
+  assert(pool.querySelectorAll('.water-rings ellipse').length===5&&pool.querySelector('.water-drop')&&pool.querySelector('.water-splash')&&!pool.querySelector('.wave-flow'),'Local pools show a falling drop, impact and five expanding rings')
   const gradients=[...fixture.querySelectorAll('radialGradient')].map(node=>node.id)
   assert(new Set(gradients).size===gradients.length&&gradients.every(Boolean),'Multiple water surfaces have independent SVG gradient IDs')
   assert([...fixture.querySelectorAll('.ambient-waves')].every(node=>node.getAttribute('aria-hidden')==='true'),'All water decorations stay out of the accessibility tree')
@@ -82,10 +82,20 @@ try{
   assert(count()===0&&localStorage.getItem('pkb:ambient-motion')==='paused','Pausing stops current feedback and saves the preference')
   pointer(go);assert(count()===0&&fixture.querySelector('.ambient-waves').dataset.running==='false','Paused motion cannot be restarted by clicking controls')
   fixture.querySelector('.motion-toggle').click();await nextTick()
+  motionState.preference='system'
   media.matches=true;for(const fn of mediaListeners)fn();await nextTick()
-  assert(fixture.querySelector('.motion-toggle').disabled&&fixture.querySelector('.ambient-waves').dataset.running==='false','A live system reduced-motion change disables decorative motion')
+  assert(!fixture.querySelector('.motion-toggle').disabled&&fixture.querySelector('.ambient-waves').dataset.running==='false','System reduced motion pauses decorations by default without disabling the user control')
   pointer(go);assert(count()===0,'Reduced motion suppresses interaction ripples as well')
+  fixture.querySelector('.motion-toggle').click();await nextTick()
+  assert(motionState.preference==='enabled'&&localStorage.getItem('pkb:ambient-motion')==='enabled'&&fixture.querySelector('.ambient-waves').dataset.running==='true','The user can explicitly enable and remember site motion under system reduced motion')
+  pointer(go);assert(count()===1,'Explicitly enabled motion restores interaction ripples')
+  media.matches=false;for(const fn of mediaListeners)fn();media.matches=true;for(const fn of mediaListeners)fn();await nextTick()
+  assert(fixture.querySelector('.ambient-waves').dataset.running==='true','Later system preference changes do not replace an explicit site choice')
+  fixture.querySelector('.motion-toggle').click();await nextTick()
+  assert(count()===0&&fixture.querySelector('.ambient-waves').dataset.running==='false','The same control can pause manually enabled motion immediately')
   media.matches=false;for(const fn of mediaListeners)fn();await nextTick()
+  assert(fixture.querySelector('.ambient-waves').dataset.running==='false','Explicit pause remains paused when system motion is restored')
+  fixture.querySelector('.motion-toggle').click();await nextTick()
   Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));await nextTick()
   pointer(go);assert(count()===0&&!motionState.visible&&fixture.querySelector('.ambient-waves').dataset.running==='false','Hidden tabs pause waves and ignore decorative activation')
   Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));await nextTick()
@@ -94,6 +104,11 @@ try{
   pointer(go);app.unmount();app=undefined
   assert(count()===0&&disconnected&&observers.size===0&&mediaListeners.size===0,'Unmount removes overlays, observers and preference listeners')
   const after=document.createElement('button');after.className='button';document.body.append(after);pointer(after);assert(count()===0,'Unmounted event handlers cannot create later overlays');after.remove()
+  media.matches=true;motionState.preference='system'
+  const restored=createApp({setup(){useMotionPreferences();return()=>h('div')}})
+  restored.mount(fixture);await nextTick()
+  assert(motionState.preference==='enabled'&&document.documentElement.dataset.motion==='on','A new mount restores the explicit enabled choice even with system reduced motion')
+  restored.unmount()
   document.documentElement.dataset.result='passed';document.getElementById('results').textContent=`PASS (${checks.length} assertions)\n${checks.join('\n')}`
 }catch(error){document.documentElement.dataset.result='failed';document.getElementById('results').textContent=error.stack;throw error}
 finally{app?.unmount();window.matchMedia=originalMedia;HTMLElement.prototype.getBoundingClientRect=originalRect;delete window.IntersectionObserver;delete globalThis.IntersectionObserver;localStorage.removeItem('pkb:ambient-motion')}
