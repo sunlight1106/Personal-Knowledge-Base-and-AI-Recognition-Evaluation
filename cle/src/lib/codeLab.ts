@@ -11,6 +11,33 @@ export interface Trace {
 export interface Run {id:string;source:string;entry:string;arguments:Value[];result:Trace}
 export interface RunSummary {id:string;language:string;entry:string;status:string;createdAt:string}
 export const languageNames:Record<Language,string>={auto:'自动识别',c:'C',python:'Python',java:'Java',javascript:'JavaScript'}
+
+// This is an editor hint, never an execution parser or an automatic rewrite.
+// Only offer a main preset for the simple signatures understood by the runner.
+export function mainSetupHint(source:string,language:Language,entry:string,argumentsText:string):{language:'c'|'java';reason:'entry'|'arguments'}|undefined{
+  if(language==='python'||language==='javascript')return
+  const code=source.replace(/\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)|#[^\n]*|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`/g,match=>match.replace(/[^\n]/g,' '))
+  const javaMain=code.match(/\bstatic\s+(?:final\s+)?void\s+main\s*\(\s*(String\s*\[\s*\]\s*[A-Za-z_]\w*)?\s*\)\s*\{/)
+  const cMain=/\b(?:int|void)\s+main\s*\(\s*(?:void\s*)?\)\s*\{/.test(code)
+  const detected=javaMain?'java':cMain&&!/\b(?:class|static)\b/.test(code)?'c':undefined
+  if(!detected||(language!=='auto'&&language!==detected))return
+  const current=entry.trim()
+  if(current&&current!=='main'){
+    // Keep a valid explicit helper entry, even when the same source has main.
+    if(/^[A-Za-z_]\w{0,59}$/.test(current)&&new RegExp('\\b(?:void|int|long|short|float|double|boolean|bool|char|String)\\s*(?:\\[\\s*\\]\\s*)*\\s+'+current+'\\s*\\([^{};]*\\)\\s*\\{').test(code))return
+    return {language:detected,reason:'entry'}
+  }
+  try{
+    const args:unknown=JSON.parse(argumentsText)
+    const valid=Array.isArray(args)&&(args.length===0||(detected==='java'&&!!javaMain?.[1]&&args.length===1&&Array.isArray(args[0])&&args[0].every(value=>typeof value==='string')))
+    if(!valid)return {language:detected,reason:'arguments'}
+  }catch{/* Invalid JSON keeps the normal field validation; do not guess. */}
+}
+
+export function replayMatchesEditor(run:Run,source:string,entry:string,argumentsText:string,language:Language){
+  if(run.source!==source||run.entry!==entry.trim()||(language!=='auto'&&run.result.language!==language))return false
+  try{return JSON.stringify(JSON.parse(argumentsText))===JSON.stringify(run.arguments)}catch{return false}
+}
 export const samples:Record<Exclude<Language,'auto'>,{source:string;entry:string;args:string}>={
   python:{entry:'sort',args:'[[5, 2, 8, 1]]',source:`def sort(a):
     n = len(a)

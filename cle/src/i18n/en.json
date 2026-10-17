@@ -3338,5 +3338,14 @@
   "代码执行环境暂未就绪，请稍后重试。": "The execution service is unavailable. Try again shortly.",
   "替换尚未运行的代码？": "Discard unrecorded code?",
   "当前编辑尚未保存在执行记录中。继续会离开或替换这些内容。": "These edits are not saved in execution history. Continuing will leave or replace them.",
-  "放弃更改并继续": "Discard changes and continue"
+  "放弃更改并继续": "Discard changes and continue",
+  "检测到 main，入口设置需要更新": "main detected — update the entry settings",
+  "main 的参数与当前输入不匹配": "The arguments do not match main",
+  "当前入口": "Current entry",
+  "未在这段代码中找到。粘贴新代码后，请同时检查入口和参数。": "was not found in this code. Check the entry and arguments after pasting new code.",
+  "此操作将入口改为 main、参数改为 []，保留源码；之后再点击运行。": "This sets the entry to main and arguments to [], keeping your code. Click Run afterwards.",
+  "使用 main 和空参数": "Use main with empty arguments",
+  "示例仅用于载入。你可以直接编写其他算法，运行时使用上方的入口和参数。": "Examples are templates. You can write other algorithms using the entry and arguments above.",
+  "代码或配置已更改。这里仍是上次运行结果，请重新运行。": "The code or settings have changed. This is the previous result; run again to update it.",
+  "这段代码没有打印输出或返回值，仍可查看变量与执行过程。": "This code has no printed output or return value. You can still inspect variables and execution steps."
 }

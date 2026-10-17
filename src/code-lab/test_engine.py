@@ -39,6 +39,30 @@ class ExecutionTests(unittest.TestCase):
     def test_java_main_and_new_array(self):
         r=self.complete('class Main { public static void main(String[] args){int[] a=new int[3]; a[2]=7; System.out.println(a[2]);}}','java')
         self.assertEqual(r['output'],'7\n')
+    def test_pasted_java_main_replaces_sort_entry_and_arguments(self):
+        code='''class test{
+public static void main(String[]args){
+int n = 8;
+for(int i = 1; i <= n-1;i++){
+for(int j = i+1;j <=n;j++){
+if(i>j){
+int temp = i;
+i = j;
+j = temp;
+}
+}
+}
+}
+}'''
+        self.assertEqual(self.run_code(code,'auto','sort',[[5,2,8,1]])['status'],'error')
+        for entry in ('main',''):
+            r=self.complete(code,'auto',entry,[])
+            self.assertEqual(r['language'],'java')
+            self.assertEqual(r['callCounts'],{'main':1})
+            self.assertEqual(sum(r['loopCounts'].values()),35)
+            self.assertEqual(r['output'],'')
+            self.assertGreater(len(r['steps']),0)
+            self.assertFalse(any('temp' in f['variables'] for s in r['steps'] for f in s['frames']))
     def test_scopes_and_continue_break(self):
         r=self.complete('function f(){let s=0;for(let i=0;i<8;i++){if(i===2){continue;} if(i===5){break;}s+=i;}return s;}','javascript','f')
         self.assertEqual(r['result'],8);self.assertNotIn('i',r['steps'][-1]['frames'][-1]['variables'])
