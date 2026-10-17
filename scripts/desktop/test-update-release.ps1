@@ -10,7 +10,7 @@ function docker {
     if ($line -eq 'compose ps --all --quiet') { return @('container1','container2') }
     if ($args[0] -eq 'inspect') {
         if ($script:inspectFails) { $global:LASTEXITCODE=1;return }
-        return @($script:actual.Keys | ForEach-Object { $_+' '+$script:actual[$_] })
+        return @($script:actual.Keys | ForEach-Object { '/pkb-personal-'+$_+'-1 '+$script:actual[$_] })
     }
     if ($script:apply -and $line -match '^compose up') { foreach($service in $script:actual.Keys.Clone()) { if($args -contains $service) { $script:actual[$service]=if($service -eq 'model-worker'){'api'}else{($images | Where-Object name -eq $service).id} } } }
 }

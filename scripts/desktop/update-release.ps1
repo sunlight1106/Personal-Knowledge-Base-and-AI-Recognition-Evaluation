@@ -7,12 +7,12 @@ function Update-ReleaseApplications($Images, [switch]$Training) {
     if ($Training) { $mapping.training='training' }
     $ids = @(& docker compose ps --all --quiet)
     if ($LASTEXITCODE -ne 0 -or -not $ids.Count) { throw 'Cannot inspect installed release containers.' }
-    $lines = @(& docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}} {{.Image}}' @ids)
+    $lines = @(& docker inspect --format '{{.Name}} {{.Image}}' @ids)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot verify installed release images.' }
     $actual = @{}
     foreach ($line in $lines) {
         $parts = $line -split ' ',2
-        if ($parts.Count -eq 2) { $actual[$parts[0]] = $parts[1] }
+        if ($parts.Count -eq 2) { $actual[($parts[0] -replace '^/pkb-personal-(.+)-[0-9]+$','$1')] = $parts[1] }
     }
     foreach ($service in $mapping.Keys) {
         if (-not $actual.ContainsKey($service) -or -not $expected.ContainsKey($mapping[$service])) { throw ('Missing release service: '+$service) }
@@ -31,10 +31,10 @@ function Update-ReleaseApplications($Images, [switch]$Training) {
     # A health check alone cannot prove that an old healthy image was replaced.
     $ids = @(& docker compose ps --all --quiet)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect updated release containers.' }
-    $lines = @(& docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}} {{.Image}}' @ids)
+    $lines = @(& docker inspect --format '{{.Name}} {{.Image}}' @ids)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot verify updated release images.' }
     $actual = @{}
-    foreach ($line in $lines) { $parts=$line -split ' ',2; if ($parts.Count -eq 2) { $actual[$parts[0]]=$parts[1] } }
+    foreach ($line in $lines) { $parts=$line -split ' ',2; if ($parts.Count -eq 2) { $actual[($parts[0] -replace '^/pkb-personal-(.+)-[0-9]+$','$1')]=$parts[1] } }
     foreach ($service in $mapping.Keys) {
         if ($actual[$service] -ne $expected[$mapping[$service]]) { throw ('Release image was not applied: '+$service) }
     }
