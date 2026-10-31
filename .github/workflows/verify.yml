@@ -39,6 +39,10 @@ jobs:
         name: Desktop image update checks
         shell: powershell
         run: ./scripts/desktop/test-update-release.ps1
+      - if: runner.os == 'Windows'
+        name: Desktop backup key permissions
+        shell: powershell
+        run: ./scripts/desktop/test-backup-key.ps1
       - if: runner.os == 'Linux'
         run: sh scripts/test-start-project.sh
   frontend:

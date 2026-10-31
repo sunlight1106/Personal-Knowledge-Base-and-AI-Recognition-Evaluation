@@ -33,13 +33,8 @@ try {
         try{$rng.GetBytes($bytes)}finally{$rng.Dispose()}
         ConvertTo-SecureString ([Convert]::ToBase64String($bytes)) -AsPlainText -Force | ConvertFrom-SecureString | Set-Content -LiteralPath $keyFile
     }
-    $acl=New-Object Security.AccessControl.FileSecurity
-    $acl.SetAccessRuleProtection($true,$false)
-    $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User;$acl.SetOwner($sid)
-    foreach($id in @($sid,(New-Object Security.Principal.SecurityIdentifier 'S-1-5-18'))) {
-        $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($id,'FullControl','Allow')))
-    }
-    Set-Acl -LiteralPath $keyFile -AclObject $acl
+    . (Join-Path $PSScriptRoot 'backup-key.ps1')
+    Protect-DesktopBackupKey $keyFile
     $secure=(Get-Content -LiteralPath $keyFile -Raw).Trim() | ConvertTo-SecureString
     $pointer=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     $env:PKB_BACKUP_PASSWORD=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)

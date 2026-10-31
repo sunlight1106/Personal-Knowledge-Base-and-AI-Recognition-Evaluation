@@ -55,6 +55,10 @@
         {
           "zh": "修复 Windows 测试残留退出码及数据库迁移测试清单，更新前端工具依赖并清除已知依赖安全公告。",
           "en": "Fix Windows test exit-code leakage and schema-test inventory, and update frontend tooling to resolve known dependency advisories."
+        },
+        {
+          "zh": "修复桌面更新在 Windows PowerShell 下设置备份密钥权限失败的问题，重复更新保留密钥和原有数据。",
+          "en": "Fix backup-key permission updates in Windows PowerShell; repeated desktop updates preserve the key and existing data."
         }
       ],
       "improved": [
