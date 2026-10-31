@@ -57,6 +57,7 @@ try {
     $exe=Join-Path $desktop ($version+'.exe')
     foreach($lock in $installGuards){$lock.Dispose()};$installGuards=@()
     $launcherMutex.ReleaseMutex();$ownsLauncher=$false
+    $launcherMutex.Dispose();$launcherMutex=$null
     Write-Host 'Verifying the desktop EXE startup...'
     $process=Start-Process -FilePath $exe -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru
     if(-not $process.WaitForExit(600000)){throw 'Launcher is still preparing. Check launcher-smoke.log before retrying.'}

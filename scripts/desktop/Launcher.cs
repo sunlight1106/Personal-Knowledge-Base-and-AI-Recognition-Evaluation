@@ -93,7 +93,7 @@ class Launcher : Form {
             return 0;
         }
         bool created; using(var mutex=new Mutex(true,"Local\\PKB-AI-Desktop-Launcher",out created)) {
-            if(!created) { MessageBox.Show("启动窗口已经打开，请切换到该窗口。","个人知识库"); return 0; }
+            if(!created) { if(args.Length>0 && args[0]=="--smoke-test") return 4; MessageBox.Show("启动窗口已经打开，请切换到该窗口。","个人知识库"); return 0; }
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false); Application.Run(new Launcher(args.Length>0 && args[0]=="--smoke-test")); return Environment.ExitCode;
         }
     }

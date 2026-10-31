@@ -84,11 +84,29 @@ class VersioningTest(unittest.TestCase):
             root = Path(directory); runtime = root/'runtime-0.11.zip'
             runtime.write_bytes(b'isolated launcher hash fixture; not an installation')
             source = root/'Launcher.cs'; exe = root/'0.11.exe'
-            source.write_text(desktop.launcher_source('0.11', desktop.sha(runtime), runtime.name), encoding='utf-8-sig')
+            mutex_name = 'Local\\PKB-Test-' + root.name
+            generated = desktop.launcher_source('0.11', desktop.sha(runtime), runtime.name)
+            generated = generated.replace('Local\\\\PKB-AI-Desktop-Launcher', mutex_name.replace('\\', '\\\\'))
+            source.write_text(generated, encoding='utf-8-sig')
             subprocess.run([str(compiler), '/nologo', '/target:winexe', '/platform:x64', '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll', '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll', '/out:'+str(exe), str(source)], check=True, capture_output=True)
             self.assertEqual(subprocess.run([str(exe), '--self-test', str(runtime)]).returncode, 0)
             runtime.write_bytes(b'tampered fixture')
             self.assertEqual(subprocess.run([str(exe), '--self-test', str(runtime)]).returncode, 3)
+            # Holding an existing launcher mutex must fail fast without a hidden
+            # dialog. Use an isolated mutex so this test never affects a real app.
+            probe = root/'mutex.ps1'
+            probe.write_text('''$ErrorActionPreference='Stop'
+$created=$false
+$guard=[Threading.Mutex]::new($true,$env:PKB_TEST_MUTEX,[ref]$created)
+try {
+    $child=Start-Process -FilePath $env:PKB_TEST_LAUNCHER -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru
+    if(-not $child.WaitForExit(5000)){$child.Kill();throw 'Blocked smoke test opened a hidden dialog.'}
+    if($child.ExitCode -ne 4){throw 'Expected explicit already-running failure.'}
+} finally {$guard.ReleaseMutex();$guard.Dispose()}
+''', encoding='utf-8-sig')
+            subprocess.run(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(probe)],
+                           env={**os.environ, 'PKB_TEST_MUTEX': mutex_name, 'PKB_TEST_LAUNCHER': str(exe)},
+                           check=True, capture_output=True, timeout=15)
 
 
 if __name__ == '__main__': unittest.main()
