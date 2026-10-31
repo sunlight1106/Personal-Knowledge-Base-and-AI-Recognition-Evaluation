@@ -33,3 +33,6 @@ $script:actual.minio='storage';$script:inspectFails=$true;$rejected=$false
 try{Update-ReleaseApplications $images}catch{$rejected=$true}
 Assert $rejected 'Inspection failure cannot silently skip an update'
 Remove-Item Function:docker
+# The last case deliberately simulates a failing native command. Do not leak
+# its exit code into the CI wrapper after every rejection assertion succeeded.
+$global:LASTEXITCODE=0

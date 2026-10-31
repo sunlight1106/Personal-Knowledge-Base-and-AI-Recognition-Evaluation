@@ -24,12 +24,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - if: runner.os == 'Windows'
+        name: Docker preflight checks
         shell: powershell
-        run: |
-          ./scripts/test-docker-preflight.ps1
-          ./scripts/test-start-project.ps1
-          ./scripts/desktop/test-release.ps1
-          ./scripts/desktop/test-update-release.ps1
+        run: ./scripts/test-docker-preflight.ps1
+      - if: runner.os == 'Windows'
+        name: Startup behavior checks
+        shell: powershell
+        run: ./scripts/test-start-project.ps1
+      - if: runner.os == 'Windows'
+        name: Desktop manifest checks
+        shell: powershell
+        run: ./scripts/desktop/test-release.ps1
+      - if: runner.os == 'Windows'
+        name: Desktop image update checks
+        shell: powershell
+        run: ./scripts/desktop/test-update-release.ps1
       - if: runner.os == 'Linux'
         run: sh scripts/test-start-project.sh
   frontend:

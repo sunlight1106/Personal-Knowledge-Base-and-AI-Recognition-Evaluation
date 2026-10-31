@@ -20,12 +20,14 @@
 | V12 | Owner-scoped personal image recognition results |
 | V19 | Permanent unique user identity codes; existing-user backfill |
 | V20 | Per-user private contact remarks, pins, mute settings and chat read/clear cursors |
+| V47 | Unique contact numbers, discovery preferences and verified phone bindings |
+| V48 | Persistent account-level login failure and cooldown state |
 
 V1–V6 remain unchanged. V7 adds indexes only: it does not replace tables, change primary keys, reset passwords, rewrite content or modify balances. MySQL `CHAR` columns are explicitly mapped as `CHAR` in Hibernate, including fixed-width IDs, hashes and tokens; changing deployed IDs to `VARCHAR` is unnecessary.
 
 ### Complete persisted domain
 
-There are **31 application tables**, **29 JPA entities**, two permission collection tables and **40 foreign keys** (plus Flyway's history table):
+Through V48 there are **71 application tables**, **68 JPA entities**, three collection tables and **100 foreign keys** (plus Flyway's history table). `MySqlSchemaMigrationTest` checks the complete table inventory; the following is a domain overview:
 
 | Domain | Tables | Integrity / access paths |
 | --- | --- | --- |
@@ -62,11 +64,11 @@ export MYSQL_TEST_USERNAME='local_test_user'
 ./mvnw -Dtest=MySqlSchemaMigrationTest test
 ```
 
-Without `MYSQL_TEST_URL`, the five schema contract cases are reported **skipped**, not passed. In CI or release verification, explicitly provide these variables and check `target/surefire-reports/com.robustvision.platform.database.MySqlSchemaMigrationTest.txt` for `Tests run: 5`, `Failures: 0`, `Errors: 0`, `Skipped: 0`.
+Without `MYSQL_TEST_URL`, the eight schema contract cases are reported **skipped**, not passed. In CI or release verification, explicitly provide these variables and check `target/surefire-reports/com.robustvision.platform.database.MySqlSchemaMigrationTest.txt` for `Tests run: 8`, `Failures: 0`, `Errors: 0`, `Skipped: 0`.
 
 The tests verify:
 
-1. Fresh V1 → latest installation on MySQL 8.4, all application tables, InnoDB/utf8mb4, all 29 entity mappings via Hibernate schema validation.
+1. Fresh V1 → latest installation on MySQL 8.4, all application tables, InnoDB/utf8mb4, all 68 entity mappings via Hibernate schema validation.
 2. Populated V6 and V7 → latest upgrades with synthetic rows in every table, checking every domain row and all previously applied Flyway checksums are unchanged.
 3. Repeated migrate is a no-op; Flyway validation succeeds.
 4. Referential and unique constraints, representative note-child cascades, Unicode/emoji round trips and exact money/cost precision.

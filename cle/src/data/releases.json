@@ -51,6 +51,10 @@
         {
           "zh": "资料问答的 AI 错误在问答区单独显示，保留问题和选择，提供用量与配置入口；重新加载资料不会重发模型请求。调整 Kimi K3 思考力度、生成预算和等待时限，区分超时、连接中断及输出截断。",
           "en": "Show Q&A model errors beside the question, preserving selections and linking to usage and settings. Reloading sources never resends a model request. Tune Kimi K3 reasoning, output budget and generation deadlines, and distinguish timeout, connection and truncation failures."
+        },
+        {
+          "zh": "修复 Windows 测试残留退出码及数据库迁移测试清单，更新前端工具依赖并清除已知依赖安全公告。",
+          "en": "Fix Windows test exit-code leakage and schema-test inventory, and update frontend tooling to resolve known dependency advisories."
         }
       ],
       "improved": [
