@@ -17,6 +17,7 @@ import { authStore } from '@/stores/auth'
 import { themeStore } from '@/stores/theme'
 import { mainItems, adminItems, supportItems, canVisit, type NavItem } from '@/lib/navigation'
 import { PIN_LIMIT, workspaceNavigation } from '@/stores/workspaceNavigation'
+import releases from '@/data/releases.json'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,6 +81,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
             <footer class="workspace-account">
               <div class="workspace-account-identity"><span class="account-monogram">{{ authStore.state.user?.displayName?.slice(0, 1) || 'U' }}</span><div><strong>{{ authStore.state.user?.displayName }}</strong><small>@{{ authStore.state.user?.username }}</small></div><span class="account-role">{{ uiRoleName(authStore.state.user?.roleName, authStore.state.user?.roleCode) }}</span></div>
               <nav class="workspace-account-links" :aria-label="uiText('账户操作')">
+                <RouterLink to="/app/settings?section=about"><AppIcon name="docs" :size="15" />{{ uiText('版本与更新') }} · v{{ releases.current }}</RouterLink>
                 <RouterLink to="/app/settings?section=profile"><AppIcon name="users" :size="15" />{{ uiText('个人资料') }}</RouterLink>
                 <RouterLink to="/app/settings?section=security"><AppIcon name="shield" :size="15" />{{ uiText('密码与登录设备') }}</RouterLink>
                 <RouterLink to="/app/settings?section=privacy"><AppIcon name="key" :size="15" />{{ uiText('隐私与数据') }}</RouterLink>

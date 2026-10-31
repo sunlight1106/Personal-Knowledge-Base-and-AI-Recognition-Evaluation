@@ -3,6 +3,19 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  release-version:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/versioning.py check
+      - run: python -m unittest discover -s scripts -p test_versioning.py -v
+      - run: python scripts/desktop/test_local_build.py
   startup-scripts:
     strategy:
       matrix:
@@ -16,6 +29,7 @@ jobs:
           ./scripts/test-docker-preflight.ps1
           ./scripts/test-start-project.ps1
           ./scripts/desktop/test-release.ps1
+          ./scripts/desktop/test-update-release.ps1
       - if: runner.os == 'Linux'
         run: sh scripts/test-start-project.sh
   frontend:
@@ -63,7 +77,7 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - run: ./mvnw -B -Dtest=PermissionMatrixMySqlIntegrationTest,ModerationMySqlIntegrationTest,AccountSecurityMySqlIntegrationTest,GroupLifecycleMySqlIntegrationTest,GroupCommunicationMySqlIntegrationTest,PersonalWorkflowMySqlIntegrationTest,ResearchWorkspaceMySqlIntegrationTest,AdministrationMySqlIntegrationTest,MySqlSchemaMigrationTest,BillingConcurrencyIntegrationTest,NoteReferenceBatchQueryTest,VocabularyMySqlIntegrationTest,AdminMutationConcurrencyIntegrationTest,PersonalPlatformHttpIntegrationTest,InferenceRecoveryIntegrationTest,PersonalAiPersistenceIntegrationTest,PlatformCompletionMySqlIntegrationTest,CodeLabMySqlIntegrationTest test
+      - run: ./mvnw -B -Dtest=LoginHardeningMySqlIntegrationTest,SocialDiscoveryMySqlIntegrationTest,SocialMySqlIntegrationTest,PermissionMatrixMySqlIntegrationTest,ModerationMySqlIntegrationTest,AccountSecurityMySqlIntegrationTest,GroupLifecycleMySqlIntegrationTest,GroupCommunicationMySqlIntegrationTest,PersonalWorkflowMySqlIntegrationTest,ResearchWorkspaceMySqlIntegrationTest,AdministrationMySqlIntegrationTest,MySqlSchemaMigrationTest,BillingConcurrencyIntegrationTest,NoteReferenceBatchQueryTest,VocabularyMySqlIntegrationTest,AdminMutationConcurrencyIntegrationTest,PersonalPlatformHttpIntegrationTest,InferenceRecoveryIntegrationTest,PersonalAiPersistenceIntegrationTest,PlatformCompletionMySqlIntegrationTest,CodeLabMySqlIntegrationTest test
         env:
           MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&rewriteBatchedStatements=true
           MYSQL_TEST_USERNAME: root

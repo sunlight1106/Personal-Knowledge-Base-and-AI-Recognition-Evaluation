@@ -14,6 +14,7 @@ import java.util.*;
 
 @Service
 public class MessageService {
+    @org.springframework.beans.factory.annotation.Autowired private ContactBlockGuard contactBlocks;
     @org.springframework.beans.factory.annotation.Autowired private ModerationGuard moderation;
     @org.springframework.beans.factory.annotation.Autowired private LiveUpdateService live;
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
@@ -75,6 +76,8 @@ public class MessageService {
         LinkedHashSet<Long> ids = new LinkedHashSet<>(recipientIds == null ? List.of() : recipientIds);
         var permissions = currentUserService.effectivePermissions(sender);
         if (ids.isEmpty() || ids.size() > 20 || ids.contains(null)) throw new BusinessException(HttpStatus.BAD_REQUEST, "MESSAGE_RECIPIENTS_INVALID", "请选择 1 到 20 个收件人");
+        if (contactBlocks.anyBlocked(sender.getId(), ids))
+            throw new BusinessException(HttpStatus.FORBIDDEN, "MESSAGE_RECIPIENT_FORBIDDEN", "当前无法联系所选收件人，请刷新联系人列表");
         if (sender.getStatus() != UserStatus.ACTIVE || userRepository.findMessageContacts(sender.getId(),
                 currentUserService.isSuperAdmin(sender), permissions.contains("contacts:use"), permissions.contains("group:use"), false, ids).size() != ids.size())
             throw new BusinessException(HttpStatus.FORBIDDEN, "MESSAGE_RECIPIENT_FORBIDDEN", "只能联系平台管理员或有交流权限的联系人或同组成员，请刷新联系人列表");

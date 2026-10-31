@@ -1,16 +1,17 @@
 import { request } from './client'
 
-export interface Person { id: number; identityCode: string; username: string; displayName: string }
+export interface Person { id: number; identityCode: string; username: string; displayName: string; contactNumber?: string | null }
 export interface Contact extends Omit<Person, 'id'> { id: number; userId: number; status: 'PENDING' | 'ACCEPTED' | 'REMOVED' | 'REJECTED'; incoming: boolean; blockedByMe: boolean; available: boolean; remark: string; pinned: boolean; muted: boolean; unreadCount: number; clearedThrough: number }
 export interface ChatMessage { id: number; senderId: number; senderName: string; clientId: string; body: string; createdAt: string }
 export type ContactAction = 'accept' | 'reject' | 'withdraw' | 'remove' | 'block' | 'unblock'
 const json = (method: string, body: unknown) => ({ method, body: JSON.stringify(body) })
 export const socialApi = {
-  search: (q: string) => request<Person[]>(`/social/people?q=${encodeURIComponent(q)}`),
+  search: (q: string, type = "auto") => request<Person[]>(`/social/people?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`),
   contacts: () => request<Contact[]>('/social/contacts'),
-  settings: () => request<{ discoverable: boolean }>('/social/settings'),
-  discovery: (discoverable: boolean) => request<{ discoverable: boolean }>('/social/settings', json('PUT', { discoverable })),
+  settings: () => request<{ discoverable: boolean; protectedAccount?: boolean }>('/social/settings'),
+  discovery: (discoverable: boolean) => request<{ discoverable: boolean; protectedAccount?: boolean }>('/social/settings', json('PUT', { discoverable })),
   add: (userId: number) => request<void>('/social/contacts', json('POST', { userId })),
+  block: (userId: number) => request<void>('/social/blacklist', json('POST', { userId })),
   act: (id: number, action: ContactAction) => request<void>(`/social/contacts/${id}`, json('PATCH', { action })),
   preferences: (id: number, settings: Partial<Pick<Contact, 'remark' | 'pinned' | 'muted'>>) => request<void>(`/social/contacts/${id}/preferences`, json('PATCH', settings)),
   read: (id: number, through: number) => request<void>(`/social/contacts/${id}/read`, json('POST', { through })),

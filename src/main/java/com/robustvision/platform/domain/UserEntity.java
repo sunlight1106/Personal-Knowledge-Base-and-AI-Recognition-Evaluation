@@ -70,6 +70,19 @@ public class UserEntity {
     public boolean isDiscoverable() { return discoverable; }
     public void setDiscoverable(boolean value) { discoverable = value; }
 
+    @Column(name="contact_number", unique=true, length=24) private String contactNumber;
+    @Column(name="search_by_number", nullable=false) private boolean searchByNumber = true;
+    @Column(name="search_by_email", nullable=false) private boolean searchByEmail;
+    @Column(name="search_by_phone", nullable=false) private boolean searchByPhone;
+    public String getContactNumber() { return contactNumber; }
+    public void setContactNumber(String value) { contactNumber = value; }
+    public boolean isSearchByNumber() { return searchByNumber; }
+    public void setSearchByNumber(boolean value) { searchByNumber = value; }
+    public boolean isSearchByEmail() { return searchByEmail; }
+    public void setSearchByEmail(boolean value) { searchByEmail = value; }
+    public boolean isSearchByPhone() { return searchByPhone; }
+    public void setSearchByPhone(boolean value) { searchByPhone = value; }
+
     protected UserEntity() {}
 
     public UserEntity(String username, String passwordHash, String displayName, String email, RoleEntity role) {

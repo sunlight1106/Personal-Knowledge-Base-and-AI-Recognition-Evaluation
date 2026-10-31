@@ -57,6 +57,11 @@ public class PersonalAiTransport {
                         || provider == AiProvider.QWEN || base.startsWith("https://api.groq.com/");
                 body.put(modern ? "max_completion_tokens" : "max_tokens", 1600);
                 if (provider == AiProvider.QWEN) body.put("enable_thinking", false);
+                // K3 always reasons; its default max effort can exhaust a small budget before answering.
+                if (provider == AiProvider.MOONSHOT && "kimi-k3".equals(model)) {
+                    body.put("reasoning_effort", "low");
+                    body.put("max_completion_tokens", 8192);
+                }
             }
         }
         try { return new Payload(url, mapper.writeValueAsString(body)); }
@@ -104,7 +109,7 @@ public class PersonalAiTransport {
         HttpUrl url = HttpUrl.get(payload.url());
         // Resolution happens once. OkHttp receives only this vetted snapshot, so DNS changes cannot redirect the socket.
         List<InetAddress> pinned = policy.resolvePublic(url.host());
-        OkHttpClient client = connectionClient(url.host(), pinned);
+        OkHttpClient client = generationClient(url.host(), pinned);
         Request.Builder request = new Request.Builder().url(url).post(RequestBody.create(payload.json(), MediaType.get("application/json; charset=utf-8")));
         switch (provider.protocol()) {
             case GEMINI -> request.header("x-goog-api-key", apiKey);
@@ -118,7 +123,8 @@ public class PersonalAiTransport {
             if (result.text().contains(apiKey)) throw new PersonalAiUpstreamFailure(result.inputTokens(), result.outputTokens());
             return result;
         } catch (BusinessException exception) { throw exception; }
-        catch (java.net.SocketTimeoutException exception) { throw new BusinessException(org.springframework.http.HttpStatus.GATEWAY_TIMEOUT,"PERSONAL_AI_TIMEOUT","供应商响应超时，请稍后再试"); }
+        catch (java.io.InterruptedIOException exception) { throw generationTimeout(); }
+        catch (java.io.IOException exception) { throw networkFailure(); }
         catch (Exception exception) { throw PersonalAiEndpointPolicy.unavailable(); }
         finally { client.connectionPool().evictAll(); }
     }
@@ -149,10 +155,11 @@ public class PersonalAiTransport {
         Payload original=prepare(provider,base,model,"Reply briefly.","Reply with OK only.");
         try {var body=(ObjectNode)mapper.readTree(original.json());
             if(provider.protocol()==AiProvider.Protocol.GEMINI)((ObjectNode)body.get("generationConfig")).put("maxOutputTokens",128);
-            else body.put(body.has("max_completion_tokens")?"max_completion_tokens":"max_tokens",128);
+            else body.put(body.has("max_completion_tokens")?"max_completion_tokens":"max_tokens",diagnosticTokens(provider,model));
             return new Payload(original.url(),mapper.writeValueAsString(body));
         } catch(Exception e){throw PersonalAiEndpointPolicy.unavailable();}
     }
+    static int diagnosticTokens(AiProvider provider,String model){return provider==AiProvider.MOONSHOT&&"kimi-k3".equals(model)?1024:128;}
     public List<String> models(AiProvider provider,String base,String apiKey) {
         policy.validateBase(provider,base);HttpUrl url=HttpUrl.get(base+"/models");
         List<InetAddress> pinned=policy.resolvePublic(url.host());OkHttpClient client=connectionClient(url.host(),pinned);
@@ -175,6 +182,15 @@ public class PersonalAiTransport {
         }return new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,code,message);
     }
     OkHttpClient connectionClient(String host, List<InetAddress> pinned) { return client(host, pinned); }
+    OkHttpClient generationClient(String host,List<InetAddress> pinned) {
+        // Non-streaming models may send no response bytes until reasoning and generation finish.
+        // Keep this below nginx's 150s and the browser's 180s deadlines; never retry a paid request.
+        return connectionClient(host,pinned).newBuilder().callTimeout(Duration.ofSeconds(120)).readTimeout(Duration.ofSeconds(120)).build();
+    }
+    private static BusinessException generationTimeout(){return new BusinessException(org.springframework.http.HttpStatus.GATEWAY_TIMEOUT,
+            "PERSONAL_AI_TIMEOUT","等待模型回复超时，未取得完整回答。请求可能已发送，请先查看使用记录，再决定是否重新预览并发送");}
+    private static BusinessException networkFailure(){return new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,
+            "PERSONAL_AI_CONNECTION_FAILED","与模型服务的连接中断，未取得完整回答。请求可能已发送，请先查看使用记录，再决定是否重新预览并发送");}
     static OkHttpClient client(String host, List<InetAddress> pinned) {
         return new OkHttpClient.Builder().proxy(Proxy.NO_PROXY)
                 .dns(requested -> { if (!host.equals(requested)) throw new UnknownHostException("Endpoint mismatch"); return pinned; })
@@ -183,11 +199,11 @@ public class PersonalAiTransport {
                 .callTimeout(Duration.ofSeconds(30)).connectionPool(new ConnectionPool()).build();
     }
     static String readBounded(ResponseBody body) throws Exception {
-        if (body.contentLength() > MAX_RESPONSE_BYTES) throw PersonalAiEndpointPolicy.unavailable();
+        if (body.contentLength() > MAX_RESPONSE_BYTES) throw responseTooLarge();
         try (InputStream input = body.byteStream(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[4096]; int count;
             while ((count = input.read(buffer)) != -1) {
-                if (output.size() + count > MAX_RESPONSE_BYTES) throw PersonalAiEndpointPolicy.unavailable();
+                if (output.size() + count > MAX_RESPONSE_BYTES) throw responseTooLarge();
                 output.write(buffer, 0, count);
             }
             return output.toString(StandardCharsets.UTF_8);
@@ -204,7 +220,8 @@ public class PersonalAiTransport {
                     output = addOptional(tokenCount(root.path("usageMetadata").path("candidatesTokenCount")),
                             root.path("usageMetadata").path("thoughtsTokenCount"));
                     JsonNode candidate = root.path("candidates").path(0);
-                    if (root.path("promptFeedback").hasNonNull("blockReason") || !"STOP".equals(candidate.path("finishReason").asText())) throw PersonalAiEndpointPolicy.unavailable();
+                    if (root.path("promptFeedback").hasNonNull("blockReason")) throw refusal();
+                    requireFinished(candidate.path("finishReason").asText(),"STOP","MAX_TOKENS");
                     StringBuilder content = new StringBuilder();
                     for (JsonNode part : candidate.path("content").path("parts")) if (!part.path("thought").asBoolean(false) && part.path("text").isTextual()) content.append(part.path("text").asText());
                     text = content.toString();
@@ -213,7 +230,7 @@ public class PersonalAiTransport {
                     input = addOptional(tokenCount(root.path("usage").path("input_tokens")),
                             root.path("usage").path("cache_read_input_tokens"), root.path("usage").path("cache_creation_input_tokens"));
                     output = tokenCount(root.path("usage").path("output_tokens"));
-                    if (!"end_turn".equals(root.path("stop_reason").asText())) throw PersonalAiEndpointPolicy.unavailable();
+                    requireFinished(root.path("stop_reason").asText(),"end_turn","max_tokens");
                     StringBuilder content = new StringBuilder();
                     for (JsonNode block : root.path("content")) if ("text".equals(block.path("type").asText())) content.append(block.path("text").asText());
                     text = content.toString();
@@ -222,14 +239,25 @@ public class PersonalAiTransport {
                     input = tokenCount(root.path("usage").path("prompt_tokens"));
                     output = tokenCount(root.path("usage").path("completion_tokens"));
                     JsonNode choice = root.path("choices").path(0);
-                    if (!"stop".equals(choice.path("finish_reason").asText()) || choice.path("message").hasNonNull("refusal")) throw PersonalAiEndpointPolicy.unavailable();
+                    if (choice.path("message").hasNonNull("refusal")) throw refusal();
+                    requireFinished(choice.path("finish_reason").asText(),"stop","length");
                     text = choice.path("message").path("content").asText("");
                 }
             }
-            if (text.isBlank() || text.length() > MAX_OUTPUT_CHARS) throw PersonalAiEndpointPolicy.unavailable();
+            if (text.isBlank()) throw new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,"PERSONAL_AI_EMPTY_ANSWER","模型没有返回回答正文。可能只生成了思考内容，请先查看使用记录，再调整问题或模型");
+            if (text.length() > MAX_OUTPUT_CHARS) throw responseTooLarge();
             return new Completion(text.trim(), input, output);
-        } catch (Exception exception) { throw new PersonalAiUpstreamFailure(input, output); }
+        } catch (BusinessException exception) { throw new PersonalAiUpstreamFailure(exception.getCode(),exception.getMessage(),input,output); }
+        catch (Exception exception) { throw new PersonalAiUpstreamFailure("PERSONAL_AI_RESPONSE_INVALID","模型返回的数据无法解析，未取得完整回答。请先查看使用记录，再决定是否重新发送",input,output); }
     }
+    private static void requireFinished(String reason,String complete,String length){
+        if(complete.equals(reason))return;
+        if(length.equals(reason))throw new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,"PERSONAL_AI_OUTPUT_LIMIT","模型达到本次生成长度上限，回答未完成。请先查看使用记录，可缩小问题范围或更换模型后重新预览");
+        if(Set.of("content_filter","SAFETY","RECITATION","refusal").contains(reason))throw refusal();
+        throw new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,"PERSONAL_AI_RESPONSE_INCOMPLETE","模型未正常结束回答，未取得完整结果。请先查看使用记录，再决定是否重新发送");
+    }
+    private static BusinessException refusal(){return new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,"PERSONAL_AI_REFUSED","模型拒绝了本次请求，请检查问题内容或供应商的使用要求");}
+    private static BusinessException responseTooLarge(){return new BusinessException(org.springframework.http.HttpStatus.BAD_GATEWAY,"PERSONAL_AI_RESPONSE_TOO_LARGE","模型响应超过当前接收容量。请先查看使用记录，可要求更简短的回答后重新预览");}
     private static Long addOptional(Long base, JsonNode... extras) {
         if (base == null) return null;
         long total = base;

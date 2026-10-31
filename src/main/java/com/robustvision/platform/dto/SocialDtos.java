@@ -5,9 +5,12 @@ import java.time.Instant;
 
 public final class SocialDtos {
     private SocialDtos() {}
-    public record Person(Long id, String identityCode, String username, String displayName) {}
+    public record Person(Long id, String identityCode, String username, String displayName, String contactNumber) {}
     public record Contact(Long id, Long userId, String identityCode, String username, String displayName, String status, boolean incoming, boolean blockedByMe, boolean available, String remark, boolean pinned, boolean muted, long unreadCount, long clearedThrough) {}
-    public record Discoverability(boolean discoverable) {}
+    public record Discoverability(boolean discoverable, boolean protectedAccount) {}
+    public record DiscoverySettings(boolean discoverable, String contactNumber, boolean searchByNumber, boolean searchByEmail, boolean searchByPhone, boolean protectedAccount) {}
+    public record DiscoveryUpdate(@NotNull Boolean discoverable, @NotNull Boolean searchByNumber, @NotNull Boolean searchByEmail, @NotNull Boolean searchByPhone) {}
+    public record NumberUpdate(@NotBlank @Pattern(regexp="[A-Za-z0-9]{6,24}") String contactNumber) {}
     public record ContactRequest(@NotNull @Positive Long userId) {}
     public record Action(@NotNull @Pattern(regexp = "accept|reject|withdraw|remove|block|unblock") String action) {}
     public record Preferences(@Size(max = 80) String remark, Boolean pinned, Boolean muted) {}

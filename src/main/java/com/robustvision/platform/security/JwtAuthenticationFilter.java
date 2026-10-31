@@ -30,6 +30,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String authorization = request.getHeader("Authorization");
+        var headers = request.getHeaders("Authorization");
+        if (headers.hasMoreElements()) headers.nextElement();
+        if (headers.hasMoreElements() || authorization != null && (authorization.length() > 8200 || authorization.contains(","))) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"success\":false,\"error\":{\"code\":\"INVALID_AUTHORIZATION\",\"message\":\"请求只能包含一个有效的身份凭据\"}}");
+            return;
+        }
         if (authorization != null && authorization.startsWith("Bearer ")
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = authorization.substring(7);

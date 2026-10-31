@@ -27,6 +27,8 @@ public class AccountExportService {
         data.put("schemaVersion", 5);
         data.put("exportedAt", Instant.now());
         data.put("profile", profile);
+        data.put("contactDiscovery",rows("SELECT contact_number,discoverable,search_by_number,search_by_email,search_by_phone FROM app_user WHERE id=?",id));
+        data.put("phoneBinding",rows("SELECT verified_phone FROM phone_binding WHERE owner_id=?",id));
         data.put("codeRuns", rows("SELECT id, language, entry_name, source, arguments_json, result_json, status, created_at, archived, title, memo FROM code_run WHERE owner_id=? ORDER BY created_at,id", id));
         data.put("notes", rows("SELECT id, title, body, tags, status, library, content_format, parent_id, revision, deleted_at, created_at, updated_at FROM note WHERE owner_id = ? ORDER BY created_at, id", id));
         data.put("noteVersions", rows("SELECT id,note_id,revision,title,body,tags,library,content_format,status,created_at FROM note_version WHERE owner_id=? ORDER BY created_at,id",id));

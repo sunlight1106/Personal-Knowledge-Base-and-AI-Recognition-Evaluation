@@ -14,9 +14,13 @@ public class SocialController {
     public SocialController(SocialService service) { this.service = service; }
     @GetMapping("/settings") public ApiResponse<SocialDtos.Discoverability> settings() { return ApiResponse.ok(service.settings()); }
     @PutMapping("/settings") public ApiResponse<SocialDtos.Discoverability> settings(@Valid @RequestBody SocialDtos.Discoverability body) { return ApiResponse.ok(service.settings(body.discoverable())); }
-    @GetMapping("/people") public ApiResponse<List<SocialDtos.Person>> search(@RequestParam String q) { return ApiResponse.ok(service.search(q)); }
+    @GetMapping("/discovery") public Object discovery() { return ApiResponse.ok(service.discovery()); }
+    @PutMapping("/discovery") public Object discovery(@Valid @RequestBody SocialDtos.DiscoveryUpdate body) { return ApiResponse.ok(service.discovery(body)); }
+    @PutMapping("/number") public Object number(@Valid @RequestBody SocialDtos.NumberUpdate body) { return ApiResponse.ok(service.number(body.contactNumber())); }
+    @GetMapping("/people") public ApiResponse<List<SocialDtos.Person>> search(@RequestParam String q, @RequestParam(defaultValue="auto") String type) { return ApiResponse.ok(service.search(q,type)); }
     @GetMapping("/contacts") public ApiResponse<List<SocialDtos.Contact>> list() { return ApiResponse.ok(service.list()); }
     @PostMapping("/contacts") public ApiResponse<Void> request(@Valid @RequestBody SocialDtos.ContactRequest request) { service.request(request.userId()); return ApiResponse.ok(null); }
+    @PostMapping("/blacklist") public ApiResponse<Void> block(@Valid @RequestBody SocialDtos.ContactRequest request) { service.block(request.userId()); return ApiResponse.ok(null); }
     @PatchMapping("/contacts/{id}") public ApiResponse<Void> act(@PathVariable long id, @Valid @RequestBody SocialDtos.Action body) { service.act(id, body.action()); return ApiResponse.ok(null); }
     @PatchMapping("/contacts/{id}/preferences") public ApiResponse<Void> preferences(@PathVariable long id, @Valid @RequestBody SocialDtos.Preferences body) { service.preferences(id, body); return ApiResponse.ok(null); }
     @PostMapping("/contacts/{id}/read") public ApiResponse<Void> read(@PathVariable long id, @Valid @RequestBody SocialDtos.ReadReceipt body) { service.read(id, body.through()); return ApiResponse.ok(null); }

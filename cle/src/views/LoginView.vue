@@ -68,6 +68,7 @@ async function submit() {
         </label>
         <label class="field-label">{{ uiText('验证码或恢复码（启用双重验证时填写）') }}<input v-model="otp" class="field-input" autocomplete="one-time-code" maxlength="32" /></label><label class="account-remember"><input v-model="remember" type="checkbox" :disabled="authStore.state.loading" />{{ uiText('在此浏览器记住这个账号名称') }}</label>
         <p v-if="error" class="form-error">{{ uiText(error) }}</p>
+        <p v-if="error" class="login-footnote">{{ uiText('连续输错密码后会暂时限制登录，请等待 5 分钟再试。忘记密码时，可通过已验证邮箱重置；切换网络不会解除限制。') }}</p>
         <button class="button button--dark button--full" type="submit" :disabled="authStore.state.loading">
           {{ authStore.state.loading ? uiText('正在验证…') : recovering?uiText('恢复并登录'):uiText('登录平台') }} <AppIcon v-if="!authStore.state.loading" name="arrow" :size="17" />
         </button>

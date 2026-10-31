@@ -145,6 +145,8 @@ app:
   payment:
     public-web-url: ${PUBLIC_WEB_URL:http://localhost:4173}
   sms:
+    endpoint: ${SMS_GATEWAY_URL:}
+    token: ${SMS_GATEWAY_TOKEN:}
     mode: ${SMS_MODE:sandbox}
     webhook-url: ${SMS_WEBHOOK_URL:}
   bootstrap:

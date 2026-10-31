@@ -10,6 +10,9 @@ target/
 output/
 .playwright-cli/
 data/
+!/cle/src/data/
+/cle/src/data/*
+!/cle/src/data/releases.json
 uploads/
 .idea/
 .vscode/

@@ -24,7 +24,7 @@ public class PersonalAiDiagnosticsService {
   if(!mode.equals("MODELS"))PersonalAiSettingsService.validateModel(provider,setting.getModel());
   String base=endpoints.validateBase(provider,setting.getBaseUrl());String token=UUID.randomUUID().toString()+UUID.randomUUID();Instant expires=Instant.now().plusSeconds(300);limits.preview(owner);
   synchronized(pending){pending.entrySet().removeIf(e->e.getValue().expires().isBefore(Instant.now())||e.getValue().owner()==owner);if(pending.size()>=256)throw bad("DIAGNOSTIC_BUSY","检查服务繁忙，请稍后再试");pending.put(token,new Pending(owner,setting.getId(),setting.getRevision(),mode,expires));}
-  return new Preview(token,mode,setting.getModel(),base,mode.equals("MODELS")?"GET /models，仅查询模型目录":mode.equals("VISION")?"发送系统生成的 16×16 蓝色测试图片，请模型识别颜色。不会发送个人图片、笔记或记忆；供应商可能计费。":"仅发送固定短句 Reply with OK only.，输出上限 128 tokens。不发送笔记、记忆或文件，供应商可能计费。",expires);
+  return new Preview(token,mode,setting.getModel(),base,mode.equals("MODELS")?"GET /models，仅查询模型目录":mode.equals("VISION")?"发送系统生成的 16×16 蓝色测试图片，请模型识别颜色。不会发送个人图片、笔记或记忆；供应商可能计费。":"仅发送固定短句 Reply with OK only.，输出上限 "+PersonalAiTransport.diagnosticTokens(provider,setting.getModel())+" tokens（含思考）。不发送笔记、记忆或文件，供应商可能计费。",expires);
  }
  public Result execute(String token,boolean confirmed){
   Long owner=current.requireCurrent().getId();if(!confirmed)throw bad("DIAGNOSTIC_CONFIRM_REQUIRED","请确认发送预览中的检查请求");Pending approved;

@@ -36,6 +36,7 @@ export const adminItems: NavItem[] = [
 export const supportItems: NavItem[] = [
   { label: '举报与处罚记录', to: '/app/safety', icon: 'shield' },
   { label: '操作文档', to: '/docs', icon: 'docs' },
+  { label: '版本与更新', to: '/updates', icon: 'docs' },
   { label: '设置', to: '/app/settings', icon: 'settings' },
 ]
 

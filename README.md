@@ -8,12 +8,15 @@
   <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.1/0.1.exe"><strong>下载 0.1.exe</strong></a>
   &nbsp; · &nbsp; <a href="docs/TEST_RELEASE_0.1.md">安装指南</a>
   &nbsp; · &nbsp; <a href="docs/README.md">使用文档</a>
+  &nbsp; · &nbsp; <a href="CHANGELOG.md">更新日志</a>
   &nbsp; · &nbsp; <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/issues">问题反馈</a>
 </p>
 
 ## 下载与启动
 
 **0.1 测试版 · 修订 2** — 修复学习中心断线恢复和新版启动后仍显示旧页面的问题。
+
+源码正在准备 **0.11**：用户号、查找隐私、黑名单完善及版本记录。以下安装包仍为已发布的 0.1；完整变化见 [更新日志](CHANGELOG.md)。
 
 | 下载方式 | 怎么用 |
 | --- | --- |

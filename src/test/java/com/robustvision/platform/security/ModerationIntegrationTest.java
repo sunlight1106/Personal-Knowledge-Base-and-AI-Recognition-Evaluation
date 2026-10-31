@@ -109,9 +109,11 @@ class ModerationIntegrationTest extends GroupCommunicationIntegrationTest {
  }
  @Test @org.springframework.transaction.annotation.Transactional
  void bannedAdminsDoNotCountAsAnAvailableHandoffForDisablingOrClosingTheLastAdmin()throws Exception{
-  var second=user("check"+UUID.randomUUID().toString().substring(0,8),admin.getRole());String secondToken=login(second);
-  db.update("UPDATE app_user SET access_expires_at=? WHERE role_id=? AND id NOT IN (?,?)",Timestamp.from(Instant.now().minusSeconds(60)),admin.getRole().getId(),admin.getId(),second.getId());
+  // Existing group membership remains valid after promotion; protected admins cannot receive new invitations.
+  var second=user("check"+UUID.randomUUID().toString().substring(0,8),member.getRole());
   long group=group(ownerToken);membership(group,ownerToken,second,"MEMBER",Set.of("CONTENT_READ","CONTENT_WRITE","MEMBERS_READ")).andExpect(status().isOk());
+  second.setRole(admin.getRole());users.saveAndFlush(second);String secondToken=login(second);
+  db.update("UPDATE app_user SET access_expires_at=? WHERE role_id=? AND id NOT IN (?,?)",Timestamp.from(Instant.now().minusSeconds(60)),admin.getRole().getId(),admin.getId(),second.getId());
   String m=data(postGroup(group,secondToken,"Synthetic admin evidence",null,false).andExpect(status().isOk()).andReturn()).path("id").asText();
   em.flush();
   String id=report("MESSAGE",m,ownerToken);review(id,"BAN",Set.of());

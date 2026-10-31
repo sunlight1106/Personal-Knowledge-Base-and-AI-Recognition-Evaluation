@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SocialIntegrationTest {
     @Autowired MockMvc mvc; @Autowired ObjectMapper mapper; @Autowired UserRepository users;
     @Autowired RoleRepository roles; @Autowired ChatMessageRepository chats; @Autowired PasswordEncoder encoder;
+    @Autowired ContactLinkRepository contactLinks;
     UserEntity alice, bob, outsider, admin;
     String a, b, o, ad;
     @BeforeEach void setup() throws Exception {
@@ -59,7 +60,7 @@ class SocialIntegrationTest {
     @Test void discoveryIsAuthenticatedLimitedPrivateAndCanBeDisabled() throws Exception {
         mvc.perform(get("/api/v1/social/people").param("q","bob")).andExpect(status().isUnauthorized());
         JsonNode result = data(mvc.perform(auth(get("/api/v1/social/people").param("q",bob.getUsername()),a)).andExpect(status().isOk()).andReturn());
-        assertThat(result).hasSize(1); assertThat(result.get(0).properties()).hasSize(4);
+        assertThat(result).hasSize(1); assertThat(result.get(0).properties()).hasSize(5);
         assertThat(result.get(0).has("email")).isFalse();
         mvc.perform(auth(get("/api/v1/social/people").param("q","%_"),a)).andExpect(status().isOk()).andExpect(jsonPath("$.data").isEmpty());
         mvc.perform(auth(get("/api/v1/social/people").param("q","b"),a)).andExpect(status().isBadRequest());
@@ -200,6 +201,95 @@ class SocialIntegrationTest {
         action(id,b,"unblock").andExpect(status().isOk());
         action(id,b,"accept").andExpect(status().isNotFound());
         send(id,a,UUID.randomUUID().toString(),"no consent").andExpect(status().isNotFound());
+    }
+    @Test void strangerBlockIsPrivateIdempotentAndDoesNotCreateConsent() throws Exception {
+        for (int i = 0; i < 2; i++) mvc.perform(json(post("/api/v1/social/blacklist"), a, Map.of("userId", bob.getId()))).andExpect(status().isOk());
+        JsonNode mine = data(mvc.perform(auth(get("/api/v1/social/contacts"), a)).andExpect(status().isOk()).andReturn());
+        assertThat(mine).hasSize(1);
+        long id = mine.get(0).path("id").asLong();
+        assertThat(mine.get(0).path("status").asText()).isEqualTo("REMOVED");
+        assertThat(mine.get(0).path("blockedByMe").asBoolean()).isTrue();
+        mvc.perform(auth(get("/api/v1/social/contacts"), b)).andExpect(jsonPath("$.data").isEmpty());
+        mvc.perform(json(post("/api/v1/social/blacklist"), b, Map.of("userId", alice.getId()))).andExpect(status().isNotFound());
+        action(id, b, "block").andExpect(status().isNotFound());
+        for (String token : List.of(a, b)) {
+            send(id, token, UUID.randomUUID().toString(), "blocked").andExpect(status().isNotFound());
+            action(id, token, "accept").andExpect(status().isNotFound());
+        }
+        for (String token : List.of(o, ad)) {
+            action(id, token, "unblock").andExpect(status().isNotFound());
+            action(id, token, "block").andExpect(status().isNotFound());
+        }
+        action(id, b, "unblock").andExpect(status().isOk()); // Cannot remove Alice's restriction.
+        mvc.perform(auth(get("/api/v1/social/contacts"), a)).andExpect(jsonPath("$.data[0].blockedByMe").value(true));
+        action(id, a, "unblock").andExpect(status().isOk());
+        mvc.perform(auth(get("/api/v1/social/contacts"), a)).andExpect(jsonPath("$.data").isEmpty());
+        send(id, a, UUID.randomUUID().toString(), "still no consent").andExpect(status().isNotFound());
+    }
+    @Test void directBlockValidatesPermissionAndDoesNotExposeHiddenUsers() throws Exception {
+        mvc.perform(post("/api/v1/social/blacklist").contentType(MediaType.APPLICATION_JSON).content("{\"userId\":1}")).andExpect(status().isUnauthorized());
+        var limitedRole = roles.save(new RoleEntity("LIMIT_" + UUID.randomUUID().toString().substring(0, 8), "Limited", "Synthetic", Set.of("note:read")));
+        String limited = login(user("limited" + UUID.randomUUID().toString().substring(0, 8), limitedRole));
+        mvc.perform(json(post("/api/v1/social/blacklist"), limited, Map.of("userId", bob.getId()))).andExpect(status().isForbidden());
+        for (long invalid : List.of(0L, -1L, alice.getId())) mvc.perform(json(post("/api/v1/social/blacklist"), a, Map.of("userId", invalid))).andExpect(status().isBadRequest());
+        mvc.perform(json(post("/api/v1/social/blacklist"), a, Map.of("userId", Long.MAX_VALUE))).andExpect(status().isNotFound());
+        bob.setDiscoverable(false); users.saveAndFlush(bob);
+        mvc.perform(json(post("/api/v1/social/blacklist"), a, Map.of("userId", bob.getId()))).andExpect(status().isNotFound());
+    }
+    @Test void expiredPeersCannotBeDiscoveredRequestedAcceptedOrMessaged() throws Exception {
+        long id = request();
+        alice.setAccessExpiresAt(java.time.Instant.now().minusSeconds(60)); users.saveAndFlush(alice);
+        action(id, b, "accept").andExpect(status().isNotFound());
+        alice.setAccessExpiresAt(null); users.saveAndFlush(alice);
+        action(id, b, "accept").andExpect(status().isOk());
+        bob.setAccessExpiresAt(java.time.Instant.now().minusSeconds(60)); users.saveAndFlush(bob);
+        mvc.perform(auth(get("/api/v1/social/people").param("q", bob.getUsername()), a)).andExpect(jsonPath("$.data").isEmpty());
+        mvc.perform(json(post("/api/v1/social/contacts"), a, Map.of("userId", bob.getId()))).andExpect(status().isNotFound());
+        mvc.perform(auth(get("/api/v1/social/contacts"), a)).andExpect(jsonPath("$.data[0].available").value(false));
+        send(id, a, UUID.randomUUID().toString(), "expired").andExpect(status().isNotFound());
+        // Privacy controls remain usable for an existing but expired contact.
+        mvc.perform(json(post("/api/v1/social/blacklist"), a, Map.of("userId", bob.getId()))).andExpect(status().isOk());
+        action(id, a, "unblock").andExpect(status().isOk());
+    }
+    @Test void blacklistAlsoRejectsMailEvenWhenTheOtherPartyIsAnAdministrator() throws Exception {
+        mvc.perform(json(post("/api/v1/social/blacklist"), a, Map.of("userId", admin.getId()))).andExpect(status().isOk());
+        for (var pair : List.of(Map.entry(a, admin), Map.entry(ad, alice))) {
+            mvc.perform(auth(get("/api/v1/messages/directory").param("userId", pair.getValue().getId().toString()), pair.getKey()))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data").isEmpty());
+            mvc.perform(auth(multipart("/api/v1/messages").param("recipientIds", pair.getValue().getId().toString())
+                    .param("subject", "Synthetic block check").param("body", "Must not be delivered"), pair.getKey()))
+                    .andExpect(status().isForbidden());
+        }
+    }
+    @Test void simultaneousStrangerBlocksCreateOnlyOnePrivateEntry() throws Exception {
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(4);
+        try {
+            var ready = new java.util.concurrent.CountDownLatch(4);
+            var start = new java.util.concurrent.CountDownLatch(1);
+            var futures = new ArrayList<java.util.concurrent.Future<Integer>>();
+            for (int i=0; i<4; i++) futures.add(executor.submit(() -> {
+                ready.countDown(); start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+                return mvc.perform(json(post("/api/v1/social/blacklist"), a, Map.of("userId",bob.getId()))).andReturn().getResponse().getStatus();
+            }));
+            assertThat(ready.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue(); start.countDown();
+            for (var future : futures) assertThat(future.get(30, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(200);
+            mvc.perform(auth(get("/api/v1/social/contacts"),a)).andExpect(jsonPath("$.data.length()").value(1));
+        } finally { executor.shutdownNow(); }
+    }
+    @Test void blacklistCapacityDoesNotPreventUnblockingOrIdempotentRetries() throws Exception {
+        var peers = new ArrayList<UserEntity>();
+        String prefix = "limit" + UUID.randomUUID().toString().substring(0,8);
+        String digest = encoder.encode("SyntheticSocial123!");
+        for (int i=0; i<500; i++) peers.add(new UserEntity(prefix+i, digest, prefix+i, prefix+i+"@example.test", alice.getRole()));
+        peers = new ArrayList<>(users.saveAllAndFlush(peers));
+        var links = new ArrayList<ContactLinkEntity>();
+        for (var peer : peers) { var link = new ContactLinkEntity(alice.getId(),peer.getId(),alice.getId()); link.block(alice.getId(),true); links.add(link); }
+        links = new ArrayList<>(contactLinks.saveAllAndFlush(links));
+        mvc.perform(json(post("/api/v1/social/blacklist"),a,Map.of("userId",bob.getId()))).andExpect(status().isConflict());
+        mvc.perform(json(post("/api/v1/social/blacklist"),a,Map.of("userId",peers.get(0).getId()))).andExpect(status().isOk());
+        action(links.get(0).getId(),a,"unblock").andExpect(status().isOk());
+        mvc.perform(json(post("/api/v1/social/blacklist"),a,Map.of("userId",bob.getId()))).andExpect(status().isOk());
+        assertThat(contactLinks.countBlockedBy(alice.getId())).isEqualTo(500);
     }
     @TestConfiguration static class FastPasswords { @Bean @Primary PasswordEncoder socialTestEncoder() { return new BCryptPasswordEncoder(4); } }
 }

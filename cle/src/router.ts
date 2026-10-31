@@ -19,6 +19,7 @@ const router = createRouter({
     { path: '/account/logout', name: 'account-logout', component: () => import('@/views/AccountAccessView.vue'), meta: { requiresAuth: true } },
     { path: '/models', name: 'models', component: () => import('@/views/ModelsView.vue') },
     { path: '/docs', name: 'docs', component: () => import('@/views/DocsView.vue') },
+    { path: '/updates', name: 'updates', component: () => import('@/views/UpdatesView.vue') },
     { path: '/pay/:token', name: 'payment-scan', component: () => import('@/views/PaymentScanView.vue') },
     // 分享只读页：要求登录，但不要求特定权限（分享的意义就是跨用户可见）
     {

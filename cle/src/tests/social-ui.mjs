@@ -111,7 +111,7 @@ try {
   assert(clearCalls === 1 && !fixture.querySelector('.chat-message'), 'Confirmed history clearing removes only the current view of old messages')
   button('加入黑名单').click(); await nextTick(); confirmDialog(); await wait(() => button('解除拉黑'))
   assert(!fixture.querySelector('.chat-compose') && !fixture.textContent.includes('<img'), 'Blacklisting removes the active conversation and exposes an unblock action')
-  button('解除拉黑').click(); await wait(() => !button('解除拉黑')); button('联系人').click(); await nextTick()
+  button('解除拉黑').click(); await nextTick(); confirmDialog(); await wait(() => !button('解除拉黑')); button('联系人').click(); await nextTick()
   assert(!!button('我的研究同伴'), 'Unblocking returns an accepted contact with personal preferences retained')
   button('申请').click(); await wait(() => button('撤回')); button('撤回').click(); await nextTick(); confirmDialog(); await wait(() => !document.querySelector('[role=alertdialog]'))
   assert(!button('撤回'), 'Withdrawn outgoing requests disappear from the request list')

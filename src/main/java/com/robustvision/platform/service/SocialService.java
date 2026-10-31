@@ -24,21 +24,50 @@ public class SocialService {
         this.users = users; this.contacts = contacts; this.chats = chats; this.current = current;
     }
     @Transactional(readOnly = true)
-    public SocialDtos.Discoverability settings() { return new SocialDtos.Discoverability(current.requireCurrent().isDiscoverable()); }
+    public SocialDtos.Discoverability settings() { return new SocialDtos.Discoverability(current.requireCurrent().isDiscoverable(), ContactDiscoveryPolicy.protectedAccount(current.requireCurrent())); }
     @Transactional
     public SocialDtos.Discoverability settings(boolean value) {
         UserEntity user = users.findLockedById(current.requireCurrent().getId()).orElseThrow();
         user.setDiscoverable(value);
-        return new SocialDtos.Discoverability(value);
+        return new SocialDtos.Discoverability(value,ContactDiscoveryPolicy.protectedAccount(user));
     }
+    @Transactional(readOnly=true)
+    public SocialDtos.DiscoverySettings discovery() { return discoveryView(current.requireCurrent()); }
+    private SocialDtos.DiscoverySettings discoveryView(UserEntity u) {
+        return new SocialDtos.DiscoverySettings(u.isDiscoverable(), u.getContactNumber(), u.isSearchByNumber(), u.isSearchByEmail(), u.isSearchByPhone(), ContactDiscoveryPolicy.protectedAccount(u));
+    }
+    @Transactional
+    public SocialDtos.DiscoverySettings discovery(SocialDtos.DiscoveryUpdate value) {
+        var u=users.findLockedById(current.requireCurrent().getId()).orElseThrow();
+        u.setDiscoverable(value.discoverable());u.setSearchByNumber(value.searchByNumber());u.setSearchByEmail(value.searchByEmail());u.setSearchByPhone(value.searchByPhone());
+        return discoveryView(u);
+    }
+    @Transactional
+    public SocialDtos.DiscoverySettings number(String raw) {
+        var u=users.findLockedById(current.requireCurrent().getId()).orElseThrow();
+        String number=raw.trim().toLowerCase(Locale.ROOT);
+        if (!number.matches("[a-z0-9]{6,24}")) throw bad("用户号须为 6–24 位字母或数字");
+        if (users.existsByContactNumberAndIdNot(number,u.getId())) throw numberTaken();
+        u.setContactNumber(number);
+        try { users.saveAndFlush(u); } catch(org.springframework.dao.DataIntegrityViolationException conflict) { throw numberTaken(); }
+        return discoveryView(u);
+    }
+    private BusinessException numberTaken() { return new BusinessException(HttpStatus.CONFLICT,"CONTACT_NUMBER_TAKEN","此用户号不可用，请换一个"); }
     @Transactional(readOnly = true)
-    public List<SocialDtos.Person> search(String query) {
+    public List<SocialDtos.Person> search(String query) { return search(query, "auto"); }
+    @Transactional(readOnly = true)
+    public List<SocialDtos.Person> search(String query, String mode) {
         String text = query == null ? "" : query.trim();
-        if (text.length() < 2 || text.length() > 50) throw bad("请输入完整身份码，或 2–50 个字符的用户名、昵称前缀");
+        if (text.length() < 2 || text.length() > 160) throw bad("请输入完整身份码，或 2–160 个字符的用户名、昵称前缀");
         String escaped = text.toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         if (text.matches("(?i)PKB-[0-9A-F]{32}")) escaped = ""; // A full identity code is an exact lookup, not a username prefix.
-        return users.searchPeople(current.requireCurrent().getId(), escaped, text.toUpperCase(Locale.ROOT), PageRequest.of(0, 20)).stream()
-                .map(u -> new SocialDtos.Person(u.getId(), u.getIdentityCode(), u.getUsername(), u.getDisplayName())).toList();
+        String kind = mode == null ? "auto" : mode;
+        if ("auto".equals(kind)) kind = text.contains("@") ? "email" : text.startsWith("+") || text.matches("1[3-9][0-9]{9}") ? "phone" : "name";
+        if (!Set.of("name","number","email","phone").contains(kind)) throw bad("请选择有效的查找方式");
+        String exact = "phone".equals(kind) ? ContactDiscoveryPolicy.phone(text) : text.toLowerCase(Locale.ROOT);
+        return users.searchPeople(current.requireCurrent().getId(), escaped, text.toUpperCase(Locale.ROOT), kind, exact, PageRequest.of(0, 20)).stream()
+                .filter(u -> users.findById(u.getId()).filter(ContactDiscoveryPolicy::canDiscover).isPresent())
+                .map(u -> new SocialDtos.Person(u.getId(), u.getIdentityCode(), u.getUsername(), u.getDisplayName(), u.getContactNumber())).toList();
     }
     @Transactional(readOnly = true)
     public List<SocialDtos.Contact> list() {
@@ -53,7 +82,7 @@ public class SocialService {
         if (me == peer) throw bad("不能添加自己");
         UserEntity target = lockUsers(me, peer);
         ContactLinkEntity link = contacts.lockPair(Math.min(me, peer), Math.max(me, peer)).orElse(null);
-        if (target.getStatus() != UserStatus.ACTIVE || (link == null && !target.isDiscoverable()) || link != null && link.blocked()) throw unavailable();
+        if (ContactDiscoveryPolicy.protectedAccount(target) || ContactDiscoveryPolicy.protectedAccount(users.findById(me).orElseThrow()) || !target.hasActiveAccess(Instant.now()) || (link == null && !target.isDiscoverable()) || link != null && link.blocked()) throw unavailable();
         if (link != null && Set.of("PENDING", "ACCEPTED").contains(link.getStatus())) return;
         if (!target.isDiscoverable()) throw unavailable();
         if (link != null && link.getUpdatedAt().isAfter(Instant.now().minusSeconds(86400)))
@@ -64,14 +93,15 @@ public class SocialService {
         contacts.save(link);
         live.changed(List.of(me,peer));
     }
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void act(long id, String action) {
         long me = current.requireCurrent().getId();
         ContactLinkEntity link = locked(id, me);
         switch (action) {
             case "accept", "reject" -> {
                 if (link.blocked() || !"PENDING".equals(link.getStatus()) || link.getRequesterId() == me) throw unavailable();
-                if (users.findById(link.peer(me)).orElseThrow().getStatus() != UserStatus.ACTIVE) throw unavailable();
+                if (!users.findById(link.peer(me)).orElseThrow().hasActiveAccess(Instant.now())) throw unavailable();
+                if (action.equals("accept") && (ContactDiscoveryPolicy.protectedAccount(users.findById(me).orElseThrow()) || ContactDiscoveryPolicy.protectedAccount(users.findById(link.peer(me)).orElseThrow()))) throw unavailable();
                 link.setStatus(action.equals("accept") ? "ACCEPTED" : "REJECTED");
             }
             case "withdraw" -> {
@@ -82,11 +112,38 @@ public class SocialService {
                 if (!"ACCEPTED".equals(link.getStatus())) throw unavailable();
                 link.setStatus("REMOVED");
             }
-            case "block" -> link.block(me, true);
+            case "block" -> { checkBlockLimit(me, link); link.block(me, true); }
             case "unblock" -> link.block(me, false);
             default -> throw bad("不支持的联系人操作");
         }
         live.changed(List.of(me, link.peer(me)));
+    }
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+    public void block(long peer) {
+        long me = current.requireCurrent().getId();
+        if (me == peer) throw bad("不能将自己加入黑名单");
+        UserEntity target = lockUsers(me, peer);
+        ContactLinkEntity link = contacts.lockPair(Math.min(me, peer), Math.max(me, peer)).orElse(null);
+        if (link == null) {
+            if (!target.isDiscoverable() || !target.hasActiveAccess(Instant.now())) throw unavailable();
+            link = new ContactLinkEntity(me, peer, me);
+            link.setStatus("REMOVED"); // Blocking a stranger never creates a friend request.
+        } else {
+            entityManager.refresh(link, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        }
+        checkBlockLimit(me, link);
+        if (link.blockedBy(me)) return;
+        link.block(me, true);
+        contacts.save(link);
+        live.changed(List.of(me, peer));
+    }
+    private void checkBlockLimit(long me, ContactLinkEntity link) {
+        // A stranger's private block record must not become an identity-discovery endpoint.
+        if (!link.blockedBy(me) && !Set.of("PENDING", "ACCEPTED").contains(link.getStatus()) &&
+                (link.blocked() || users.findById(link.peer(me)).filter(u -> u.isDiscoverable() && u.hasActiveAccess(Instant.now())).isEmpty()))
+            throw unavailable();
+        if (!link.blockedBy(me) && contacts.countBlockedBy(me) >= 500)
+            throw new BusinessException(HttpStatus.CONFLICT, "BLACKLIST_LIMIT", "黑名单已达上限（500），请先整理已有名单");
     }
     @Transactional
     public void preferences(long id, SocialDtos.Preferences value) {
@@ -172,10 +229,12 @@ public class SocialService {
     private UserEntity lockUsers(long me, long peer) {
         UserEntity low = users.findLockedById(Math.min(me, peer)).orElseThrow(this::unavailable);
         UserEntity high = users.findLockedById(Math.max(me, peer)).orElseThrow(this::unavailable);
+        entityManager.refresh(low, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        entityManager.refresh(high, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         return peer == low.getId() ? low : high;
     }
     private void requireChat(ContactLinkEntity link, long me) {
-        if (link.blocked() || !"ACCEPTED".equals(link.getStatus()) || users.findById(link.peer(me)).orElseThrow(this::unavailable).getStatus() != UserStatus.ACTIVE) throw unavailable();
+        if (link.blocked() || !"ACCEPTED".equals(link.getStatus()) || !users.findById(link.peer(me)).orElseThrow(this::unavailable).hasActiveAccess(Instant.now())) throw unavailable();
     }
     private BusinessException unavailable() { return new BusinessException(HttpStatus.NOT_FOUND, "CONTACT_UNAVAILABLE", "联系人不存在或当前无法交流，请刷新联系人列表"); }
     private BusinessException bad(String message) { return new BusinessException(HttpStatus.BAD_REQUEST, "CONTACT_INVALID", message); }

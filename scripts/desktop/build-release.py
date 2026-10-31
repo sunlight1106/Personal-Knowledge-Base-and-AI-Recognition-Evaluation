@@ -1,13 +1,15 @@
-"""Build immutable Windows v0.1 assets from tracked sources and local verified images.
+"""Build versioned Windows assets from tracked sources and local verified images.
 
 Run after tests and Docker builds. No .env, user data, browser state or Git credentials
-are read or included. Outputs are ignored under output/release/0.1.
+are read or included. Outputs are ignored under output/release/<VERSION>.
 """
-import argparse, gzip, hashlib, json, os, re, shutil, subprocess, zipfile
+import argparse, gzip, hashlib, json, os, re, shutil, subprocess, sys, zipfile
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
-OUT=ROOT/'output/release/0.1'
+sys.path.insert(0,str(ROOT/'scripts'))
+from versioning import sync, entry_markdown, version_parts
+OUT=ROOT/'output/release'
 IMAGES={'backend':'robust-vision-backend:local','frontend':'robust-vision-frontend:latest',
         'code-lab':'robust-vision-code-lab:local','training':'robust-vision-training:local',
         'minio':'robust-vision-minio:2025-10-15'}
@@ -15,16 +17,27 @@ INFRASTRUCTURE={'mysql':'mysql:8.4','redis':'redis:7.4-alpine','clamav':'clamav/
 def sha(path):
     with path.open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 def command(*args):return subprocess.check_output(args,cwd=ROOT,text=True).strip()
+def launcher_source(version, runtime_hash, runtime_file, revision=1):
+    version_parts(version)
+    if not re.fullmatch(r'[a-f0-9]{64}',runtime_hash):raise ValueError('Invalid runtime hash')
+    if runtime_file != 'runtime-'+version+'.zip':raise ValueError('Invalid runtime filename')
+    source=(ROOT/'scripts/desktop/Launcher.cs').read_text(encoding='utf8')
+    for key,value in {'__VERSION__':version,'__RUNTIME_SHA256__':runtime_hash,'__RUNTIME_FILE__':runtime_file,'__REVISION__':str(revision)}.items():
+        source=source.replace(key,value)
+    if re.search(r'__[A-Z_]+__',source):raise ValueError('Unresolved launcher placeholder')
+    return source
+
 def build(skip_images=False, revision=1):
     global OUT
-    if revision < 1 or revision > 999:raise ValueError('Invalid release revision')
-    original=ROOT/'output/release/0.1'
-    OUT=ROOT/('output/release/0.1'+('-r'+str(revision) if revision>1 else ''))
+    if revision != 1:raise ValueError('Use a new public version for each patch, not a revision')
+    data=sync(ROOT,check=True);version=data['current'];entry=data['releases'][0]
+    if entry['status'] != 'ready':raise ValueError('Mark a tested release ready before packaging; published versions are immutable')
+    OUT=ROOT/'output/release'/version
     if command('git','status','--porcelain','--untracked-files=normal'):
         raise RuntimeError('Commit the tested source before packaging; release inputs must be clean.')
     OUT.mkdir(parents=True,exist_ok=True)
-    manifest={'version':'0.1','revision':revision,'sourceCommit':command('git','rev-parse','HEAD'),'images':[],'infrastructure':[]}
-    previous={i['name']:i for i in json.loads((original/'release.json').read_text())['images']} if revision>1 else {}
+    if not (OUT/'minio-sources.tar.gz').is_file():raise RuntimeError('Provide matching minio-sources.tar.gz before packaging')
+    manifest={'version':version,'revision':revision,'releaseDate':entry['date'],'sourceCommit':command('git','rev-parse','HEAD'),'images':[],'infrastructure':[]}
     for service,source in INFRASTRUCTURE.items():
         repository=source.rsplit(':',1)[0]
         digests=json.loads(command('docker','image','inspect',source,'--format','{{json .RepoDigests}}'))
@@ -33,13 +46,9 @@ def build(skip_images=False, revision=1):
         manifest['infrastructure'].append({'name':service,'image':digest})
     for name,source in IMAGES.items():
         image_id=command('docker','image','inspect',source,'--format','{{.Id}}')
-        tag='pkb-'+name+':0.1';command('docker','tag',source,tag)
-        old=previous.get(name)
-        reuse_original=old and old['id']==image_id and sha(original/old['file'])==old['sha256']
-        filename=old['file'] if reuse_original else name+('-r'+str(revision) if revision>1 else '')+'.tar.gz'
+        tag='pkb-'+name+':'+version;command('docker','tag',source,tag)
+        filename=name+'.tar.gz'
         target=OUT/filename; stamp=OUT/(name+'.image-id')
-        if reuse_original and not target.exists():
-            shutil.copyfile(original/old['file'],target);stamp.write_text(image_id)
         if not(skip_images and target.exists() and stamp.exists() and stamp.read_text()==image_id):
             print('Exporting '+name,flush=True)
             with (OUT/(name+'.partial')).open('wb') as raw, gzip.GzipFile(filename='',mode='wb',fileobj=raw,compresslevel=1,mtime=0) as packed:
@@ -50,11 +59,13 @@ def build(skip_images=False, revision=1):
             (OUT/(name+'.partial')).replace(target);stamp.write_text(image_id)
         manifest['images'].append({'name':name,'file':target.name,'sha256':sha(target),'id':image_id})
     (OUT/'release.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf8')
-    override='services:\n'+''.join('  '+service+':\n    image: pkb-'+image+':0.1\n' for service,image in [('backend','backend'),('model-worker','backend'),('frontend','frontend'),('code-lab','code-lab'),('training','training'),('minio','minio')])
+    override='services:\n'+''.join('  '+service+':\n    image: pkb-'+image+':'+version+'\n' for service,image in [('backend','backend'),('model-worker','backend'),('frontend','frontend'),('code-lab','code-lab'),('training','training'),('minio','minio')])
     override+=''.join('  '+item['name']+':\n    image: '+item['image']+'\n' for item in manifest['infrastructure'])
     # Include only Git-tracked sources: staging new files makes this packaging boundary explicit.
     files=command('git','ls-files','-z').split('\0')
-    runtime=OUT/('runtime-0.1'+('-r'+str(revision) if revision>1 else '')+'.zip')
+    runtime=OUT/('runtime-'+version+'.zip')
+    notes=entry_markdown(entry)+'\n'
+    (OUT/'RELEASE-NOTES.md').write_text(notes,encoding='utf8')
     with zipfile.ZipFile(runtime,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
         for name in sorted(filter(None,files)):
             path=ROOT/name
@@ -66,22 +77,23 @@ def build(skip_images=False, revision=1):
             z.writestr(name,data)
         z.writestr('release.json',json.dumps(manifest,indent=2))
         z.writestr('compose.desktop.yaml',override)
-    source=(ROOT/'scripts/desktop/Launcher.cs').read_text(encoding='utf8').replace('__RUNTIME_SHA256__',sha(runtime)).replace('__RUNTIME_FILE__',runtime.name).replace('__REVISION__',str(revision))
+        z.writestr('RELEASE-NOTES.md',notes)
+    source=launcher_source(version,sha(runtime),runtime.name,revision)
     (OUT/'Launcher.generated.cs').write_text(source,encoding='utf-8-sig')
     compiler=Path(os.environ['WINDIR'])/'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
     subprocess.run([str(compiler),'/nologo','/target:winexe','/platform:x64','/optimize+',
         '/reference:System.Windows.Forms.dll','/reference:System.Drawing.dll','/reference:System.IO.Compression.dll',
-        '/reference:System.IO.Compression.FileSystem.dll','/out:'+str(OUT/'0.1.exe'),str(OUT/'Launcher.generated.cs')],check=True)
-    subprocess.run([str(OUT/'0.1.exe'),'--self-test',str(runtime)],check=True)
-    shutil.copyfile(ROOT/'docs/TEST_RELEASE_0.1.md',OUT/'START-HERE.md')
-    with zipfile.ZipFile(OUT/'PKB-AI-0.1-Windows-x64.zip','w',zipfile.ZIP_DEFLATED) as z:
-        for name in ['0.1.exe',runtime.name,'START-HERE.md']:z.write(OUT/name,name)
+        '/reference:System.IO.Compression.FileSystem.dll','/out:'+str(OUT/(version+'.exe')),str(OUT/'Launcher.generated.cs')],check=True)
+    subprocess.run([str(OUT/(version+'.exe')),'--self-test',str(runtime)],check=True)
+    guide=(ROOT/'docs/WINDOWS_RELEASE.md').read_text(encoding='utf8').replace('__VERSION__',version)
+    (OUT/'START-HERE.md').write_text(guide,encoding='utf8')
+    with zipfile.ZipFile(OUT/('PKB-AI-'+version+'-Windows-x64.zip'),'w',zipfile.ZIP_DEFLATED) as z:
+        for name in [version+'.exe',runtime.name,'START-HERE.md','RELEASE-NOTES.md']:z.write(OUT/name,name)
     # No generator sources or local stamps are published as binary assets.
-    if revision>1:shutil.copyfile(original/'minio-sources.tar.gz',OUT/'minio-sources.tar.gz')
-    names=['0.1.exe',runtime.name,'PKB-AI-0.1-Windows-x64.zip','START-HERE.md','release.json']+[x['file'] for x in manifest['images']]+['minio-sources.tar.gz']
+    names=[version+'.exe',runtime.name,'PKB-AI-'+version+'-Windows-x64.zip','START-HERE.md','RELEASE-NOTES.md','release.json']+[x['file'] for x in manifest['images']]+['minio-sources.tar.gz']
     missing=[name for name in names if not(OUT/name).is_file()]
     if missing:raise RuntimeError('Missing release companions: '+str(missing))
     (OUT/'SHA256SUMS').write_text(''.join(sha(OUT/name)+'  '+name+'\n' for name in names),encoding='ascii')
-    print('Built and hash-verified 0.1.exe and Windows package.',flush=True)
+    print('Built and hash-verified '+version+'.exe and Windows package.',flush=True)
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--reuse-images',action='store_true');p.add_argument('--revision',type=int,default=1);args=p.parse_args();build(args.reuse_images,args.revision)

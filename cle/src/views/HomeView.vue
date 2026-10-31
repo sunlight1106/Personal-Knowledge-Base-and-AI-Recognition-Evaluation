@@ -10,6 +10,7 @@ import MotionToggle from '@/components/MotionToggle.vue'
 import CodeListing from '@/components/CodeListing.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import HomeWorkspacePreview from '@/components/HomeWorkspacePreview.vue'
+import releases from '@/data/releases.json'
 import { authStore } from '@/stores/auth'
 onMounted(() => { void authStore.ensureUser() })
 const enter = computed(() => authStore.state.user ? '/app/home' : '/login')
@@ -60,7 +61,7 @@ input → preprocessing → optimized
 compare(baseline, optimized)" /><p>{{ uiText('个人模型用于图片识别；双路 DEMO 用于体验对照流程。') }}</p><nav :aria-label="uiText('实验记录')"><RouterLink to="/app/logs">{{ uiText('调用日志 →') }}</RouterLink><RouterLink to="/app/downloads">{{ uiText('下载结果 →') }}</RouterLink></nav></div>
       </section>
     </main>
-    <footer class="home-footer"><RouterLink to="/" class="home-brand"><BrandMark /><span>{{ uiText('个人知识库') }}<small>{{ uiText('学习 · 记录 · 探索') }}</small></span></RouterLink><p>{{ uiText('把每一次思考，留给未来的自己。') }}</p><a href="#introduction">{{ uiText('返回顶部 ↑') }}</a></footer>
+    <footer class="home-footer"><RouterLink to="/" class="home-brand"><BrandMark /><span>{{ uiText('个人知识库') }}<small>{{ uiText('学习 · 记录 · 探索') }}</small></span></RouterLink><RouterLink to="/updates">v{{ releases.current }} · {{ uiText('版本与更新') }}</RouterLink><a href="#introduction">{{ uiText('返回顶部 ↑') }}</a></footer>
   </div>
 </template>
 

@@ -12,6 +12,9 @@ public class AccountPurgeService {
     public AccountPurgeService(JdbcTemplate db,FileService files,PersonalTrainingService training){this.db=db;this.files=files;this.training=training;}
     public void erasePrivate(long owner){
         deletionGuard.requireAvailable();
+        db.update("DELETE FROM phone_binding WHERE owner_id=?",owner);
+        db.update("DELETE FROM account_login_throttle WHERE owner_id=?",owner);
+        db.update("UPDATE app_user SET contact_number=NULL,search_by_number=FALSE,search_by_email=FALSE,search_by_phone=FALSE WHERE id=?",owner);
         // Dissolved groups and delivered conversations remain shared history.
         db.update("DELETE FROM workspace_member_permission WHERE workspace_member_id IN (SELECT id FROM workspace_member WHERE user_id=?)",owner);
         db.update("DELETE FROM workspace_member WHERE user_id=?",owner);

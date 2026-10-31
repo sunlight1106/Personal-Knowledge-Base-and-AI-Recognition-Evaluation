@@ -65,3 +65,7 @@ The Nginx privacy access log is defined at the server level to override the offi
 搜索、原文读取与收藏列表均重新检查来源的当前访问权限。个人 AI 识别结果要求 `personal-ai:use`；群组来源同时要求 `group:use`、`message:read` 和成员的 `CONTENT_READ`。禁用学习中心也会关闭它的 AI 问答接口。
 
 收藏不保存正文或标题副本；仅保存本人选择的资料标识。常用搜索保存本人的筛选条件，不能据此访问他人的资料。并发保存以账号行锁和数据库唯一约束去重，按账号限制数量；清理只处理当前账号的收藏。
+
+## 0.11 登录与异常请求补强
+
+增加数据库账号级密码失败保护、拒绝歧义 JSON 和重复身份凭据，并修复未知用户名登录的异常响应。策略、限制和测试命令见 [登录保护与首次使用](SECURITY_ONBOARDING_011.md)。

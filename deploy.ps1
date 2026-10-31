@@ -1,6 +1,7 @@
 ﻿param([int]$Port = 4173, [switch]$SkipBuild, [switch]$Build, [switch]$FullBuild, [switch]$Training)
 # Desktop releases set this only after verifying their pinned image manifest.
-$prebuiltRelease = $env:PKB_PREBUILT_RELEASE -eq '0.1'
+$sourceVersion = ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'VERSION'))).Trim()
+$prebuiltRelease = $sourceVersion -cmatch '^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$' -and $env:PKB_PREBUILT_RELEASE -ceq $sourceVersion
 New-Item -ItemType Directory -Path "$PSScriptRoot\.runtime" -Force | Out-Null
 $startupGuard = $null
 function Write-StartupStatus([string]$Phase,[string]$Step,[string]$State='running',[string]$Url='') {

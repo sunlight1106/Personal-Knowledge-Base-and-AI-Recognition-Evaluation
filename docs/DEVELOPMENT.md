@@ -34,6 +34,8 @@ npm run build --prefix cle
 
 ## 验证与反馈
 
+每次补丁同步 [版本与更新记录](VERSIONING.md)。提交前运行 `python scripts/versioning.py check`，确保网站、安装器、包版本和 [更新日志](../CHANGELOG.md) 一致。
+
 [功能验收](FUNCTIONAL_TESTS.md) 列出了复跑方法、正常流程和异常边界；[验证记录](VALIDATION.md) 保存实际结果。自动交互检查使用模拟资料，不发送真实消息或收费 AI 请求。
 
 遇到问题可以 [提交 Issue](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/issues)。请写明使用版本、安装方式、操作步骤、预期结果与实际结果；附截图或错误编号时隐藏个人资料。不要上传 `.env`、密码、API 密钥或完整私人数据。

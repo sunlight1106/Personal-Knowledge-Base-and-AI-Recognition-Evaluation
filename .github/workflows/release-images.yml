@@ -39,7 +39,10 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - id: version
-        run: echo "tag=sha-$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          python scripts/versioning.py check
+          echo "tag=sha-$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "app_version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v7
         with:
@@ -53,6 +56,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.app_version }}
       - name: Export image and checksum
         env:
           COMPONENT: ${{ matrix.name }}
@@ -97,18 +101,21 @@ jobs:
         run: |
           SHA=$(git rev-parse HEAD)
           TAG="sha-$SHA"
+          python scripts/versioning.py check
+          APP_VERSION=$(cat VERSION)
           cat release/*.sha256 > release/SHA256SUMS
           python scripts/release/source_manifest.py > release/SOURCE.json
           cp docs/RELEASE_INSTALL.md release/INSTALL.md
           cp scripts/components/minio-runtime.md release/MINIO-SOURCE.md
-          printf 'Prebuilt Linux amd64 images for commit %s. Installation and recovery steps are in INSTALL.md.\n' "$SHA" > release/NOTES.md
+          printf 'v%s source-image build (%s). These are Linux amd64 images, not the Windows installer. Installation and recovery steps are in INSTALL.md.\n\n' "$APP_VERSION" "$SHA" > release/NOTES.md
+          python scripts/versioning.py notes >> release/NOTES.md
           if gh release view "$TAG" >/dev/null 2>&1; then
             if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = false ]; then
               echo 'This immutable release already exists; leaving its assets unchanged.'
               exit 0
             fi
           else
-            gh release create "$TAG" --draft --prerelease --target "$SHA" --title "Build ${SHA:0:8}" --notes-file release/NOTES.md
+            gh release create "$TAG" --draft --prerelease --target "$SHA" --title "v$APP_VERSION · Image build ${SHA:0:8}" --notes-file release/NOTES.md
           fi
           gh release upload "$TAG" release/*.tar.gz release/SHA256SUMS release/SOURCE.json release/INSTALL.md release/MINIO-SOURCE.md --clobber
           gh release view "$TAG" --json assets --jq '.assets | map(select(.size > 0) | .name)' > release/uploaded.json

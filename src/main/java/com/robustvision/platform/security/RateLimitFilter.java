@@ -132,6 +132,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private String category(HttpServletRequest request) {
         String path = path(request);
         boolean mutation = !Set.of("GET", "HEAD", "OPTIONS").contains(request.getMethod());
+        if (path.equals("/api/v1/social/people") || path.equals("/api/v1/social/number")) return "contacts";
         if (mutation && (path.contains("/auth/") || path.startsWith("/api/v1/account/"))) return "auth";
         if ("POST".equals(request.getMethod()) && (path.equals("/api/v1/code-lab/runs") || path.equals("/api/v1/inference/tasks")
                 || path.matches("/api/v1/inference/tasks/[^/]+/recover")
@@ -142,7 +143,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 || path.matches("/api/v1/notes/[^/]+/attachments")
                 || path.equals("/api/v1/messages") || path.matches("/api/v1/messages/groups/[0-9]+")
                 || path.equals("/api/v1/vocabulary/backup/restore"))) return "files";
-        if ("POST".equals(request.getMethod()) && path.equals("/api/v1/social/contacts")) return "contacts";
+        if ("POST".equals(request.getMethod()) && (path.equals("/api/v1/social/contacts") || path.equals("/api/v1/social/blacklist"))) return "contacts";
         if ("POST".equals(request.getMethod()) && path.matches("/api/v1/social/contacts/[0-9]+/messages")) return "chat";
         return "general";
     }

@@ -23,6 +23,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>, org.spr
     Optional<UserEntity> findLockedByUsername(@Param("username") String username);
 
     boolean existsByUsername(String username);
+    boolean existsByContactNumberAndIdNot(String contactNumber, Long id);
     @Query("select u.id from UserEntity u where u.username = :username")
     Optional<Long> findIdByUsername(@Param("username") String username);
     boolean existsByEmail(String email);
@@ -55,14 +56,21 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>, org.spr
     }
 
     @Query("""
-        select u.id as id, u.identityCode as identityCode, u.username as username, u.displayName as displayName
+        select u.id as id, u.identityCode as identityCode, u.username as username, u.displayName as displayName, u.contactNumber as contactNumber
         from UserEntity u where u.id <> :me and u.discoverable = true
+        and u.role.code not in ('ADMIN','CHECK','REVIEWER','MODERATOR','AUDITOR')
+        and not exists (select r.id from RoleEntity r join r.permissions p where r.id=u.role.id and p in ('moderation:review','user:write','role:write'))
+        and not exists (select staff.id from UserEntity staff join staff.permissionOverrides permission where staff.id=u.id and key(permission) in ('moderation:review','user:write','role:write') and value(permission)=true)
         and u.status = com.robustvision.platform.domain.UserStatus.ACTIVE
-        and (u.identityCode = :identityCode or lower(u.username) like :query escape '!' or lower(u.displayName) like :query escape '!')
+        and (u.accessExpiresAt is null or u.accessExpiresAt > CURRENT_TIMESTAMP)
+        and ((:mode = 'name' and u.searchByNumber = true and (u.contactNumber = :exact or u.identityCode = :identityCode or lower(u.username) like :query escape '!' or lower(u.displayName) like :query escape '!'))
+          or (:mode = 'number' and u.searchByNumber = true and u.contactNumber = :exact)
+          or (:mode = 'email' and u.searchByEmail = true and lower(u.email) = :exact and exists (select s.ownerId from AccountSecurityEntity s where s.ownerId = u.id and lower(s.verifiedEmail) = :exact))
+          or (:mode = 'phone' and u.searchByPhone = true and exists (select p.ownerId from PhoneBindingEntity p where p.ownerId = u.id and p.verifiedPhone = :exact)))
         and not exists (select c.id from ContactLinkEntity c where ((c.lowUserId = :me and c.highUserId = u.id) or (c.highUserId = :me and c.lowUserId = u.id)) and (c.lowBlocked = true or c.highBlocked = true))
         order by u.username, u.id
         """)
-    List<MessageContactRow> searchPeople(@Param("me") long me, @Param("query") String query, @Param("identityCode") String identityCode, org.springframework.data.domain.Pageable pageable);
+    List<MessageContactRow> searchPeople(@Param("me") long me, @Param("query") String query, @Param("identityCode") String identityCode, @Param("mode") String mode, @Param("exact") String exact, org.springframework.data.domain.Pageable pageable);
 
     interface MessageContactRow {
         Long getId();
@@ -70,6 +78,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>, org.spr
         String getUsername();
         String getDisplayName();
         String getRoleCode();
+        String getContactNumber();
     }
     /** A locking/current read, including on MySQL REPEATABLE READ transactions. */
     @Query(value = "SELECT u.id FROM app_user u WHERE u.role_id = :roleId AND u.status = 'ACTIVE' AND (u.access_expires_at IS NULL OR u.access_expires_at>CURRENT_TIMESTAMP) AND NOT EXISTS (SELECT 1 FROM moderation_penalty p WHERE p.target_id=u.id AND p.kind='BAN' AND p.revoked_at IS NULL AND p.expires_at>CURRENT_TIMESTAMP) ORDER BY u.id FOR UPDATE", nativeQuery = true)

@@ -23,7 +23,9 @@ public class UserAccountDetailsService implements UserDetailsService {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    // A missing login name is an expected authentication failure, not a reason
+    // to mark the caller's transaction rollback-only and turn its 401 into 500.
+    @org.springframework.transaction.annotation.Transactional(readOnly = true, noRollbackFor = UsernameNotFoundException.class)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         UserEntity account = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("用户不存在"));

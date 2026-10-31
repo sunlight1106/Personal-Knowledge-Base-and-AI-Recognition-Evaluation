@@ -1,0 +1,130 @@
+{
+  "current": "0.11",
+  "releases": [
+    {
+      "version": "0.11",
+      "status": "ready",
+      "date": "2026-10-31",
+      "title": {
+        "zh": "账号安全、联系隐私与资料问答更新",
+        "en": "Account security, contact privacy and source-based Q&A"
+      },
+      "added": [
+        {
+          "zh": "新增可自行设置的唯一用户号，支持用户号、已验证邮箱及手机号查找。",
+          "en": "Choose a unique user number and find people by number, verified email or verified phone."
+        },
+        {
+          "zh": "增加各查找方式的隐私开关，以及手机号验证、换绑和解绑流程。",
+          "en": "Control each discovery method and verify, replace or unlink a phone number."
+        },
+        {
+          "zh": "新增版本与更新记录页面，网站、更新日志和启动器使用统一版本信息。",
+          "en": "View version history with consistent release information across the website, changelog and launcher."
+        },
+        {
+          "zh": "工作台增加下一步引导、默认展开的操作说明，以及账号安全与隐私快捷入口。",
+          "en": "The dashboard now highlights your next step, opens its instructions and provides shortcuts to account security and privacy."
+        }
+      ],
+      "fixed": [
+        {
+          "zh": "关闭查找或拉黑后，直接指定用户 ID 也不能绕过好友申请限制；管理和审核账号不可搜索或添加。",
+          "en": "Direct user IDs cannot bypass discovery or block settings. Administrative and review accounts cannot be discovered or added."
+        },
+        {
+          "zh": "修复切换联系人分类时旧搜索结果覆盖列表，以及拉黑后残留私聊内容的问题。",
+          "en": "Prevent stale search results from replacing contact lists and clear the active conversation after blocking."
+        },
+        {
+          "zh": "合并重复短信配置，增加生产配置解析检查。",
+          "en": "Merge duplicate SMS configuration and validate the production configuration file."
+        },
+        {
+          "zh": "拒绝重复 JSON 字段、多段 JSON 和多个身份凭据，避免同一请求被不同层以不同方式解释。",
+          "en": "Reject duplicate JSON fields, trailing JSON payloads and multiple authorization credentials to avoid ambiguous request parsing."
+        },
+        {
+          "zh": "修复不存在的登录用户名触发 500 错误的问题，统一返回普通认证失败。",
+          "en": "Fix unknown login names causing a 500 error; return a normal authentication failure instead."
+        },
+        {
+          "zh": "资料问答的 AI 错误在问答区单独显示，保留问题和选择，提供用量与配置入口；重新加载资料不会重发模型请求。调整 Kimi K3 思考力度、生成预算和等待时限，区分超时、连接中断及输出截断。",
+          "en": "Show Q&A model errors beside the question, preserving selections and linking to usage and settings. Reloading sources never resends a model request. Tune Kimi K3 reasoning, output budget and generation deadlines, and distinguish timeout, connection and truncation failures."
+        }
+      ],
+      "improved": [
+        {
+          "zh": "黑名单支持查找、搜索结果直接拉黑、解除确认和完成反馈。",
+          "en": "Search the blocklist, block from search results and confirm unblocking with clear feedback."
+        },
+        {
+          "zh": "补充号码唯一性、并发、隐私隔离和角色变更的回归测试；更新 DOMPurify。",
+          "en": "Add regression coverage for uniqueness, concurrency, privacy and role changes; update DOMPurify."
+        },
+        {
+          "zh": "后续启动器按版本命名，下载地址与镜像标签自动生成，不再覆盖同名旧版本。",
+          "en": "Generate versioned launcher names, download URLs and image tags for future releases."
+        },
+        {
+          "zh": "增加跨 IP、跨登录方式的账号级密码保护：15 分钟内连续失败 8 次，限制登录 5 分钟；限制期间重试不延长等待。",
+          "en": "Add account-level password protection across IPs and login aliases: eight failures within 15 minutes trigger a five-minute cooldown, which retries do not extend."
+        },
+        {
+          "zh": "入门进度只读取本人实际保存的数据，权限变更和切换账号后重新核验；查询找到首条记录就停止，不再统计全部历史。",
+          "en": "Onboarding reflects only your saved work and rechecks after account or permission changes. Progress queries stop at the first matching record instead of counting all history."
+        },
+        {
+          "zh": "资料问答取消 8 份数量限制，支持当前页全选、跨页累加和清空；未选资料时悬停发送按钮显示提示。长资料按问题分配片段容量，并继续逐份校验访问权限。",
+          "en": "Remove the eight-source Q&A limit. Select the current page, accumulate sources across pages or clear them; hovering over the send button explains when a source is required. Long sources share a passage budget while access is checked individually."
+        },
+        {
+          "zh": "增加桌面本地版本同步流程：更新前加密备份并校验，保留账号与资料，更新后检查 EXE、应用镜像及接口。",
+          "en": "Add local desktop synchronization with verified encrypted backups, preserved accounts and data, and launcher, image and endpoint checks."
+        }
+      ],
+      "notes": [
+        {
+          "zh": "0.11 为公开测试版，更新包含 Windows 启动器、配套运行文件和变化说明。",
+          "en": "0.11 is a public test release with a Windows launcher, matching runtime files and change notes."
+        },
+        {
+          "zh": "短信服务未配置时，手机号验证和查找不可用；不将未验证号码视为已绑定。",
+          "en": "Phone verification and discovery remain unavailable until SMS is configured; unverified numbers are never treated as bound."
+        },
+        {
+          "zh": "更新前请备份数据。本版本包含数据库迁移，不支持直接降级数据库。",
+          "en": "Back up before updating. This version includes a database migration; direct database downgrades are unsupported."
+        }
+      ]
+    },
+    {
+      "version": "0.1",
+      "status": "published",
+      "date": "2026-10-17",
+      "title": {
+        "zh": "首个公开测试版",
+        "en": "First public test release"
+      },
+      "added": [
+        {
+          "zh": "提供 Windows 启动器，集成笔记、词汇学习、个人 AI、群组交流与代码可视化。",
+          "en": "A Windows launcher for notes, vocabulary, personal AI, group collaboration and code visualization."
+        }
+      ],
+      "fixed": [
+        {
+          "zh": "历史修订 2 修复学习中心断线恢复和更新后仍显示旧页面的问题。",
+          "en": "Historical revision 2 fixed learning-workspace connection recovery and stale pages after updates."
+        }
+      ],
+      "improved": [],
+      "notes": [
+        {
+          "zh": "保留历史 0.1 下载。后续补丁使用独立版本号，不再以“修订”覆盖发布文件。",
+          "en": "Historical 0.1 downloads remain available. Future patches use separate versions instead of replacing revision assets."
+        }
+      ]
+    }
+  ]
+}

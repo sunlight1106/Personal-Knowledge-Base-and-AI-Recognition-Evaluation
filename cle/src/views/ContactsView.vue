@@ -26,13 +26,17 @@ async function searchHistory() {
     if (version === historyVersion && choice === selection && id === selected.value) historyResults.value = rows
   } catch (e) { if (version === historyVersion && choice === selection) error.value = messageOf(e) }
 }
+const protectedAccount = ref(false)
+const searchType = ref('auto')
+watch(searchType,()=>{searchVersion++;results.value=[];searched.value=false;searching.value=false})
 const contacts = ref<Contact[]>([]), results = ref<Person[]>([]), query = ref(''), searched = ref(false)
 const selected = ref<number | null>(null), messages = ref<ChatMessage[]>([]), body = ref('')
 const error = ref(''), loading = ref(true), searching = ref(false), busy = ref(false), sending = ref(false)
 useUnsavedDraft(computed(() => !!body.value.trim()), computed(() => sending.value || busy.value))
 const more = ref(false), historyBusy = ref(false), refreshing = ref(false), discoverable = ref(true), transcript = ref<HTMLElement | null>(null)
 const listTab = ref<'contacts' | 'requests' | 'blacklist'>('contacts'), managerOpen = ref(false), remarkDraft = ref('')
-const confirmation = ref<{ contact: Contact; action: ContactAction | 'clear'; title: string; description: string; label: string } | null>(null)
+const confirmation = ref<{ contact: Contact | Person; action: ContactAction | 'clear' | 'block-person'; title: string; description: string; label: string } | null>(null)
+const blacklistQuery = ref(''), feedback = ref('')
 const acknowledged = new Map<number, number>(), acknowledging = new Set<number>()
 const display = (contact: Contact) => contact.remark || contact.displayName
 const current = computed(() => contacts.value.find(c => c.id === selected.value))
@@ -42,11 +46,13 @@ const unreadTotal = computed(() => friends.value.reduce((sum, c) => sum + (c.mut
 const incoming = computed(() => contacts.value.filter(c => c.status === 'PENDING' && c.incoming && c.available))
 const outgoing = computed(() => contacts.value.filter(c => c.status === 'PENDING' && !c.incoming && c.available))
 const blocked = computed(() => contacts.value.filter(c => c.blockedByMe))
+const filteredBlocked = computed(() => blocked.value.filter(c => `${c.remark || ''} ${c.displayName} ${c.username} ${c.identityCode}`.toLowerCase().includes(blacklistQuery.value.trim().toLowerCase())))
 let generation = 0, selection = 0, searchVersion = 0, contactsVersion = 0, timer: ReturnType<typeof setTimeout> | undefined
 let retry: { id: number; clientId: string; body: string } | null = null
 const messageOf = (reason: unknown) => reason instanceof ApiClientError ? reason.message : '连接失败，内容仍保留，请重试。'
 function reset() {
   generation++; selection++; searchVersion++; clearTimeout(timer)
+  blacklistQuery.value = ''; feedback.value = ''; protectedAccount.value = false; searchType.value = 'auto'
   contacts.value = []; results.value = []; messages.value = []; selected.value = null; body.value = ''; query.value = ''
   retry = null; confirmation.value = null; managerOpen.value = false; remarkDraft.value = ''; listTab.value = 'contacts'; acknowledged.clear(); acknowledging.clear(); error.value = ''; loading.value = false; refreshing.value = false; searching.value = false; busy.value = false; sending.value = false; historyBusy.value = false
 }
@@ -57,6 +63,7 @@ watch(selected,()=>{historyVersion++;historyQuery.value='';historyResults.value=
 watch(historyQuery,()=>{historyVersion++;historyResults.value=[]})
 function openNotification() {
   if (route.query.tab === 'requests') listTab.value = 'requests'
+  if (route.query.tab === 'blacklist') selectList('blacklist')
   const contact = friends.value.find(c => String(c.id) === route.query.contact)
   if (contact) void open(contact)
 }
@@ -71,7 +78,7 @@ function reconcile(items: Contact[]) {
     selection++; historyVersion++; historyResults.value = []; messages.value = []; more.value = false; retry = null
   }
 }
-function selectList(tab: typeof listTab.value) { listTab.value = tab; query.value = ''; searched.value = false; results.value = [] }
+function selectList(tab: typeof listTab.value) { searchVersion++; searching.value = false; listTab.value = tab; query.value = ''; searched.value = false; results.value = [] }
 function toggleManager() { managerOpen.value = !managerOpen.value; if (managerOpen.value) remarkDraft.value = current.value?.remark || '' }
 async function markRead() {
   const id = selected.value, through = messages.value.at(-1)?.id, token = generation, choice = selection
@@ -93,7 +100,7 @@ async function load() {
   try {
     const [items, settings] = await Promise.all([socialApi.contacts(), socialApi.settings()])
     if (token !== generation) return
-    reconcile(items); discoverable.value = settings.discoverable; openNotification()
+    reconcile(items); discoverable.value = settings.discoverable; protectedAccount.value = !!settings.protectedAccount; openNotification()
   } catch (reason) { if (token === generation) error.value = messageOf(reason) }
   finally { if (token === generation) { loading.value = false; schedule() } }
 }
@@ -121,17 +128,17 @@ async function refresh() {
   } finally { if (token === generation) { refreshing.value = false; schedule() } }
 }
 async function search() {
-  if (query.value.trim().length < 2 || query.value.trim().length > 50) { error.value = '请输入完整身份码，或至少 2 个字符的用户名、昵称'; return }
+  if (query.value.trim().length < 2 || query.value.trim().length > 160) { error.value = '请输入完整用户号、邮箱、手机号，或至少 2 个字符的昵称'; return }
   const token = generation, version = ++searchVersion, text = query.value.trim()
   searching.value = true; error.value = ''; results.value = []; searched.value = false
-  try { const rows = await socialApi.search(text); if (token === generation && version === searchVersion) { results.value = rows; searched.value = true } }
+  try { const rows = await socialApi.search(text, searchType.value); if (token === generation && version === searchVersion) { results.value = rows; searched.value = true } }
   catch (reason) { if (token === generation && version === searchVersion) error.value = messageOf(reason) }
   finally { if (token === generation && version === searchVersion) searching.value = false }
 }
 watch(query, () => { searchVersion++; results.value = []; searched.value = false; searching.value = false })
 async function mutate(work: () => Promise<unknown>) {
   if (busy.value || sending.value) return false
-  const token = generation; contactsVersion++; busy.value = true; error.value = ''
+  const token = generation; contactsVersion++; busy.value = true; error.value = ''; feedback.value = ''
   try { await work(); if (token !== generation) return false; const items = await socialApi.contacts(); if (token !== generation) return false; reconcile(items); return true }
   catch (reason) { if (token === generation) error.value = messageOf(reason); return false }
   finally { if (token === generation) busy.value = false }
@@ -139,6 +146,7 @@ async function mutate(work: () => Promise<unknown>) {
 function act(contact: Contact, action: ContactAction | 'clear') {
   const descriptions = {
     block: ['加入黑名单', `将「${display(contact)}」加入黑名单后，双方无法搜索、私聊或发送站内信。已建立的联系人关系保留，群组权限单独管理。`, '确认拉黑'],
+    unblock: ['解除拉黑', '解除后只撤销你设置的限制。已添加的联系人可恢复交流；未添加的用户不会自动成为联系人。被拦截的消息不会补发。', '确认解除'],
     remove: ['删除联系人', `删除「${display(contact)}」后，双方需要重新申请并同意才能私聊。历史记录不会从对方账户删除。`, '确认删除'],
     withdraw: ['撤回申请', '撤回后，对方无法再接受这份申请。重新申请需要等待 24 小时。', '确认撤回'],
     clear: ['清空聊天记录', '将清空这个会话在你所有设备上的已有聊天记录，无法在当前账户中恢复。对方的记录不受影响，新消息仍会正常接收。', '确认清空'],
@@ -149,12 +157,29 @@ function act(contact: Contact, action: ContactAction | 'clear') {
   }
   void mutate(() => socialApi.act(contact.id, action as ContactAction))
 }
+function blockPerson(person: Person) {
+  const existing = relation(person)
+  if (existing) { act(existing, 'block'); return }
+  error.value = ''
+  confirmation.value = { contact: person, action: 'block-person', title: '加入黑名单', description: '加入后，双方无法搜索、私聊、发送站内信或相互邀请入群。不会向对方发送好友申请。共同群组中的发言仍由群组权限管理。', label: '确认拉黑' }
+}
 async function confirmAction() {
   const pending = confirmation.value, token = generation
   if (!pending) return
-  if (await mutate(() => pending.action === 'clear' ? socialApi.clearHistory(pending.contact.id) : socialApi.act(pending.contact.id, pending.action)) && token === generation) {
+  if (await mutate(async () => {
+    if (pending.action === 'clear') await socialApi.clearHistory(pending.contact.id)
+    else if (pending.action === 'block-person') await socialApi.block(pending.contact.id)
+    else await socialApi.act(pending.contact.id, pending.action)
+    if (token !== generation) return
+    // Remove stale content as soon as the server confirms a block, even if list refresh fails.
+    if (pending.action === 'block' || pending.action === 'block-person') {
+      selection++; selected.value = null; messages.value = []; body.value = ''; retry = null; managerOpen.value = false
+      results.value = []; searched.value = false
+    }
+  }) && token === generation) {
     confirmation.value = null
-    if (pending.action === 'block') selectList('blacklist')
+    if (pending.action === 'block' || pending.action === 'block-person') { blacklistQuery.value = ''; selectList('blacklist'); feedback.value = '已加入黑名单' }
+    if (pending.action === 'unblock') feedback.value = '已解除拉黑'
   }
 }
 function preferences(settings: Partial<Pick<Contact, 'remark' | 'pinned' | 'muted'>>) {
@@ -211,24 +236,25 @@ onBeforeUnmount(() => { reset(); document.removeEventListener('visibilitychange'
   <div class="page-stack people-page">
     <section class="page-intro page-intro--split"><div><p class="page-kicker">PEOPLE & CONVERSATIONS</p><h2>{{ uiText('联系人与聊天') }}</h2><p>{{ uiText('把交流留在这里，把联系掌握在自己手中。') }}</p></div><RouterLink class="text-link" to="/app/groups">{{ uiText('群组讨论与资料 →') }}</RouterLink></section>
     <p v-if="error && !confirmation" class="inline-alert inline-alert--error" role="alert">{{ uiText(error) }}</p>
+    <p v-if="feedback" class="people-hint" role="status">{{ uiText(feedback) }}</p>
     <div class="people-layout">
       <aside class="people-directory water-surface water-surface--bottom"><AmbientWaves variant="pool" class="surface-watermark" />
-        <form class="people-search" @submit.prevent="search"><label for="people-query">{{ uiText('查找与添加') }}</label><div><input id="people-query" v-model="query" class="field-input" type="search" maxlength="50" :placeholder="uiText('身份码、用户名或昵称')" /><button class="button button--ghost" :disabled="searching || loading">{{ searching ? uiText('查找中…') : uiText('查找用户') }}</button></div></form>
+        <form class="people-search" @submit.prevent="search"><label for="people-query">{{ uiText('查找与添加') }}</label><select v-model="searchType" class="field-input" :aria-label="uiText('查找方式')"><option value="auto">{{ uiText('自动识别') }}</option><option value="number">{{ uiText('用户号') }}</option><option value="email">{{ uiText('邮箱') }}</option><option value="phone">{{ uiText('手机号') }}</option><option value="name">{{ uiText('昵称、用户名或身份码') }}</option></select><div><input id="people-query" v-model="query" class="field-input" type="search" maxlength="160" :placeholder="uiText('用户号、邮箱、手机号或昵称')" /><button class="button button--ghost" :disabled="searching || loading">{{ searching ? uiText('查找中…') : uiText('查找用户') }}</button></div></form>
         <nav class="people-tabs" :aria-label="uiText('联系人分类')"><button :class="{ active: listTab === 'contacts' && !searched }" :aria-current="listTab === 'contacts' && !searched ? 'page' : undefined" @click="selectList('contacts')">{{ uiText('联系人') }} <b v-if="unreadTotal">{{ unreadTotal > 99 ? '99+' : unreadTotal }}</b></button><button :class="{ active: listTab === 'requests' && !searched }" :aria-current="listTab === 'requests' && !searched ? 'page' : undefined" @click="selectList('requests')">{{ uiText('申请') }} <b v-if="incoming.length">{{ incoming.length }}</b></button><button :class="{ active: listTab === 'blacklist' && !searched }" :aria-current="listTab === 'blacklist' && !searched ? 'page' : undefined" @click="selectList('blacklist')">{{ uiText('黑名单') }} <small v-if="blocked.length">{{ blocked.length }}</small></button></nav>
         <div class="people-list-content">
-          <section v-if="searched || searching" class="people-section"><h3>{{ uiText('搜索结果') }} <small>{{ uiText('最多 20 人') }}</small></h3><p v-if="searching" class="people-hint">{{ uiText('正在查找…') }}</p><p v-else-if="!results.length" class="people-hint">{{ uiText('没有找到用户。可以粘贴完整身份码，或尝试其他用户名。') }}</p><div v-for="person in results" :key="person.id" class="person-line"><span><strong>{{ person.displayName }}</strong><small>@{{ person.username }}</small><IdentityCode :value="person.identityCode" :copyable="false" /></span><button class="button button--ghost button--small" :disabled="busy || !!relation(person)" @click="mutate(() => socialApi.add(person.id))">{{ relation(person)?.status === 'ACCEPTED' ? uiText('已添加') : relation(person) ? uiText('等待处理') : uiText('申请添加') }}</button></div></section>
+          <section v-if="searched || searching" class="people-section"><h3>{{ uiText('搜索结果') }} <small>{{ uiText('最多 20 人') }}</small></h3><p v-if="searching" class="people-hint">{{ uiText('正在查找…') }}</p><p v-else-if="!results.length" class="people-hint">{{ uiText('没有找到可添加的用户。请核对完整号码及对方的查找权限。') }}</p><div v-for="person in results" :key="person.id" class="person-line"><span><strong>{{ person.displayName }}</strong><small>@{{ person.username }}</small><p v-if="person.contactNumber">{{ uiText("用户号") }} · {{ person.contactNumber }}</p><IdentityCode :value="person.identityCode" :copyable="false" /></span><button class="button button--ghost button--small" :disabled="busy || protectedAccount || !!relation(person)" @click="mutate(() => socialApi.add(person.id))">{{ relation(person)?.status === 'ACCEPTED' ? uiText('已添加') : relation(person) ? uiText('等待处理') : uiText('申请添加') }}</button><button class="text-link" :disabled="busy || sending" @click="blockPerson(person)">{{ uiText('加入黑名单') }}</button></div></section>
           <template v-else-if="listTab === 'contacts'">
             <div class="people-section-heading"><span>{{ uiText('我的联系人') }}</span><small>{{ friends.length }} {{ uiText('人') }}</small></div>
-            <p v-if="loading" class="people-hint">{{ uiText('正在读取联系人…') }}</p><div v-else-if="!filteredFriends.length" class="people-empty"><AppIcon name="users" :size="25" /><strong>{{ query ? uiText('没有匹配的联系人') : uiText('还没有联系人') }}</strong><p>{{ uiText('在上方输入身份码、用户名或昵称，查找并申请添加。') }}</p></div>
+            <p v-if="loading" class="people-hint">{{ uiText('正在读取联系人…') }}</p><div v-else-if="!filteredFriends.length" class="people-empty"><AppIcon name="users" :size="25" /><strong>{{ query ? uiText('没有匹配的联系人') : uiText('还没有联系人') }}</strong><p>{{ uiText('在上方输入用户号、邮箱、手机号或昵称，查找并申请添加。') }}</p></div>
             <button v-for="person in filteredFriends" :key="person.id" class="person-select" :class="{ active: selected === person.id }" :disabled="sending || busy" @click="open(person)"><span class="person-initial">{{ display(person).slice(0, 1) }}</span><span class="person-info"><strong>{{ display(person) }} <small v-if="person.pinned" class="person-pin">{{ uiText('置顶') }}</small></strong><small>{{ person.available ? `@${person.username}` : uiText('暂时无法联系') }}</small></span><span v-if="person.muted" class="person-muted" :title="uiText('消息免打扰')" :aria-label="uiText('消息免打扰')"><AppIcon name="bell" :size="14" /></span><b v-else-if="person.available && person.unreadCount" class="person-unread" :aria-label="((person.unreadCount) + uiText(' 条未读消息'))">{{ person.unreadCount > 99 ? '99+' : person.unreadCount }}</b></button>
           </template>
           <template v-else-if="listTab === 'requests'">
-            <section class="people-section"><h3>{{ uiText('新的申请') }} <small>{{ incoming.length }}</small></h3><p v-if="!incoming.length" class="people-hint">{{ uiText('没有待处理的申请。') }}</p><article v-for="person in incoming" :key="person.id" class="request-card"><strong>{{ person.displayName }}</strong><small>@{{ person.username }}</small><IdentityCode :value="person.identityCode" :copyable="false" /><div class="person-actions"><button :disabled="busy" @click="act(person, 'accept')">{{ uiText('同意') }}</button><button :disabled="busy" @click="act(person, 'reject')">{{ uiText('拒绝') }}</button><button :disabled="busy" @click="act(person, 'block')">{{ uiText('加入黑名单') }}</button></div></article></section>
+            <section class="people-section"><h3>{{ uiText('新的申请') }} <small>{{ incoming.length }}</small></h3><p v-if="!incoming.length" class="people-hint">{{ uiText('没有待处理的申请。') }}</p><article v-for="person in incoming" :key="person.id" class="request-card"><strong>{{ person.displayName }}</strong><small>@{{ person.username }}</small><p v-if="person.contactNumber">{{ uiText("用户号") }} · {{ person.contactNumber }}</p><IdentityCode :value="person.identityCode" :copyable="false" /><div class="person-actions"><button :disabled="busy" @click="act(person, 'accept')">{{ uiText('同意') }}</button><button :disabled="busy" @click="act(person, 'reject')">{{ uiText('拒绝') }}</button><button :disabled="busy" @click="act(person, 'block')">{{ uiText('加入黑名单') }}</button></div></article></section>
             <section class="people-section"><h3>{{ uiText('已发送的申请') }} <small>{{ outgoing.length }}</small></h3><p v-if="!outgoing.length" class="people-hint">{{ uiText('没有等待回复的申请。') }}</p><div v-for="person in outgoing" :key="person.id" class="person-line"><span><strong>{{ person.displayName }}</strong><small>{{ uiText('等待对方同意') }}</small></span><button class="text-link" :disabled="busy" @click="act(person, 'withdraw')">{{ uiText('撤回') }}</button></div></section>
           </template>
-          <section v-else class="people-section blacklist-section"><h3>{{ uiText('黑名单') }} <small>{{ blocked.length }} {{ uiText('人') }}</small></h3><p class="people-hint">{{ uiText('拉黑后，双方无法搜索、私聊或发送站内信。群组权限单独管理。') }}</p><div v-if="!blocked.length" class="people-empty"><AppIcon name="shield" :size="25" /><strong>{{ uiText('黑名单为空') }}</strong><p>{{ uiText('在联系人管理或新的申请中，可以将对方加入黑名单。') }}</p></div><article v-for="person in blocked" :key="person.id" class="blacklist-card"><div class="person-line"><span><strong>{{ display(person) }}</strong><small>@{{ person.username }}</small></span><button class="button button--ghost button--small" :disabled="busy" @click="act(person, 'unblock')">{{ uiText('解除拉黑') }}</button></div><IdentityCode :value="person.identityCode" /><p>{{ person.status === 'ACCEPTED' ? uiText('原有联系人关系保留，双方都解除限制后可继续交流。') : uiText('解除后不会自动添加，需要重新申请并等待对方同意。') }}</p></article></section>
+          <section v-else class="people-section blacklist-section"><h3>{{ uiText('黑名单') }} <small>{{ blocked.length }} {{ uiText('人') }}</small></h3><p class="people-hint">{{ uiText('拉黑后，双方无法搜索、私聊或发送站内信。群组权限单独管理。') }}</p><label class="field-label" for="blacklist-query">{{ uiText('查找黑名单') }}<input id="blacklist-query" v-model="blacklistQuery" class="field-input" type="search" maxlength="100" :placeholder="uiText('备注、昵称、用户名或身份码')" /></label><p v-if="blocked.length && !filteredBlocked.length" class="people-hint">{{ uiText('没有匹配的黑名单用户') }}</p><div v-if="!blocked.length" class="people-empty"><AppIcon name="shield" :size="25" /><strong>{{ uiText('黑名单为空') }}</strong><p>{{ uiText('可以从搜索结果、联系人管理或新的申请中加入黑名单。') }}</p></div><article v-for="person in filteredBlocked" :key="person.id" class="blacklist-card"><div class="person-line"><span><strong>{{ display(person) }}</strong><small>@{{ person.username }}</small></span><button class="button button--ghost button--small" :disabled="busy" @click="act(person, 'unblock')">{{ uiText('解除拉黑') }}</button></div><p v-if="person.contactNumber">{{ uiText("用户号") }} · {{ person.contactNumber }}</p><IdentityCode :value="person.identityCode" /><p>{{ person.status === 'ACCEPTED' ? uiText('原有联系人关系保留，双方都解除限制后可继续交流。') : uiText('解除后不会自动添加，需要重新申请并等待对方同意。') }}</p></article></section>
         </div>
-        <footer class="people-directory-footer"><label class="people-discovery"><input type="checkbox" :checked="discoverable" :disabled="busy || loading" @change="toggleDiscovery" />{{ uiText('允许其他用户搜索到我') }}</label><p>{{ uiText('关闭后，身份码也无法被搜索。') }}</p><RouterLink to="/app/mail">{{ uiText('站内信与附件') }} <span>↗</span></RouterLink></footer>
+        <footer class="people-directory-footer"><label class="people-discovery"><input type="checkbox" :checked="discoverable && !protectedAccount" :disabled="busy || loading || protectedAccount" @change="toggleDiscovery" />{{ uiText('允许其他用户搜索到我') }}</label><p>{{ protectedAccount ? uiText('管理与审核账号不开放用户搜索和好友添加，个人开关不会解除此限制。') : uiText('关闭后，身份码也无法被搜索。') }}</p><RouterLink to="/app/settings?section=privacy">{{ uiText('用户号与查找权限') }}</RouterLink><RouterLink to="/app/mail">{{ uiText('站内信与附件') }} <span>↗</span></RouterLink></footer>
       </aside>
       <section class="chat-panel" :aria-label="uiText('私聊')">
         <template v-if="current">

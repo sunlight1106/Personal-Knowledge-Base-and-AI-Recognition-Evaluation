@@ -14,6 +14,9 @@ public interface ContactLinkRepository extends JpaRepository<ContactLinkEntity, 
     @Query("select count(c) from ContactLinkEntity c where (c.lowUserId = :user or c.highUserId = :user) and c.status in ('PENDING', 'ACCEPTED')")
     long countActive(@Param("user") long user);
 
+    @Query("select count(c) from ContactLinkEntity c where (c.lowUserId = :user and c.lowBlocked = true) or (c.highUserId = :user and c.highBlocked = true)")
+    long countBlockedBy(@Param("user") long user);
+
     interface Row {
         Long getId(); Long getUserId(); String getIdentityCode(); String getUsername(); String getDisplayName();
         Long getRequesterId(); String getStatus(); boolean getBlockedByMe(); boolean getAvailable();
@@ -29,7 +32,7 @@ public interface ContactLinkRepository extends JpaRepository<ContactLinkEntity, 
         (select count(m.id) from ChatMessageEntity m where m.contact.id = c.id and m.sender.id <> :user
             and m.id > case when c.lowUserId = :user then c.lowReadThrough else c.highReadThrough end) as unreadCount,
         case when c.lowUserId = :user then c.lowBlocked else c.highBlocked end as blockedByMe,
-        case when c.lowBlocked = false and c.highBlocked = false and u.status = com.robustvision.platform.domain.UserStatus.ACTIVE then true else false end as available
+        case when c.lowBlocked = false and c.highBlocked = false and u.status = com.robustvision.platform.domain.UserStatus.ACTIVE and (u.accessExpiresAt is null or u.accessExpiresAt > CURRENT_TIMESTAMP) then true else false end as available
         from ContactLinkEntity c, UserEntity u
         where (c.lowUserId = :user or c.highUserId = :user)
         and u.id = case when c.lowUserId = :user then c.highUserId else c.lowUserId end

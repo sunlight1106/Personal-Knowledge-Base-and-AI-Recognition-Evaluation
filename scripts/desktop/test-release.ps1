@@ -22,10 +22,15 @@ function Check-Manifest([bool]$valid,[string]$label) {
     Write-Host ('PASS: '+$label)
 }
 try {
+    [IO.File]::WriteAllText((Join-Path $fixture 'VERSION'),'0.1')
     Check-Manifest $true 'Complete pinned manifest is accepted without Docker or network'
     $manifest.revision=2;$manifest.images[1].file='frontend-r2.tar.gz';Check-Manifest $true 'Revision-specific companions are accepted'
     $manifest.images[1].file='frontend-r3.tar.gz';Check-Manifest $false 'A companion from a different revision is rejected'
     $manifest.images[1].file='frontend.tar.gz';$manifest.Remove('revision')
+    $manifest.version='0.11';Check-Manifest $false 'Version mismatch is rejected'
+    [IO.File]::WriteAllText((Join-Path $fixture 'VERSION'),'0.11');Check-Manifest $true 'New patch version is accepted'
+    $manifest.version='../evil';Check-Manifest $false 'Unsafe version is rejected'
+    [IO.File]::WriteAllText((Join-Path $fixture 'VERSION'),'0.1')
     $manifest.version='other';Check-Manifest $false 'Unexpected version is rejected';$manifest.version='0.1'
     $manifest.images[0].file='../outside.tar.gz';Check-Manifest $false 'Path traversal is rejected';$manifest.images[0].file='backend.tar.gz'
     $manifest.images[0].sha256='bad';Check-Manifest $false 'Invalid checksums are rejected';$manifest.images[0].sha256='a'*64
@@ -35,6 +40,15 @@ try {
     $manifest.infrastructure[0].image='untrusted/mysql@sha256:'+('c'*64);Check-Manifest $false 'Unexpected infrastructure repositories are rejected'
     $manifest.infrastructure[0].image='mysql@sha256:'+('c'*64)
     $manifest.infrastructure=$manifest.infrastructure[0..1];Check-Manifest $false 'Missing infrastructure is rejected'
+    $manifest.infrastructure+=@{name='clamav';image='clamav/clamav@sha256:'+('c'*64)}
+    $manifest.localSnapshot=$true;$manifest.snapshotId='20261031000000000000'
+    foreach($item in $manifest.images){$item.tag='pkb-'+$item.name+':0.1-local-'+$manifest.snapshotId;$item.Remove('sha256');$item.Remove('file')}
+    Check-Manifest $true 'Local snapshots use pinned image IDs without pretending to have release archives'
+    $manifest.images[0].tag='pkb-backend:latest';Check-Manifest $false 'Mutable or unrelated local image tags are rejected'
+    $manifest.images[0].tag='pkb-backend:0.1-local-'+$manifest.snapshotId
+    $manifest.snapshotId='../unsafe';Check-Manifest $false 'Unsafe local snapshot ID is rejected'
+    $manifest.snapshotId='20261031000000000000';$manifest.localSnapshot=$false;Check-Manifest $false 'Local snapshots cannot masquerade as public releases'
+    $manifest.localSnapshot='true';Check-Manifest $false 'Local snapshot flag must be a boolean'
     if(Test-Path -LiteralPath (Join-Path $fixture '.env')) { throw 'Validation must not create credentials.' }
     Write-Host 'PASS: Validation leaves private configuration untouched'
 } finally {

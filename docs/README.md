@@ -34,6 +34,8 @@
 | 文档 | 内容 |
 | --- | --- |
 | [Windows 测试版](TEST_RELEASE_0.1.md) | 下载 0.1.exe、首次登录、更新与故障处理 |
+| [更新日志](../CHANGELOG.md) | 每个版本的新增、修复、优化及更新说明 |
+| [版本与发布流程](VERSIONING.md) | 版本编号、状态、打包和发布检查 |
 | [源码安装与更新](SOURCE_INSTALL.md) | Windows / Linux / macOS 部署、端口与版本更新 |
 | [预构建镜像安装](RELEASE_INSTALL.md) | 免本机编译、校验、升级前备份与失败恢复 |
 | [启动排查](STARTUP.md) | 日常启动、异常处理与耗时测量 |

@@ -102,6 +102,43 @@ class PersonalAiTransportTest {
         var t = transport(chain -> response(chain.request(), 302, KEY));
         assertSafeFailure(t);
     }
+    @Test void kimiK3HasReasoningHeadroomAndTheDiagnosticPreviewUsesItsActualLimit() throws Exception {
+        var t=new PersonalAiTransport(mapper,policy);
+        var body=mapper.readTree(t.prepare(AiProvider.MOONSHOT,"https://api.moonshot.cn/v1","kimi-k3","system","context").json());
+        assertThat(body.path("reasoning_effort").asText()).isEqualTo("low");
+        assertThat(body.path("max_completion_tokens").asInt()).isEqualTo(8192);
+        var diagnostic=mapper.readTree(t.prepareDiagnostic(AiProvider.MOONSHOT,"https://api.moonshot.cn/v1","kimi-k3").json());
+        assertThat(diagnostic.path("max_completion_tokens").asInt()).isEqualTo(PersonalAiTransport.diagnosticTokens(AiProvider.MOONSHOT,"kimi-k3")).isEqualTo(1024);
+        var legacy=mapper.readTree(t.prepare(AiProvider.MOONSHOT,"https://api.moonshot.cn/v1","moonshot-v1-8k","system","context").json());
+        assertThat(legacy.has("reasoning_effort")).isFalse();assertThat(legacy.path("max_completion_tokens").asInt()).isEqualTo(1600);
+    }
+    @Test void generationWaitsForSlowModelsWithoutChangingLookupTimeoutsOrRetryPolicy() throws Exception {
+        var t=new PersonalAiTransport(mapper,policy);var pinned=List.of(InetAddress.getByName("8.8.8.8"));
+        var client=t.generationClient("approved.example",pinned);
+        assertThat(client.callTimeoutMillis()).isEqualTo(120000);assertThat(client.readTimeoutMillis()).isEqualTo(120000);
+        assertThat(client.connectTimeoutMillis()).isEqualTo(8000);assertThat(client.retryOnConnectionFailure()).isFalse();
+        assertThat(client.followRedirects()).isFalse();assertThat(client.dns().lookup("approved.example")).isSameAs(pinned);
+        assertThat(t.connectionClient("approved.example",pinned).callTimeoutMillis()).isEqualTo(30000);
+    }
+    @Test void totalDeadlineAndDisconnectedResponsesHaveDistinctSafeErrorsAndAreNeverRetried() throws Exception {
+        for(boolean timeout:List.of(true,false)){
+            var count=new java.util.concurrent.atomic.AtomicInteger();
+            var t=transport(chain->{count.incrementAndGet();if(timeout)throw new java.io.InterruptedIOException("timeout "+KEY);throw new java.io.EOFException(KEY);});
+            var payload=t.prepare(AiProvider.MOONSHOT,"https://api.moonshot.cn/v1","kimi-k3","s","c");
+            assertThatThrownBy(()->t.execute(AiProvider.MOONSHOT,payload,KEY)).isInstanceOfSatisfying(BusinessException.class,e->{
+                assertThat(e.getCode()).isEqualTo(timeout?"PERSONAL_AI_TIMEOUT":"PERSONAL_AI_CONNECTION_FAILED");assertThat(e.getMessage()).doesNotContain(KEY).contains("使用记录");
+            });assertThat(count.get()).isEqualTo(1);
+        }
+    }
+    @Test void responseFailureCodesExplainLengthRefusalEmptyAndMalformedResults(){
+        var t=new PersonalAiTransport(mapper,policy);
+        Map<String,String> cases=Map.of(
+            success(AiProvider.MOONSHOT).replace("\"stop\"","\"length\""),"PERSONAL_AI_OUTPUT_LIMIT",
+            success(AiProvider.MOONSHOT).replace("\"stop\"","\"content_filter\""),"PERSONAL_AI_REFUSED",
+            success(AiProvider.MOONSHOT).replace("answer",""),"PERSONAL_AI_EMPTY_ANSWER",
+            "malformed "+KEY,"PERSONAL_AI_RESPONSE_INVALID");
+        cases.forEach((body,code)->assertThatThrownBy(()->t.parse(AiProvider.MOONSHOT,body)).isInstanceOfSatisfying(PersonalAiUpstreamFailure.class,e->{assertThat(e.getCode()).isEqualTo(code);assertThat(e.getMessage()).doesNotContain(KEY);}));
+    }
     @Test void oversizedTimeoutMalformedErrorAndSecretEchoAreSanitized() throws Exception {
         for (String body : List.of("x".repeat(PersonalAiTransport.MAX_RESPONSE_BYTES + 1), "invalid " + KEY,
                 success(AiProvider.OPENAI).replace("answer", KEY), "{\"error\":\"" + KEY + "\"}")) {
