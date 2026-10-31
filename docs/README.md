@@ -2,7 +2,7 @@
 
 [← 项目首页](../README.md)
 
-**第一次安装：** [Windows 0.1 测试版](TEST_RELEASE_0.1.md) · [从源码部署](SOURCE_INSTALL.md)
+**第一次安装：** [Windows 0.11 测试版](TEST_RELEASE_0.11.md) · [从源码部署](SOURCE_INSTALL.md)
 
 **已经能打开网站：** [从第一篇笔记、第一次背词开始](USAGE.md#第一次使用先做一件小事)
 
@@ -33,7 +33,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [Windows 测试版](TEST_RELEASE_0.1.md) | 下载 0.1.exe、首次登录、更新与故障处理 |
+| [Windows 测试版](TEST_RELEASE_0.11.md) | 下载 0.11.exe、首次登录、更新与故障处理 |
 | [更新日志](../CHANGELOG.md) | 每个版本的新增、修复、优化及更新说明 |
 | [版本与发布流程](VERSIONING.md) | 版本编号、状态、打包和发布检查 |
 | [源码安装与更新](SOURCE_INSTALL.md) | Windows / Linux / macOS 部署、端口与版本更新 |
@@ -62,7 +62,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [功能验收](FUNCTIONAL_TESTS.md) | 常用操作、异常场景与复跑命令 |
-| [0.1 发布验证](RELEASE_0.1_VALIDATION.md) | 本次发布的检查范围与限制 |
+| [当前验证记录](VALIDATION.md) | 各次更新的检查范围与限制 |
 | [权限检查](PERMISSION_TESTS.md) | 角色、个人授权和账号隔离 |
 | [交互检查](INTERACTION_CHECKS.md) | 点击、切换、重复提交和失败恢复 |
 | [界面检查](INTERFACE_AUDIT.md) | 各页面入口和流程检查记录 |

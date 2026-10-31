@@ -1,5 +1,13 @@
 # 验证记录
 
+## 0.11 已发布（2026-10-31）
+
+- [GitHub 0.11 测试版](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.11) 已公开，构建源码为 `e29feba1ce0f0093418e1c5004b12224cde689f7`，历史 0.1 资产未覆盖。
+- [Verify 全部 11 个作业](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/actions/runs/41196678206) 和 [恢复演练](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/actions/runs/41196678151) 通过。环境跳过项仍在测试报告中单独记录，不把 CI 成功解释为穷举了所有操作。
+- 13 个发布附件的 GitHub SHA-256 和大小全部与本地一致。无需认证实际下载 EXE、运行包、清单和校验文件，再次比较哈希；下载的启动器自检通过。
+- 桌面固定入口已替换为相同的公开 0.11 启动器和运行包，实际启动通过，原 `.env` 哈希保持不变，各运行应用镜像与公开清单一致，HTTP/API 返回 200。更新前加密备份已验证认证和全部组件校验和。
+- 浏览器打开桌面站点首页，显示 v0.11，无控制台错误。本轮不使用真实供应商密钥、不发送用户资料，也不产生短信或 AI 测试费用。
+
 ## 0.11 GitHub CI 修复（2026-10-31）
 
 首次上传的 Verify 检查暴露三处问题：前端工具依赖安全公告、Windows 模拟失败留下的进程退出码，以及 V47/V48 新增表未计入数据库测试清单。相关检查保持启用，没有通过跳过断言处理失败。
