@@ -5,8 +5,8 @@
 <h1 align="center">个人知识库与 AI 识别评测</h1>
 <p align="center">笔记、词汇、代码与个人 AI，在一个地方。</p>
 <p align="center">
-  <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.13/0.13.exe"><strong>下载 0.13.exe</strong></a>
-  &nbsp; · &nbsp; <a href="docs/TEST_RELEASE_0.13.md">安装指南</a>
+  <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.14/0.14.exe"><strong>下载 0.14.exe</strong></a>
+  &nbsp; · &nbsp; <a href="docs/TEST_RELEASE_0.14.md">安装指南</a>
   &nbsp; · &nbsp; <a href="docs/README.md">使用文档</a>
   &nbsp; · &nbsp; <a href="CHANGELOG.md">更新日志</a>
   &nbsp; · &nbsp; <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/issues">问题反馈</a>
@@ -14,14 +14,14 @@
 
 ## 下载与启动
 
-**0.13 测试版 · 2026-11-04** — 单一词汇量估计、针对性补测与 34 本内置词书。
+**0.14 测试版 · 2026-11-04** — Java 主类与辅助类、对象回放和网页更新提醒。
 
 从首页选择勾选、英译汉或汉译英，了解不同词频层级的表现，再按学习方向选词书。测试无需登录，不调用 AI；结果用于选书参考。完整变化见 [更新日志](CHANGELOG.md)。
 
 | 下载方式 | 怎么用 |
 | --- | --- |
-| [**0.13.exe**](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.13/0.13.exe) | 双击启动，首次自动下载并校验程序文件 |
-| [Windows 压缩包](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.13/PKB-AI-0.13-Windows-x64.zip) | 完整解压，运行其中的 **0.13.exe** |
+| [**0.14.exe**](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.14/0.14.exe) | 双击启动，首次自动下载并校验程序文件 |
+| [Windows 压缩包](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.14/PKB-AI-0.14-Windows-x64.zip) | 完整解压，运行其中的 **0.14.exe** |
 
 需要 **Windows 10 / 11 x64** 和已启动的 **Docker Desktop（Linux 容器）**。首次需要联网下载镜像；以后复用已有服务和数据，不需要另装 Java、Node.js 或 Python。
 
@@ -29,7 +29,7 @@
 2. 在启动窗口点击「打开安装目录」，从 `.env` 的 `BOOTSTRAP_ADMIN_PASSWORD` 取得初始密码，用 `admin` 登录。
 3. 进入「我的笔记」或「背单词」开始使用。普通笔记、背单词和代码可视化不需要 AI 密钥。
 
-已安装用户重新下载并运行新版启动器即可更新。[安装、停止与故障处理](docs/TEST_RELEASE_0.13.md) · [版本说明与校验文件](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.13)
+已安装用户重新下载并运行新版启动器即可更新。[安装、停止与故障处理](docs/TEST_RELEASE_0.14.md) · [版本说明与校验文件](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.14)
 
 Linux、macOS 或需要修改代码，请按 [源码安装与更新](docs/SOURCE_INSTALL.md) 操作。网站可运行在自己的电脑或服务器上；本机安装之间不会自动同步账号和资料。
 
@@ -55,7 +55,7 @@ Linux、macOS 或需要修改代码，请按 [源码安装与更新](docs/SOURCE
 | 你想做什么 | 从这里开始 |
 | --- | --- |
 | 第一次使用，了解各个入口 | [分步使用指南](docs/USAGE.md#第一次使用先做一件小事) |
-| 安装、启动或更新 | [Windows 测试版](docs/TEST_RELEASE_0.13.md) · [源码部署](docs/SOURCE_INSTALL.md) |
+| 安装、启动或更新 | [Windows 测试版](docs/TEST_RELEASE_0.14.md) · [源码部署](docs/SOURCE_INSTALL.md) |
 | 配置自己的模型 | [个人 AI](docs/PERSONAL_AI.md) |
 | 备份数据或迁移电脑 | [完整备份与恢复](docs/COMPOSE_BACKUP.md) |
 | 部署到服务器，供多人使用 | [域名与 HTTPS 部署](docs/PUBLIC_DEPLOYMENT.md) |
