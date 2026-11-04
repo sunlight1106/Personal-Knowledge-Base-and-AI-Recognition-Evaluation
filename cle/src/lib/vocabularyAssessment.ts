@@ -80,6 +80,7 @@ export function recommendBooks(bank: AssessmentBank, result: AssessmentResult, g
     }
     const difficulty = (book: AssessmentBook) => book.bands.reduce((n, size, i) => n + size * i, 0) / Math.max(1, book.bands.reduce((n, size) => n + size, 0))
     return Math.abs(a.coverage - .7) - Math.abs(b.coverage - .7)
-      || (a.coverage > .9 && b.coverage > .9 ? difficulty(b) - difficulty(a) : a.total - b.total)
+      || (a.coverage > .9 && b.coverage > .9 ? difficulty(b) - difficulty(a) : difficulty(a) - difficulty(b))
+      || a.total - b.total
   }).slice(0, 3)
 }

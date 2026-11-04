@@ -81,6 +81,7 @@ test('recommendations include foundational help for weak scores and advancement 
     assert.ok(recommended.every(b => bank.books.some(book => b.id === book.id)))
   }
   assert.notEqual(recommendBooks(bank, high, 'general')[0].id, 'vocab-ec-primary')
+  assert.ok(recommendBooks(bank, low, 'general').every(book => ['vocab-ec-primary', 'vocab-ec-gk-core', 'vocab-ec-zk'].includes(book.id)), 'An all-unknown beginner result must not promote a short advanced book just because it has fewer words')
   assert.ok(recommendBooks(bank, high, 'abroad').some(b => b.id === 'vocab-ec-toefl'))
 })
 
