@@ -6,6 +6,7 @@ import { authStore } from '../stores/auth'
 import { vocabularyApi } from '../api/vocabulary'
 import { setUiLanguage } from '../i18n'
 import bank from '../lib/vocabulary-assessment-bank.json'
+import { scoreAssessment } from '../lib/vocabularyAssessment'
 
 const fixture = document.getElementById('fixture'), passed = []
 const assert = (value, message) => { if (!value) throw new Error(message); passed.push(message) }
@@ -35,9 +36,9 @@ try {
   assert(fixture.querySelectorAll('.assessment-word-grid .checked').length === 1, 'A word click updates visible selection')
   fixture.querySelector('.assessment-word-grid input').click(); await settle(); await click('下一轮')
   const second = [...fixture.querySelectorAll('.assessment-word-grid input')].map(i => i.getAttribute('aria-label'))
-  assert(second.length === 40 && !second.some(id => first.includes(id)), 'Adaptive second round has 40 new words even with zero known')
+  assert(second.length === 120 && !second.some(id => first.includes(id)), 'Adaptive second round has 120 new words even with zero known')
   await click('查看结果')
-  assert(fixture.querySelector('.assessment-range') && fixture.textContent.includes('不代表你的词汇量为零'), 'All-unknown result gives a bounded range without declaring zero ability')
+  assert(fixture.querySelector('.assessment-no-estimate') && fixture.textContent.includes('不代表你的词汇量为零'), 'All-unknown result requests more evidence without declaring zero vocabulary')
   assert(fixture.querySelectorAll('.assessment-book-grid article').length === 3, 'Results recommend actual books')
   const goals=fixture.querySelector('select[aria-label="学习方向"]')
   assert(goals.options.length===10, 'Results offer the new daily, travel, work and science goals')
@@ -46,7 +47,7 @@ try {
   goals.value='general';goals.dispatchEvent(new Event('change',{bubbles:true}));await settle()
   const guestLinks = [...fixture.querySelectorAll('.assessment-book-grid a')].map(a => a.getAttribute('href'))
   assert(guestLinks.every(link => link.startsWith('/login?redirect=') && decodeURIComponent(link).includes('?book=vocab-ec-')), 'Guest book links preserve a specific book through login')
-  assert(fixture.querySelectorAll('.assessment-review li').length === 80, 'Unfamiliar words and meanings are available for review')
+  assert(fixture.querySelectorAll('.assessment-review li').length === 160, 'Unfamiliar words and meanings are available for review')
   await setUiLanguage('en'); await settle()
   assert(fixture.textContent.includes('Your vocabulary snapshot') && fixture.textContent.includes('Sign in to study'), 'Results and recommendation actions switch to English')
   await setUiLanguage('zh'); await settle()
@@ -61,14 +62,39 @@ try {
     input.click(); await settle(); fixture.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle()
   }
   assert(fixture.textContent.includes('30 / 30') && fixture.textContent.includes('本次全部答对'), 'Thirty meaning answers complete the test with ceiling guidance')
+  assert(fixture.querySelector('.assessment-estimate strong').textContent === '12,200' && fixture.querySelector('[role=meter]'), 'Main result shows a single approximate number and an accessible level gauge')
   await click('尝试另一种模式'); fixture.querySelector('input[value=spelling]').click(); await settle(); await click('开始测试')
-  const firstMeaning = fixture.querySelector('h1').textContent.trim(), target = bank.items.find(i => i.meaning === firstMeaning)
-  const input = fixture.querySelector('.assessment-spelling input'); input.value = ` ${target.id.toUpperCase()} `; input.dispatchEvent(new Event('input', { bubbles: true })); await settle()
-  fixture.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle()
-  for (let n = 1; n < 30; n++) await click('不认识，跳过')
-  assert(fixture.textContent.includes('1 / 30') && fixture.querySelectorAll('.assessment-review li').length === 29, 'Spelling grades case-insensitive recall and explicit skips')
+  const spellingAnswers = []
+  const spellingTarget = () => {
+    const meaning = fixture.querySelector('h1').textContent.trim()
+    const hint = fixture.querySelector('.assessment-spelling>span').textContent
+    return bank.items.find(i => i.meaning === meaning && hint.includes(` ${i.id[0]} `) && hint.includes(`${i.id.length} 个字母`))
+  }
+  for (let n = 0; n < 30; n++) {
+    const target = spellingTarget()
+    spellingAnswers.push({id:target.id,value:n < 3 ? target.id : ''})
+    if (n < 3) {
+      const input = fixture.querySelector('.assessment-spelling input'); input.value = ` ${target.id.toUpperCase()} `; input.dispatchEvent(new Event('input', { bubbles: true })); await settle()
+      fixture.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle()
+    } else await click('不认识，跳过')
+  }
+  assert(fixture.textContent.includes('3 / 30') && fixture.querySelectorAll('.assessment-review li').length === 27, 'Spelling grades three case-insensitive answers and explicit skips')
+  const expected = scoreAssessment(bank, 'spelling', spellingAnswers)
+  assert(fixture.querySelector('.assessment-estimate strong').textContent === expected.estimate.toLocaleString() && !fixture.querySelector('.assessment-range'), 'Three out of thirty shows the calculated point estimate, never the old huge range')
+  assert(fixture.textContent.includes('预估可回忆词汇量') && fixture.textContent.includes('通常会低于'), 'Cued recall is clearly distinguished from recognition')
+  for (let round = 0; round < 2; round++) {
+    await click('继续细测')
+    assert(fixture.querySelector('.assessment-quiz-top').textContent.includes('补测 · 1 / 20'), 'Follow-up progress starts a new twenty-question round')
+    for (let n = 0; n < 20; n++) {
+      const target = spellingTarget()
+      if (spellingAnswers.some(a => a.id === target.id)) throw new Error('Follow-up repeated an answered word')
+      spellingAnswers.push({id:target.id,value:''}); await click('不认识，跳过')
+    }
+    assert(fixture.textContent.includes(`3 / ${50 + round * 20}`), 'Follow-up preserves previous correct answers and adds new evidence')
+  }
+  assert(!button('继续细测'), 'Refinement stops at seventy translation questions instead of repeating indefinitely')
   authStore.state.user = { id: 'restricted', permissions: [] }; await settle()
-  assert(fixture.querySelector('.assessment-mode-picker') && !fixture.querySelector('.assessment-range'), 'Switching accounts clears previous answers and result')
+  assert(fixture.querySelector('.assessment-mode-picker') && !fixture.querySelector('.assessment-result-card'), 'Switching accounts clears previous answers and result')
   await click('开始测试'); await click('不认识，跳过')
   fixture.querySelector('.assessment-quiz-top a').click(); await settle()
   assert(fixture.querySelector('.assessment-confirm'), 'Reset asks before discarding work')

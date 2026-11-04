@@ -20,14 +20,56 @@ test('licensed bank has five complete unique pools and valid disjoint choice set
   }
 })
 
-test('recognition samples 40+40 without repeats; every band remains covered at extremes', () => {
+test('recognition samples 40+120 without repeats and focuses on the appropriate boundary', () => {
   const first = selectQuestions(bank, 'recognition', [], random)
   assert.equal(first.length, 40)
   for (const value of [false, true]) {
     const second = selectQuestions(bank, 'recognition', answers(first, value), random)
-    assert.equal(second.length, 40)
-    assert.equal(new Set([...first, ...second].map(i => i.id)).size, 80)
-    for (let band = 0; band < 5; band++) assert.ok(second.filter(i => i.band === band).length >= 4)
+    assert.equal(second.length, 120)
+    assert.equal(new Set([...first, ...second].map(i => i.id)).size, 160)
+    for (let band = 0; band < 5; band++) assert.ok(second.filter(i => i.band === band).length >= 8)
+    assert.equal(second.filter(i => i.band === (value ? 4 : 0)).length, 58)
+  }
+})
+
+test('translation follow-ups retain broad coverage and never reuse earlier questions', () => {
+  for (const mode of ['meaning', 'spelling']) {
+    let previous = answers(selectQuestions(bank, mode, [], random), '')
+    for (let round = 0; round < 2; round++) {
+      const followup = selectQuestions(bank, mode, previous, random)
+      assert.equal(followup.length, 20)
+      assert.ok(followup.every(item => !previous.some(a => a.id === item.id)))
+      for (let band = 0; band < 5; band++) assert.ok(followup.filter(item => item.band === band).length >= 2)
+      assert.equal(followup.filter(item => item.band === 0).length, 8)
+      previous = [...previous, ...answers(followup, '')]
+    }
+    assert.equal(previous.length, 70)
+  }
+})
+
+test('three basic spelling answers out of thirty produce a weighted point, not a broad interval as the estimate', () => {
+  const items = selectQuestions(bank, 'spelling', [], random)
+  let known = 0
+  const result = scoreAssessment(bank, 'spelling', answers(items, item => item.band === 0 && known++ < 3 ? item.id : ''))
+  assert.equal(result.correct, 3)
+  assert.equal(result.estimate, 500)
+  assert.ok(result.upper > result.estimate, 'sampling bounds remain distinct from the displayed estimate')
+})
+
+test('additional recognition samples reduce sampling uncertainty across synthetic low, middle and high profiles', () => {
+  const seed = n => () => ((n = (Math.imul(n, 1664525) + 1013904223) >>> 0) / 2 ** 32)
+  for (const rates of [[.4,.1,0,0,0], [1,.8,.4,.1,0], [1,1,.9,.7,.5]]) {
+    let initialWidth = 0, finalWidth = 0
+    for (let run = 1; run <= 40; run++) {
+      const rng = seed(run)
+      const first = selectQuestions(bank, 'recognition', [], rng)
+      const a = answers(first, item => rng() < rates[item.band])
+      const second = selectQuestions(bank, 'recognition', a, rng)
+      const before = scoreAssessment(bank, 'recognition', a)
+      const after = scoreAssessment(bank, 'recognition', [...a, ...answers(second, item => rng() < rates[item.band])])
+      initialWidth += before.upper - before.lower; finalWidth += after.upper - after.lower
+    }
+    assert.ok(finalWidth < initialWidth * .75, 'more evidence must improve sampling resolution on these synthetic profiles')
   }
 })
 

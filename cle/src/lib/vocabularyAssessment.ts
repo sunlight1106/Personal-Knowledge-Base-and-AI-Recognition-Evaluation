@@ -15,17 +15,30 @@ export function shuffled<T>(items: readonly T[], random: () => number = Math.ran
   return result
 }
 
-/** Every band is represented, even when refining a very low/high first-pass score. */
+/** Keep a broad sample, then concentrate new questions near the observed boundary.
+ * Every round still represents every band; no answered item is presented again.
+ */
 export function selectQuestions(bank: AssessmentBank, mode: AssessmentMode, previous: AssessmentAnswer[] = [], random = Math.random) {
   const used = new Set(previous.map(answer => answer.id))
   const pools = bank.bands.map((_, band) => shuffled(bank.items.filter(item => item.band === band && !used.has(item.id)), random))
-  const counts = bank.bands.map(() => mode === 'recognition' ? (previous.length ? 4 : 8) : 6)
-  if (mode === 'recognition' && previous.length) {
+  const counts = bank.bands.map(() => previous.length ? (mode === 'recognition' ? 8 : 2) : mode === 'recognition' ? 8 : 6)
+  if (previous.length) {
     const scores = scoreAssessment(bank, mode, previous).bands
-    const focus = [...scores].sort((a, b) => Math.abs(a.rate - .5) - Math.abs(b.rate - .5)).slice(0, 2)
-    for (const band of focus) counts[band.band]! += 10
+    const focus = [...scores].sort((a, b) => Math.abs(a.rate - .5) - Math.abs(b.rate - .5)
+      || (a.rate >= .5 && b.rate >= .5 ? b.band - a.band : a.band - b.band))[0]!
+    const neighbor = focus.band === 0 ? 1 : focus.band === scores.length - 1 ? focus.band - 1
+      : focus.rate >= .5 ? focus.band + 1 : focus.band - 1
+    counts[focus.band]! += mode === 'recognition' ? 50 : 6
+    counts[neighbor]! += mode === 'recognition' ? 30 : 4
   }
-  return shuffled(pools.flatMap((pool, i) => pool.slice(0, counts[i])), random)
+  const target = counts.reduce((n, count) => n + count, 0)
+  const picked = pools.flatMap((pool, i) => pool.slice(0, counts[i]))
+  // A depleted focus pool must not silently shorten a follow-up round.
+  if (picked.length < target) {
+    const selected = new Set(picked.map(item => item.id))
+    picked.push(...shuffled(pools.flat().filter(item => !selected.has(item.id)), random).slice(0, target - picked.length))
+  }
+  return shuffled(picked, random)
 }
 
 const variants = [['color', 'colour'], ['favorite', 'favourite'], ['center', 'centre'], ['theater', 'theatre'], ['analyze', 'analyse'], ['organize', 'organise'], ['recognize', 'recognise'], ['behavior', 'behaviour'], ['labor', 'labour'], ['honor', 'honour'], ['neighbor', 'neighbour'], ['traveling', 'travelling'], ['gray', 'grey']]

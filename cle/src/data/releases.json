@@ -6,8 +6,8 @@
       "status": "ready",
       "date": "2026-11-04",
       "title": {
-        "zh": "词书扩充与主题选书",
-        "en": "More word books and topic-based discovery"
+        "zh": "词汇自测结果改进与词书扩充",
+        "en": "Clearer vocabulary estimates and more word books"
       },
       "added": [
         {
@@ -19,11 +19,20 @@
           "en": "Add life/travel and reading/academic filters, topic search, and assessment recommendations for daily life, travel, work and science."
         }
       ],
-      "fixed": [],
+      "fixed": [
+        {
+          "zh": "词汇自测主结果改为单一近似词数与水平刻度，不再用过宽上下界替代结果；明确区分认识、理解和回忆拼写。",
+          "en": "Show a single approximate vocabulary count and gauge instead of overly broad bounds, distinguishing recognition, meaning and cued recall."
+        }
+      ],
       "improved": [
         {
           "zh": "新旧词书中的同词进度接续，词书按需展开；升级只增加内容，不覆盖个人词书或学习记录。",
           "en": "Share progress across new and existing books, reveal shelf cards in batches, and upgrade additively without replacing private books or study records."
+        },
+        {
+          "zh": "勾选测试改为 40 词初测加 120 词边界细测；翻译模式可追加两轮各 20 道新题，合并原答案且不重复出题。",
+          "en": "Use 40 initial and 120 adaptive recognition words; translation offers two optional 20-question follow-ups, retaining earlier answers without repeats."
         }
       ],
       "notes": [

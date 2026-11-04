@@ -2,11 +2,15 @@
 
 首页、工作台和背单词页面提供入口，公开地址为 `/vocabulary-test`。测试不要求登录。
 
-- **勾选认识的词**：第一轮每层 8 词，共 40 词；第二轮每层至少 4 词，再向自评认识比例最接近一半的两层各补 10 词。两轮共 80 个不同词，只勾选能说出至少一个词义的词。
+- **勾选认识的词**：先用 40 词定位（每层 8 词），再测 120 个新词（每层保留 8 词，在最接近认识一半的层补 50 词，向相邻层补 30 词）。全不认识时重点补基础层，全认识时重点补高频率序号层。两轮共 160 个不同词，只勾选能说出至少一个词义的词。
 - **英译汉**：每层 6 题，共 30 道四选一释义题，可选“不认识”。估算比例采用 `max(0, (答对比例 − 0.25) / 0.75)`，降低随机猜测影响；这不能消除所有猜测偏差。
 - **汉译英**：每层 6 题，共 30 道目标词拼写题。提供首字母和长度，因此衡量的是有提示的回忆。忽略大小写和两端空白，接受已列入规则的常见英美变体；不模糊接受拼错的词，同义表达可能不是本题目标。
 
-每层按样本比例乘以该层词条数，结果给出宽范围。范围采用各层 Wilson 区间端点的加权和，并作保守取整；这里没有把自适应取样后的范围宣称为经验证的 95% 人群置信区间。自评偏差、题库覆盖、抽样池筛选与提示效应仍然存在。**这是内置可测词库范围内的教学参考，不代表英语全部词汇量，不映射 CEFR，也不预测考试通过。** 三种模式的结果不可直接等同。
+翻译模式完成 30 题后可继续细测：每轮 20 个新题，每层保留 2 题，向熟悉边界层补 6 题、相邻层补 4 题，最多两轮，共 70 题。保留原答案并合并计算；词池不足时从其他未答词补足，不重复出题。回看答案不会影响后续补测，因为补测不重用已经出现的词。
+
+主结果为**单一近似词数＋刻度＋选书建议**。每层的样本比例乘以该层词条数，再加总并按百词取整。例如汉译英 30 题中只有核心层的 3/6 题答对、其余为零，点估计为约 500 词，不会把保守上下界当成主结果。按模式明确标为预估认识、理解或可回忆词汇量；估计为零时显示需要更多答案，不断言用户一个词都不认识。刻度表示本词库中的估算位置，不是考试等级。
+
+导出仍保留各层 Wilson 上下界加权和作为保守诊断字段 `lower/upper`，并以 `methodVersion: stratified-adaptive-2` 标识新流程。上下界不是经过验证的 95% 人群置信区间，也不再作为主结果。增加样本可减少抽样波动，但自评偏差、题库覆盖、抽样池筛选与提示效应仍然存在。**这是内置可测词库范围内的教学参考，不代表英语全部词汇量，不映射 CEFR，也不预测考试通过。** 三种模式的结果不可直接等同。
 
 题库采用已有 ECDICT 固定快照和学习目录，保留 MIT 许可与来源（见 `database/vocabulary/ECDICT-LICENSE.txt`、`THIRD_PARTY_NOTICES.md`）。从有词频、适合独立提问的词条中筛选并按频率排序，排除明确变形、专名、交叉引用和不适宜公开提问的释义。五层分别覆盖前 1000、接下来的 2000、3000、3000 和剩余词条；每层固定抽出 100 个候选，运行时随机选题。生成器及源快照校验：
 
@@ -24,8 +28,8 @@ python scripts/build-vocabulary-assessment.py .runtime/ecdict.csv
 
 ## 检查
 
-- 单元测试覆盖分层抽样、补测去重、极端答案、重复 ID、越界答案、猜测校正、拼写变体与推荐方向。
+- 单元测试覆盖分层抽样、补测去重、极端答案、重复 ID、越界答案、猜测校正、拼写变体与推荐方向；低、中、高三组模拟表现验证增加样本后抽样诊断区间平均缩小（不等于真人准确率验证）。
 - 界面测试覆盖三种完整流程、返回修改、跳过、空选择、重置、双语、账号切换，以及推荐词书入口与权限。
 - 词书跳转不会静默保存设置，未知或已不可用的词书显示提示。
 
-English: Three public, local-only checks offer two-stage recognition, English-to-Chinese meaning choices and cued Chinese-to-English spelling. Results are uncalibrated, catalog-relative educational ranges. They do not certify proficiency or alter mastery. The licensed offline bank is lazy-loaded; recommendations open existing books subject to normal account permissions.
+English: Three public, local-only checks offer 40+120-word recognition, English-to-Chinese meaning choices and cued Chinese-to-English spelling. Translation starts with 30 questions and offers two optional 20-question follow-ups without repeats. Results show an approximate point estimate, a catalog-relative gauge and book recommendations. The uncalibrated educational estimate does not certify proficiency or alter mastery. The licensed offline bank is lazy-loaded; recommendations open existing books subject to normal account permissions.
