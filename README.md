@@ -5,8 +5,8 @@
 <h1 align="center">个人知识库与 AI 识别评测</h1>
 <p align="center">笔记、词汇、代码与个人 AI，在一个地方。</p>
 <p align="center">
-  <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.12/0.12.exe"><strong>下载 0.12.exe</strong></a>
-  &nbsp; · &nbsp; <a href="docs/TEST_RELEASE_0.12.md">安装指南</a>
+  <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.13/0.13.exe"><strong>下载 0.13.exe</strong></a>
+  &nbsp; · &nbsp; <a href="docs/TEST_RELEASE_0.13.md">安装指南</a>
   &nbsp; · &nbsp; <a href="docs/README.md">使用文档</a>
   &nbsp; · &nbsp; <a href="CHANGELOG.md">更新日志</a>
   &nbsp; · &nbsp; <a href="https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/issues">问题反馈</a>
@@ -14,14 +14,14 @@
 
 ## 下载与启动
 
-**0.12 测试版 · 2026-11-04** — 词汇量自测与词书推荐。
+**0.13 测试版 · 2026-11-04** — 单一词汇量估计、针对性补测与 34 本内置词书。
 
 从首页选择勾选、英译汉或汉译英，了解不同词频层级的表现，再按学习方向选词书。测试无需登录，不调用 AI；结果用于选书参考。完整变化见 [更新日志](CHANGELOG.md)。
 
 | 下载方式 | 怎么用 |
 | --- | --- |
-| [**0.12.exe**](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.12/0.12.exe) | 双击启动，首次自动下载并校验程序文件 |
-| [Windows 压缩包](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.12/PKB-AI-0.12-Windows-x64.zip) | 完整解压，运行其中的 **0.12.exe** |
+| [**0.13.exe**](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.13/0.13.exe) | 双击启动，首次自动下载并校验程序文件 |
+| [Windows 压缩包](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/download/v0.13/PKB-AI-0.13-Windows-x64.zip) | 完整解压，运行其中的 **0.13.exe** |
 
 需要 **Windows 10 / 11 x64** 和已启动的 **Docker Desktop（Linux 容器）**。首次需要联网下载镜像；以后复用已有服务和数据，不需要另装 Java、Node.js 或 Python。
 
@@ -29,7 +29,7 @@
 2. 在启动窗口点击「打开安装目录」，从 `.env` 的 `BOOTSTRAP_ADMIN_PASSWORD` 取得初始密码，用 `admin` 登录。
 3. 进入「我的笔记」或「背单词」开始使用。普通笔记、背单词和代码可视化不需要 AI 密钥。
 
-已安装用户重新下载并运行新版启动器即可更新。[安装、停止与故障处理](docs/TEST_RELEASE_0.12.md) · [版本说明与校验文件](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.12)
+已安装用户重新下载并运行新版启动器即可更新。[安装、停止与故障处理](docs/TEST_RELEASE_0.13.md) · [版本说明与校验文件](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.13)
 
 Linux、macOS 或需要修改代码，请按 [源码安装与更新](docs/SOURCE_INSTALL.md) 操作。网站可运行在自己的电脑或服务器上；本机安装之间不会自动同步账号和资料。
 
@@ -39,7 +39,7 @@ Linux、macOS 或需要修改代码，请按 [源码安装与更新](docs/SOURCE
 | --- | --- |
 | **笔记与资料** | Markdown / HTML 边写边预览，整理知识库、阅读文档、收藏与摘录；历史版本、回收站和常见格式导出。[使用说明](docs/LEARNING_WORKSPACE.md) |
 | **词汇与复习** | 音标、搭配、美式听读与拼写练习；同一单词跨词书接续进度，熟词 Skip，导入、备份和学习统计。[词书与学习](docs/VOCABULARY.md) |
-| **词汇量自测** | 勾选认识的词、英译汉、汉译英三种模式。查看词汇参考范围，按学习方向推荐词书；首页即可开始。[测试说明](docs/VOCABULARY-ASSESSMENT.md) |
+| **词汇量自测** | 勾选认识的词、英译汉、汉译英三种模式。查看预估词数与水平刻度，可继续细测，并按学习方向推荐词书；首页即可开始。[测试说明](docs/VOCABULARY-ASSESSMENT.md) |
 | **代码可视化** | C / Python / Java / JavaScript 算法子集的逐步回放、变量图、运算次数与复杂度分析，支持存入笔记和导出。[支持范围](docs/CODE_LAB.md) |
 | **个人 AI** | 连接 Kimi、千问、DeepSeek 等供应商，辅助笔记、词汇和图片理解，管理自己的共享记忆。[配置说明](docs/PERSONAL_AI.md) |
 | **交流与管理** | 身份码与用户号找人、查找隐私、黑名单、私聊、群组与资料共享；角色权限、登录记录、举报审核和用户统计。[群组](docs/GROUPS.md) · [管理](docs/ADMINISTRATION.md) |
@@ -55,7 +55,7 @@ Linux、macOS 或需要修改代码，请按 [源码安装与更新](docs/SOURCE
 | 你想做什么 | 从这里开始 |
 | --- | --- |
 | 第一次使用，了解各个入口 | [分步使用指南](docs/USAGE.md#第一次使用先做一件小事) |
-| 安装、启动或更新 | [Windows 测试版](docs/TEST_RELEASE_0.12.md) · [源码部署](docs/SOURCE_INSTALL.md) |
+| 安装、启动或更新 | [Windows 测试版](docs/TEST_RELEASE_0.13.md) · [源码部署](docs/SOURCE_INSTALL.md) |
 | 配置自己的模型 | [个人 AI](docs/PERSONAL_AI.md) |
 | 备份数据或迁移电脑 | [完整备份与恢复](docs/COMPOSE_BACKUP.md) |
 | 部署到服务器，供多人使用 | [域名与 HTTPS 部署](docs/PUBLIC_DEPLOYMENT.md) |
