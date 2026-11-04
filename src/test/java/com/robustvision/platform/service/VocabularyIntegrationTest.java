@@ -53,6 +53,7 @@ class VocabularyIntegrationTest {
                 new db.migration.V17__expanded_vocabulary_catalog().migrate(context);
                 db.migration.V23__merge_vocabulary_progress.backfill(connection);
                 new db.migration.V24__daily_context_vocabulary().migrate(context);
+                new db.migration.V49__thematic_vocabulary_books().migrate(context);
             }
         }
         clock.set("2026-10-02T12:00:00Z");
@@ -87,8 +88,8 @@ class VocabularyIntegrationTest {
     }
     @Test void requiresAuthenticationAndExplicitValidTimezone() throws Exception {
         mvc.perform(get("/api/v1/vocabulary/dashboard")).andExpect(status().isUnauthorized());
-        var dashboard=dash(alice);assertThat(dashboard.path("settings").path("zoneId").isNull()).isTrue();assertThat(dashboard.path("books").size()).isEqualTo(18);
-        assertThat(jdbc.queryForObject("select count(*) from vocabulary_word where book_id like 'vocab-%'",Integer.class)).isEqualTo(43778);
+        var dashboard=dash(alice);assertThat(dashboard.path("settings").path("zoneId").isNull()).isTrue();assertThat(dashboard.path("books").size()).isEqualTo(34);
+        assertThat(jdbc.queryForObject("select count(*) from vocabulary_word where book_id like 'vocab-%'",Integer.class)).isEqualTo(53644);
         mvc.perform(json(post("/api/v1/vocabulary/next"),alice,Map.of("bookId","vocab-daily","mode","LEARN"))).andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("VOCAB_TIMEZONE_REQUIRED"));
         mvc.perform(json(put("/api/v1/vocabulary/settings"),alice,Map.of("zoneId","Mars/Nowhere","dailyGoal",10))).andExpect(status().isBadRequest());
         mvc.perform(json(put("/api/v1/vocabulary/settings"),alice,Map.of("zoneId","Asia/Shanghai","dailyGoal",0))).andExpect(status().isBadRequest());
