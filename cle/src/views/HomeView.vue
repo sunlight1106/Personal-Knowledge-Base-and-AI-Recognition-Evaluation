@@ -10,6 +10,7 @@ import MotionToggle from '@/components/MotionToggle.vue'
 import CodeListing from '@/components/CodeListing.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import HomeWorkspacePreview from '@/components/HomeWorkspacePreview.vue'
+import VocabularyAssessmentEntry from '@/components/VocabularyAssessmentEntry.vue'
 import releases from '@/data/releases.json'
 import { authStore } from '@/stores/auth'
 onMounted(() => { void authStore.ensureUser() })
@@ -24,7 +25,7 @@ const chapters = [
   <div class="lab-docs lab-home">
     <header class="home-header">
       <RouterLink to="/" class="home-brand"><BrandMark /><span>{{ uiText('个人知识库') }}<small>A SPACE FOR YOUR MIND</small></span></RouterLink>
-      <nav class="home-navigation" :aria-label="uiText('首页导航')"><a href="#collection">{{ uiText('探索空间') }}</a><RouterLink to="/docs">{{ uiText('使用文档') }}</RouterLink><RouterLink to="/models">{{ uiText('模型目录') }}</RouterLink><LanguageToggle /><MotionToggle /><RouterLink :to="enter" class="home-enter">{{ authStore.state.user ? uiText('进入工作台') : uiText('登录平台') }}<AppIcon name="arrow" :size="16" /></RouterLink></nav>
+      <nav class="home-navigation" :aria-label="uiText('首页导航')"><a href="#collection">{{ uiText('探索空间') }}</a><RouterLink to="/vocabulary-test">{{ uiText('测试词汇量') }}</RouterLink><RouterLink to="/docs">{{ uiText('使用文档') }}</RouterLink><RouterLink to="/models">{{ uiText('模型目录') }}</RouterLink><LanguageToggle /><MotionToggle /><RouterLink :to="enter" class="home-enter">{{ authStore.state.user ? uiText('进入工作台') : uiText('登录平台') }}<AppIcon name="arrow" :size="16" /></RouterLink></nav>
     </header>
     <main>
       <section id="introduction" class="home-hero" aria-labelledby="home-title">
@@ -41,6 +42,7 @@ const chapters = [
           <span class="home-folio-caption" aria-hidden="true">A personal collection. Always growing.</span>
         </div>
       </section>
+      <div class="home-assessment"><VocabularyAssessmentEntry /></div>
       <section id="collection" class="home-collection" aria-labelledby="collection-title">
         <header class="home-section-head"><div><p class="home-eyebrow">A PLACE FOR WHAT MATTERS</p><h2 id="collection-title">{{ uiText('为日常积累，留出空间。') }}</h2></div><p>{{ uiText('从今天的小小一步开始。') }}</p></header>
         <div class="home-chapters">

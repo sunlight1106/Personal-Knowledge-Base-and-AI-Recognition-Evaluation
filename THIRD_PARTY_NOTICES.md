@@ -4,6 +4,8 @@
 
 新增词书使用 [ECDICT](https://github.com/skywind3000/ECDICT) 固定版本的词条、释义和音标。原 MIT 许可全文保存在 [ECDICT-LICENSE.txt](database/vocabulary/ECDICT-LICENSE.txt)，版本、校验值及各书词量见 [catalog.json](database/vocabulary/catalog.json)。选词规则与使用方法见 [词汇学习指南](docs/VOCABULARY.md)。未引入具体出版社词书的封面、原版编排或例句。
 
+词汇自测复用同一固定快照的词频、释义和音标，生成离线分层题库。抽样与估算说明见 [词汇自测](docs/VOCABULARY-ASSESSMENT.md)。题目未复制外部词汇量测试。
+
 ## 软件依赖与服务组件
 
 词条缺失音标的离线补充使用 eng_to_ipa 0.0.2 的 CMU 字典转换结果，另含补充标注。保留 [eng_to_ipa MIT 许可](database/vocabulary/ENG-TO-IPA-LICENSE.txt) 和 [CMU 字典许可](database/vocabulary/CMUDICT-LICENSE.txt)。转换仅在生成数据时进行，不是运行时依赖。补充列表见 [phonetic-supplement.json](database/vocabulary/phonetic-supplement.json)。

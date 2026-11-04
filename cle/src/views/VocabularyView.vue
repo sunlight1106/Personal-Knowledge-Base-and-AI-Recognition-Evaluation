@@ -3,7 +3,7 @@ import SelectField from '@/components/SelectField.vue'
 import HelpHint from '@/components/HelpHint.vue'
 import { uiText } from '@/i18n'
 
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import PracticeFollowups, { type Followup } from '@/components/PracticeFollowups.vue'
 import AmbientWaves from '@/components/AmbientWaves.vue'
 import { wordSpeaker,stopWordSpeech } from '@/lib/pronunciation'
@@ -209,7 +209,19 @@ function onKey(event: KeyboardEvent) {
   if (event.key === ' ' && question.value) { event.preventDefault(); automaticSpeaker.say(question.value.term) }
   if (event.key === 'Enter' && answer.value) { event.preventDefault(); void next() }
 }
-onMounted(async () => { window.addEventListener('keydown', onKey); try { await refresh(); if(route.query.followups)tab.value='stats';else if(['LEARN','REVIEW'].includes(String(route.query.mode)))await start(String(route.query.mode) as VocabularyMode) } catch (reason) { error.value = message(reason) } finally { loading.value = false } })
+onMounted(async () => {
+  window.addEventListener('keydown', onKey)
+  try {
+    await refresh()
+    // A recommendation opens the book for inspection, never silently changing the
+    // saved learning plan or starting pronunciation/marking a word as mastered.
+    const recommended = typeof route?.query.book === 'string' ? route.query.book : ''
+    if (recommended && dashboard.value?.books.some(book => book.id === recommended)) { selected.value = recommended; tab.value = 'books' }
+    else if (recommended) { tab.value = 'books'; notice.value = '这本推荐词书暂不可用，请从现有词书中选择。' }
+    else if(route?.query.followups)tab.value='stats'
+    else if(['LEARN','REVIEW'].includes(String(route?.query.mode)))await start(String(route?.query.mode) as VocabularyMode)
+  } catch (reason) { error.value = message(reason) } finally { loading.value = false }
+})
 onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; window.removeEventListener('keydown', onKey) })
 </script>
 
@@ -217,7 +229,7 @@ onBeforeUnmount(() => { automaticSpeaker.stop(); active = false; generation++; w
   <div class="page-stack vocabulary-page">
     <section class="page-intro page-intro--split">
       <div><p class="page-kicker">WORDS, EVERY DAY</p><h2>{{ uiText('把单词，慢慢记住。') }}<HelpHint label="词汇学习" text="先在「我的词书」选书，再到「今日学习」开始练习。同一个单词跨词书共享进度；熟词可 Skip，之后在单词本恢复。" /></h2><p>{{ uiText('用场景理解，用搭配串联，再遮住答案回忆。同一个词，在每本词书里接着学。') }}</p></div>
-      <div class="vocab-toolbar"><button class="button button--light" :disabled="!!busy" @click="showBackup = !showBackup">{{ uiText('备份与恢复') }}</button><button class="button button--light" :disabled="!!busy" @click="showSettings = !showSettings"><AppIcon name="settings" :size="16" />{{ uiText('学习设置') }}</button></div>
+      <div class="vocab-toolbar"><RouterLink class="button button--light" to="/vocabulary-test">{{ uiText('测试词汇量') }}</RouterLink><button class="button button--light" :disabled="!!busy" @click="showBackup = !showBackup">{{ uiText('备份与恢复') }}</button><button class="button button--light" :disabled="!!busy" @click="showSettings = !showSettings"><AppIcon name="settings" :size="16" />{{ uiText('学习设置') }}</button></div>
     </section>
     <p v-if="error" role="alert" class="inline-alert inline-alert--error">{{ uiText(error) }} <button v-if="!dashboard" class="button button--light" @click="run('refresh', refresh)">{{ uiText('重新加载') }}</button><button v-else-if="question && !answer" class="button button--light" :disabled="!!busy" @click="next">{{ uiText('恢复当前题目') }}</button></p>
     <section v-if="loading" class="panel vocab-loading" aria-live="polite">{{ uiText('正在准备你的词书与学习记录…') }}</section>

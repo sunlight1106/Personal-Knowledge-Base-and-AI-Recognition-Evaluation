@@ -1,6 +1,7 @@
 // Mounted VocabularyView regression. Every HTTP response is synthetic.
 import { createApp, nextTick } from 'vue'
 import VocabularyView from '../views/VocabularyView.vue'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import { tokenStorage } from '../api/client.ts'
 
 const passed = []
@@ -103,7 +104,9 @@ const resolveAnswer = async () => {
 
 try {
   tokenStorage.set('synthetic-vocabulary-session')
-  app = createApp(VocabularyView); app.mount(fixture)
+  const router = createRouter({history:createMemoryHistory(),routes:[{path:'/app/vocabulary',component:VocabularyView}]})
+  await router.push('/app/vocabulary'); await router.isReady()
+  app = createApp(VocabularyView); app.use(router); app.mount(fixture)
   await wait(() => pendingDashboard)
   key('1', document.body)
   assert(answerCalls.length === 0 && nextCalls.length === 0, 'Initial dashboard loading ignores answer shortcuts')

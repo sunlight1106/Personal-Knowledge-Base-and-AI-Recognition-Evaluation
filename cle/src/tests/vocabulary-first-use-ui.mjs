@@ -1,5 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import VocabularyView from '../views/VocabularyView.vue'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import { tokenStorage } from '../api/client.ts'
 const fixture=document.getElementById('fixture'),passed=[]
 const assert=(value,message)=>{if(!value)throw new Error(message);passed.push(message)}
@@ -19,7 +20,9 @@ window.fetch=async(url,init={})=>{
   return new Response(JSON.stringify({success:true,data}),{status:200,headers:{'Content-Type':'application/json'}})
 }
 try{
-  tokenStorage.set('synthetic-first-use-session');app=createApp(VocabularyView);app.mount(fixture);await wait(()=>button('开始学习'))
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/app/vocabulary',component:VocabularyView}]})
+  await router.push('/app/vocabulary');await router.isReady()
+  tokenStorage.set('synthetic-first-use-session');app=createApp(VocabularyView);app.use(router);app.mount(fixture);await wait(()=>button('开始学习'))
   assert(!fixture.querySelector('dialog'), 'A new account is not interrupted by timezone confirmation')
   button('开始学习').click();button('开始学习').click();await wait(()=>fixture.textContent.includes('work on sth.'))
   assert(settingsCalls.length===1 && settingsCalls[0].zoneId===Intl.DateTimeFormat().resolvedOptions().timeZone, 'First Start saves the computer timezone exactly once')

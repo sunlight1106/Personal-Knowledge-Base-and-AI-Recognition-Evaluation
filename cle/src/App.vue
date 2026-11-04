@@ -13,7 +13,7 @@ const route = useRoute()
 
 <template>
   <RouterView />
-  <div v-if="!['/', '/docs', '/models', '/updates'].includes(route.path) && !route.path.startsWith('/app')" class="public-language"><LanguageToggle /></div>
+  <div v-if="!['/', '/docs', '/models', '/updates', '/vocabulary-test'].includes(route.path) && !route.path.startsWith('/app')" class="public-language"><LanguageToggle /></div>
   <ToastStack />
 </template>
 

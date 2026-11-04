@@ -1,6 +1,38 @@
 {
-  "current": "0.11",
+  "current": "0.12",
   "releases": [
+    {
+      "version": "0.12",
+      "status": "ready",
+      "date": "2026-11-04",
+      "title": {
+        "zh": "词汇量自测与词书推荐",
+        "en": "Vocabulary checks and word-book recommendations"
+      },
+      "added": [
+        {
+          "zh": "首页、工作台与背单词增加词汇量测试入口，支持两轮勾选、英译汉释义选择、汉译英拼写三种模式。",
+          "en": "Launch vocabulary checks from the home page, dashboard or vocabulary area: two-stage recognition, meaning choices and cued spelling."
+        },
+        {
+          "zh": "测试后按词频层级给出教学参考范围，并结合学习方向推荐内置词书；可回看不熟悉的词和保存结果摘要。",
+          "en": "See indicative frequency-band results, goal-aware built-in book recommendations, unfamiliar words and a downloadable summary."
+        }
+      ],
+      "fixed": [],
+      "improved": [
+        {
+          "zh": "题库延迟加载，答案只在当前页面处理，不调用 AI，也不改动学习进度；推荐词书需按原有权限访问。",
+          "en": "Lazy-load the offline bank and process answers on the page without AI calls or mastery changes. Book access retains normal permission checks."
+        }
+      ],
+      "notes": [
+        {
+          "zh": "自测尚未经大规模人群标定，结果不是英语总词汇量、CEFR 等级或考试分数。不同模式分别反映自评、辨认和有提示的拼写。",
+          "en": "This uncalibrated educational check does not establish total English vocabulary, CEFR or exam scores. Interpret self-report, meaning recognition and cued spelling separately."
+        }
+      ]
+    },
     {
       "version": "0.11",
       "status": "published",

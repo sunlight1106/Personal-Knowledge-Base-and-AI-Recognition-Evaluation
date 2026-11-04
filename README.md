@@ -39,6 +39,7 @@ Linux、macOS 或需要修改代码，请按 [源码安装与更新](docs/SOURCE
 | --- | --- |
 | **笔记与资料** | Markdown / HTML 边写边预览，整理知识库、阅读文档、收藏与摘录；历史版本、回收站和常见格式导出。[使用说明](docs/LEARNING_WORKSPACE.md) |
 | **词汇与复习** | 音标、搭配、美式听读与拼写练习；同一单词跨词书接续进度，熟词 Skip，导入、备份和学习统计。[词书与学习](docs/VOCABULARY.md) |
+| **词汇量自测** | 勾选认识的词、英译汉、汉译英三种模式。查看词汇参考范围，按学习方向推荐词书；首页即可开始。[测试说明](docs/VOCABULARY-ASSESSMENT.md) |
 | **代码可视化** | C / Python / Java / JavaScript 算法子集的逐步回放、变量图、运算次数与复杂度分析，支持存入笔记和导出。[支持范围](docs/CODE_LAB.md) |
 | **个人 AI** | 连接 Kimi、千问、DeepSeek 等供应商，辅助笔记、词汇和图片理解，管理自己的共享记忆。[配置说明](docs/PERSONAL_AI.md) |
 | **交流与管理** | 身份码与用户号找人、查找隐私、黑名单、私聊、群组与资料共享；角色权限、登录记录、举报审核和用户统计。[群组](docs/GROUPS.md) · [管理](docs/ADMINISTRATION.md) |
