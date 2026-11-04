@@ -3557,5 +3557,11 @@
   "通用分级": "General English levels",
   "生活与旅行": "Life and travel",
   "阅读与学术": "Reading and academic",
-  "个词条收录 · 同词进度跨书接续": "book entries · Shared word progress across books"
+  "个词条收录 · 同词进度跨书接续": "book entries · Shared word progress across books",
+  "主类与辅助类": "Main and helper classes",
+  "创建对象": "Create object",
+  "初始化字段": "Initialize field",
+  "C / Java 留空时寻找 main。Java 可填写 类名.方法名 选择静态入口；实例方法请在 main 中创建对象后调用。Python / JavaScript 留空从顶层执行。": "C / Java find main when left blank. Java accepts Class.method for a static entry; create objects in main to call instance methods. Python / JavaScript start at the top level when blank.",
+  "支持变量、条件、循环、函数、递归和一维数组。Java 支持 public 主类、非 public 辅助类、构造方法、字段、实例与静态方法。C / Java 使用 32 位整数，溢出停止；暂不支持继承、泛型、方法重载、导入库、文件与网络操作。": "Supports variables, conditions, loops, functions, recursion and one-dimensional arrays. Java supports a public main class, package-private helpers, constructors, fields, instance and static methods. C / Java use bounded 32-bit integers. Inheritance, generics, method overloading, imports, files and network access are not supported.",
+  "Python / JavaScript 指定函数入口时不执行顶层初始化。Java 会初始化使用到的类字段；同名方法按类区分。": "Python / JavaScript function entries do not run top-level initialization. Java initializes fields in used classes and resolves methods by class."
 }

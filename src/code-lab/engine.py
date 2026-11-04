@@ -15,13 +15,14 @@ import tree_sitter_c
 import tree_sitter_java
 import tree_sitter_python
 import tree_sitter_javascript
+from java_runtime import JavaRuntime, JavaObject, JavaClass
 
 GRAMMARS = dict(c=tree_sitter_c, java=tree_sitter_java,
                 python=tree_sitter_python, javascript=tree_sitter_javascript)
 LIMITS = dict(sourceBytes=16000, lines=400, operations=20000, steps=1000,
               stack=24, collection=128, string=2000, output=8000, traceBytes=1500000)
 COMMENTS = {'comment', 'line_comment', 'block_comment'}
-BLOCKS = {'block', 'compound_statement', 'statement_block', 'module', 'program', 'translation_unit'}
+BLOCKS = {'block', 'compound_statement', 'statement_block', 'module', 'program', 'translation_unit', 'constructor_body'}
 FUNCS = {'function_definition', 'function_declaration', 'method_declaration'}
 ASSIGNS = {'assignment', 'assignment_expression', 'augmented_assignment', 'augmented_assignment_expression'}
 NUMBERS = {'number', 'integer', 'float', 'number_literal', 'decimal_integer_literal',
@@ -42,6 +43,7 @@ ALLOWED = BLOCKS | FUNCS | COMMENTS | ASSIGNS | NUMBERS | {
  'char_literal','preproc_include','system_lib_string','string_literal','expression_list','pattern_list',
  'list_pattern','tuple_pattern','boolean_type', 'decimal_floating_point_literal'
 }
+JAVA_NODES = {'constructor_declaration','field_declaration','object_creation_expression','this','null_literal'}
 
 
 class Fault(Exception):
@@ -91,7 +93,7 @@ def detect(code):
     raise Fault('语言不明确，请手动选择 C、Python、Java 或 JavaScript。', code='LANGUAGE_REQUIRED')
 
 
-class Engine:
+class Engine(JavaRuntime):
     def __init__(self, request):
         self.source = request.get('source', '')
         if not isinstance(self.source, str) or not self.source.strip(): raise Fault('请先输入代码。', code='INPUT')
@@ -102,6 +104,8 @@ class Engine:
         if self.language not in GRAMMARS: raise Fault('当前支持 C、Python、Java、JavaScript。', code='INPUT')
         self.root, self.offset = parse(self.source, self.language)
         self.steps, self.frames, self.functions = [], [], {}
+        self.java_classes, self.java_methods, self.java_objects = {}, {}, 0
+        self.snapshot_nodes = 0
         self.counts, self.loops, self.calls = collections.Counter(), collections.Counter(), collections.Counter()
         self.loop_visits, self.event_counts = collections.Counter(), collections.Counter()
         self.ops = self.trace_bytes = 0
@@ -111,12 +115,15 @@ class Engine:
         self.frames.append(self.globals)
         self.entry = request.get('entry', '')
         self.arguments = request.get('arguments', [])
-        if not isinstance(self.entry, str) or (self.entry and not re.fullmatch(r'[A-Za-z_]\w{0,59}', self.entry)):
+        entry_pattern = r'[A-Za-z_]\w{0,59}(?:\.[A-Za-z_]\w{0,59})?' if self.language == 'java' else r'[A-Za-z_]\w{0,59}'
+        if not isinstance(self.entry, str) or len(self.entry)>60 or (self.entry and not re.fullmatch(entry_pattern, self.entry)):
             raise Fault('入口应为函数名称。', code='INPUT')
         if not isinstance(self.arguments, list) or len(self.arguments) > 16: raise Fault('参数应为 JSON 数组，最多 16 项。', code='INPUT')
         self.checked(self.arguments)
 
     def line(self, n): return max(1, n.start_point.row + 1 - self.offset)
+
+    def java_fault(self, message, node=None, code='UNSUPPORTED'): raise Fault(message, node, code)
 
     def tick(self, n):
         self.ops += 1
@@ -127,6 +134,7 @@ class Engine:
     def checked(self, value, depth=0):
         if depth > 8: raise Fault('数据嵌套最多 8 层。', self.last, 'LIMIT')
         if value is UNSET or value is None or type(value) is bool: return value
+        if isinstance(value, JavaObject): return value
         if type(value) is int:
             if value.bit_length() > (31 if self.language in ('c','java') else 53 if self.language=='javascript' else 256):
                 if self.language in ('c','java') and value == -2147483648: return value
@@ -142,18 +150,29 @@ class Engine:
         else: raise Fault('只支持数字、布尔、字符串和数组参数。', self.last)
         return value
 
-    def snapshot(self, value, depth=0):
+    def snapshot(self, value, depth=0, seen=None):
+        self.snapshot_nodes += 1
+        if self.snapshot_nodes > 10000: raise Fault('单步对象图超过展示上限。', self.last, 'LIMIT')
+        if seen is None: seen = set()
         if value is UNSET: return '<uninitialized>'
+        if isinstance(value, JavaObject):
+            if value.identity in seen or depth >= 8: return {'$ref':value.identity, '$class':value.name}
+            seen.add(value.identity)
+            return {'$id':value.identity, '$class':value.name, 'fields':{k:self.snapshot(v,depth+1,seen) for k,v in value.values.items()}}
         if depth > 8: raise Fault('不支持循环引用。', self.last)
-        if isinstance(value, (list,tuple)): return [self.snapshot(v,depth+1) for v in value]
+        if isinstance(value, (list,tuple)): return [self.snapshot(v,depth+1,seen) for v in value]
         return value
 
     def emit(self, n, event='statement', detail=None):
         if len(self.steps) >= LIMITS['steps']: raise Fault('已达到 1000 步回放上限。', n, 'LIMIT')
+        self.snapshot_nodes = 0
         frames=[]
         for f in self.frames:
             values={}
             for scope in f['scopes']: values.update(scope)
+            if f.get('java_this') is not None: values = {'this':f['java_this'], **values}
+            if f is self.globals and self.language == 'java':
+                values.update({owner+'.'+name:value for owner,cls in self.java_classes.items() if cls['state']!='new' for name,value in cls['values'].items()})
             if len(values)>64: raise Fault('每个调用帧最多 64 个变量。',n,'LIMIT')
             frames.append({'name':f['name'], 'variables':{k:self.snapshot(v) for k,v in values.items()}})
         step={'line':self.line(n),'event':event,'frames':frames,'outputLength':len(self.output)}
@@ -168,13 +187,12 @@ class Engine:
     def validate(self):
         nodes=list(walk(self.root))
         if len(nodes)>6000: raise Fault('语法树过大。',self.root,'LIMIT')
+        if self.language == 'java': self.java_prepare(nodes)
         for n in nodes:
             if n.type=='ERROR' or n.is_missing: raise Fault('语法错误，请检查这一行。',n,'SYNTAX')
-            if n.type not in ALLOWED: raise Fault('暂不支持语法：'+n.type,n)
+            if n.type not in ALLOWED and not (self.language=='java' and n.type in JAVA_NODES): raise Fault('暂不支持语法：'+n.type,n)
             if self.language in ('c','java') and n.type=='modifiers' and any(x not in ('public','private','protected','static') for x in text(n).split()):
                 raise Fault('暂不支持此修饰符。',n)
-            if self.language=='java' and n.type=='method_declaration' and 'static' not in text(next((c for c in n.named_children if c.type=='modifiers'),None)):
-                raise Fault('本版仅支持 static 方法；类实例尚未支持。',n)
             if n.type in ASSIGNS:
                 left=field(n,'left')
                 if any(c.type in ASSIGNS|{'update_expression','call','call_expression','method_invocation'} for c in walk(left)):
@@ -184,9 +202,9 @@ class Engine:
             if n.type=='preproc_include' and not re.fullmatch(r'#\s*include\s*<(stdio|stdbool)\.h>\s*',text(n)):
                 raise Fault('仅识别 stdio.h / stdbool.h；不会载入其他头文件。',n)
             if self.language in ('c','java') and n.type in ('primitive_type','integral_type','type_identifier'):
-                if text(n) not in ('int','void','boolean','bool','String','CodeLab','Main'):
+                if text(n) not in ('int','void','boolean','bool','String','CodeLab','Main') and not (self.language=='java' and text(n) in self.java_classes):
                     raise Fault('本版仅支持 int、boolean 和一维数组算法；此类型尚未支持。',n)
-            if n.type in FUNCS:
+            if n.type in FUNCS and self.language != 'java':
                 name=field(n,'name')
                 decl=field(n,'declarator')
                 if decl: name=field(decl,'declarator')
@@ -206,6 +224,9 @@ class Engine:
             if name in scope:
                 if scope[name] is UNSET: raise Fault('变量尚未初始化：'+name,n,'RUNTIME')
                 return scope[name]
+        if self.language == 'java':
+            found, value = self.java_lookup(name,n)
+            if found: return value
         if self.frames[-1] is not self.globals and name in self.globals['scopes'][0]:
             value=self.globals['scopes'][0][name]
             if value is UNSET: raise Fault('变量尚未初始化：'+name,n,'RUNTIME')
@@ -215,13 +236,19 @@ class Engine:
     def typed(self,value,type_node,declarator,n):
         if self.language not in ('c','java') or value is UNSET:return
         kind=text(type_node)
-        array='[]' in kind or declarator is not None and declarator.type=='array_declarator'
+        kind=re.sub(r'\s+','',kind)
+        array='[]' in kind or declarator is not None and (declarator.type=='array_declarator' or field(declarator,'dimensions') is not None)
         base=kind.replace('[]','').strip()
+        if self.language=='java' and value is None and (array or base=='String' or base in self.java_classes): return
         values=value if array and isinstance(value,list) else [value]
         if array and not isinstance(value,list):raise Fault('数组参数或初值必须为数组。',n,'RUNTIME')
         if not array and isinstance(value,(list,tuple)):raise Fault('标量类型不能接收数组。',n,'RUNTIME')
         for item in values:
             if item is UNSET:continue
+            if self.language=='java' and base in self.java_classes:
+                if item is None or isinstance(item,JavaObject) and item.name==base: continue
+                raise Fault('对象类型与声明不一致。',n,'RUNTIME')
+            if self.language=='java' and base=='String' and item is None: continue
             if base=='int' and type(item)is not int or base in ('boolean','bool') and type(item)is not bool or base=='String' and not isinstance(item,str):
                 raise Fault('参数、初值或返回值与声明类型不一致。',n,'RUNTIME')
 
@@ -246,6 +273,11 @@ class Engine:
 
     def assign(self,n,value,declare=False,const=False):
         self.checked(value)
+        if self.language=='java' and n.type=='field_access':
+            return self.java_set(self.expr(field(n,'object')),text(field(n,'field')),value,n)
+        if self.language=='java' and n.type=='identifier' and not declare and not any(text(n) in s for s in self.frames[-1]['scopes']):
+            implicit=self.java_implicit_target(text(n))
+            if implicit is not None:return self.java_set(implicit,text(n),value,n)
         if n.type in ('pattern_list','tuple_pattern','list_pattern'):
             names=children(n)
             if not isinstance(value,(list,tuple)) or len(names)!=len(value): raise Fault('解包数量不一致。',n,'RUNTIME')
@@ -257,6 +289,13 @@ class Engine:
             if value is target: raise Fault('不支持循环引用。',n)
             obj=field(n,'value','argument','object','array')
             declared=self.declared_type(text(obj))
+            if self.language=='java' and obj is not None and obj.type=='field_access':
+                member,_=self.java_member(self.expr(field(obj,'object')),text(field(obj,'field')),obj)
+                declared=(member['type'],member['declaration'])
+            elif self.language=='java' and obj is not None and obj.type=='identifier' and declared is None:
+                implicit=self.java_implicit_target(text(obj))
+                if implicit is not None:
+                    member,_=self.java_member(implicit,text(obj),obj);declared=(member['type'],member['declaration'])
             if declared:
                 tn,_=declared
                 self.typed(value,field(tn,'element') or tn,None,n)
@@ -288,6 +327,12 @@ class Engine:
 
     def binary(self,op,a,b,n):
         numeric=type(a) in (int,float) and type(b) in (int,float)
+        if self.language=='java' and op=='+' and (isinstance(a,str) or isinstance(b,str)):
+            return self.checked(self.format_value(a)+self.format_value(b))
+        if self.language=='java' and (isinstance(a,JavaObject) or isinstance(b,JavaObject) or a is None or b is None):
+            if op not in ('==','!=') or not (a is None or isinstance(a,(JavaObject,list,str))) or not (b is None or isinstance(b,(JavaObject,list,str))):
+                raise Fault('对象只支持兼容引用的相等比较。',n,'RUNTIME')
+            return (a is b) if op=='==' else (a is not b)
         if op in ('==','===','!=','!==','<','<=','>','>='):
             if type(a)!=type(b) and not numeric:raise Fault('比较需要相同类型。',n,'RUNTIME')
             if isinstance(a,(list,tuple)) or isinstance(b,(list,tuple)):raise Fault('数组比较语义尚未支持。',n)
@@ -315,7 +360,12 @@ class Engine:
             if re.search(r'[uUlLfFdD]$',raw) and not raw.lower().startswith('0x'):raise Fault('暂不支持数值类型后缀。',n)
             return self.checked(int(raw,0) if raw.lower().startswith(('0x','0b','0o')) else int(raw,8) if self.language in ('c','java') and len(raw)>1 and raw.startswith('0') else int(raw))
         if t in ('true','false'):return t=='true'
-        if t in ('null','none'):return None
+        if t in ('null','none','null_literal'):return None
+        if self.language=='java' and t=='this':
+            value=self.frames[-1].get('java_this')
+            if value is None:raise Fault('static 方法中不能使用 this。',n,'RUNTIME')
+            return value
+        if self.language=='java' and t=='object_creation_expression':return self.java_new(n)
         if t in ('string','string_literal','character_literal','char_literal'):
             try:value=ast.literal_eval(raw)
             except (ValueError,SyntaxError):raise Fault('不支持此字符串格式或转义。',n)
@@ -335,13 +385,14 @@ class Engine:
             if len(dims)!=1:raise Fault('当前只支持一维数组。',n)
             size=self.expr(children(dims[0])[0])
             if type(size)is not int or not 0<=size<=128:raise Fault('数组长度须为 0 到 128。',n,'LIMIT')
-            return [0]*size
+            return [self.java_default(field(n,'type')) if self.language=='java' else 0 for _ in range(size)]
         if t in ('subscript','subscript_expression','array_access'):
             target,index=self.target(n)
             if target[index] is UNSET:raise Fault('数组元素尚未初始化。',n,'RUNTIME')
             return target[index]
         if t in ('attribute','member_expression','field_access'):
             obj=self.expr(field(n,'object'));name=text(field(n,'attribute','property','field'))
+            if self.language=='java' and isinstance(obj,(JavaObject,JavaClass)):return self.java_get(obj,name,n)
             if name=='length' and isinstance(obj,(list,str)):return len(obj)
             raise Fault('此属性不可访问。',n)
         if t in ('binary_expression','binary_operator','boolean_operator','comparison_operator'):
@@ -373,6 +424,7 @@ class Engine:
             if self.language=='python':return self.expr(cs[0] if self.expr(cs[1]) else cs[2])
             return self.expr(field(n,'consequence') if self.expr(field(n,'condition')) else field(n,'alternative'))
         if t in ('call','call_expression','method_invocation'):
+            if self.language=='java' and t=='method_invocation':return self.java_invoke(n)
             fn=field(n,'function');name=text(fn) if fn else ((text(field(n,'object'))+'.') if field(n,'object') else '')+text(field(n,'name'))
             args=[self.expr(c) for c in children(field(n,'arguments'))]
             if name in self.functions:return self.call(name,args,n)
@@ -422,10 +474,13 @@ class Engine:
         if v is False:return 'false'
         if v is None:return 'null'
         if isinstance(v,list):raise Fault('请逐项输出数组，避免误用语言原生数组显示语义。',self.last)
+        if isinstance(v,JavaObject):return v.name+'#'+str(v.identity)
         return str(v)
 
-    def call(self,name,args,site):
+    def call(self,name,args,site,receiver=None):
         if len(self.frames)>=LIMITS['stack']:raise Fault('调用栈达到 24 层上限。',site,'LIMIT')
+        java_member=self.java_methods.get(name)
+        if java_member:self.java_initialize(java_member['owner'])
         fn=self.functions[name];decl=field(fn,'declarator')
         parameters=field(fn,'parameters') or field(decl,'parameters') if decl else field(fn,'parameters')
         params=[]
@@ -439,7 +494,9 @@ class Engine:
         for p,value in zip(declarations,args):self.typed(value,field(p,'type'),field(p,'declarator'),p)
         self.calls[name]+=1
         types={key:(field(p,'type'),field(p,'declarator')) for key,p in zip(params,declarations)} if self.language in ('c','java') else {}
-        self.frames.append({'name':name,'scopes':[dict(zip(params,args))],'const':[set()], 'types':[types]})
+        frame={'name':name,'scopes':[dict(zip(params,args))],'const':[set()], 'types':[types]}
+        if java_member:frame.update(java_class=java_member['owner'],java_this=receiver)
+        self.frames.append(frame)
         self.emit(fn,'call')
         result=None
         try:
@@ -447,6 +504,8 @@ class Engine:
         except Return as done:result=done.value
         except (Break,Continue):raise Fault('break / continue 必须位于循环内。',self.last,'SYNTAX')
         return_type=field(fn,'type')
+        if self.language=='java' and (java_member and java_member['constructor'] or text(return_type)=='void') and result is not None:
+            raise Fault('void 方法或构造方法不能返回值。',fn,'RUNTIME')
         if return_type and text(return_type)!='void':self.typed(result,return_type,None,fn)
         self.emit(fn,'return',result)
         self.frames.pop()
@@ -549,14 +608,14 @@ class Engine:
         result=None;error=None;status='completed'
         try:
             self.validate()
-            if not self.entry and self.language in ('c','java'):
+            if self.language=='java':result=self.java_entry()
+            elif not self.entry and self.language=='c':
                 if 'main' in self.functions:self.entry='main'
                 else:raise Fault('没有 main。请在入口框填写函数名，并提供 JSON 参数。',code='ENTRY_REQUIRED')
-            if self.entry:
+            if self.entry and self.language!='java':
                 if self.entry not in self.functions:raise Fault('找不到指定入口函数。',code='INPUT')
-                if self.arguments==[] and self.entry=='main' and self.language=='java' and 'String' in text(field(self.functions['main'],'parameters')):self.arguments=[[]]
                 result=self.call(self.entry,self.arguments,self.functions[self.entry])
-            else:self.stmt(self.root)
+            elif self.language!='java':self.stmt(self.root)
         except Fault as e:
             error={'code':e.code,'message':e.message,'line':self.line(e.node or self.last)};status='limited' if e.code=='LIMIT' else 'error'
         except (ZeroDivisionError,IndexError,ValueError,TypeError,OverflowError,RecursionError) as e:
@@ -566,10 +625,11 @@ class Engine:
         from analysis import analyze
         analysis=analyze(self,status)
         complexity=self.complexity(analysis)
+        self.snapshot_nodes=0
         return {'language':self.language,'entry':self.entry,'status':status,'error':error,'steps':self.steps,
                 'output':self.output,'result':self.snapshot(result),'lineCounts':dict(self.counts),
                 'loopCounts':dict(self.loops),'callCounts':dict(self.calls),'operations':self.ops,
-                'complexity':complexity,'analysis':analysis,'limits':LIMITS,'engine':'bounded-interpreter-v1'}
+                'complexity':complexity,'analysis':analysis,'limits':LIMITS,'engine':'bounded-interpreter-v2'}
 
 
 def execute(request):

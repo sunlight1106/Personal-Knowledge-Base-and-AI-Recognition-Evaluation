@@ -15,7 +15,7 @@ window.fetch=async(url,init={})=>{
  if(!String(url).includes('/code-lab/runs'))throw Error('Unexpected request')
  if(init.method!=='POST')return reply([])
  const input=JSON.parse(init.body);requests.push(input)
- const result=input.entry==='main'?{language:'java',status:'completed',steps:[{line:1,event:'return',frames:[{name:'main',variables:{n:8}}],outputLength:0}],output:'',result:null}:{language:'java',status:'error',steps:[],error:{line:1,message:'找不到指定入口函数。'}}
+ const result=input.entry==='main'?{language:'java',status:'completed',steps:[{line:1,event:'return',frames:[{name:'main',variables:{n:8,c:{$class:'Counter',$id:1,fields:{value:5,next:{$class:'Counter',$ref:1}}}}}],outputLength:0}],output:'',result:null}:{language:'java',status:'error',steps:[],error:{line:1,message:'找不到指定入口函数。'}}
  const response=()=>reply({...input,id:'synthetic-run',result})
  if(delay)return new Promise(resolve=>{held=()=>resolve(response())})
  return response()
@@ -39,6 +39,8 @@ try{
  held();await wait(()=>fixture.querySelector('.lab-status')?.textContent.includes('执行完成'))
  assert(requests.at(-1).language==='java'&&requests.at(-1).entry==='main'&&requests.at(-1).arguments.length===0,'Corrected payload is sent to the execution API')
  assert(!fixture.querySelector('.lab-replay-notice'),'Completed run matches the current editor')
+ assert(fixture.querySelector('.lab-object')?.textContent.includes('Counter #1')&&fixture.querySelector('.lab-object dd')?.textContent==='5','Object replay shows class identity and fields')
+ assert(fixture.querySelector('.lab-object')?.textContent.includes('↪ Counter #1'),'Circular object references render without expanding indefinitely')
  assert(fixture.querySelector('.lab-output').textContent.includes('没有打印输出或返回值'),'A program without printing explains its empty output')
  await set(args,'[[5,2,8,1]]');assert(fixture.querySelector('.lab-entry-hint').textContent.includes('参数与当前输入不匹配'),'Stale sort arguments are detected even with main selected')
  await set(args,'[["hello"]]');assert(!fixture.querySelector('.lab-entry-hint'),'Valid Java string arguments are preserved')

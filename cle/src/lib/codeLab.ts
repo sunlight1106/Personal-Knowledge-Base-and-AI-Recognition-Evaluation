@@ -1,5 +1,7 @@
 export type Language = 'auto' | 'python' | 'c' | 'java' | 'javascript'
-export type Value = null | string | number | boolean | Value[]
+export interface ObjectValue {$class:string;$id?:number;$ref?:number;fields?:Record<string,Value>}
+export type Value = null | string | number | boolean | Value[] | ObjectValue
+export function isObjectValue(value:Value|undefined):value is ObjectValue{return !!value&&typeof value==='object'&&!Array.isArray(value)&&typeof value.$class==='string'}
 export interface Frame {name:string;variables:Record<string,Value>}
 export interface Step {line:number;event:string;frames:Frame[];outputLength:number;detail?:Value}
 export interface CountFormula {id:string;line:number;kind:'loop'|'condition'|'update'|'branch';summation:string;formula:string;coefficients:number[];measured:number;predicted:number;degree:number;exampleTerms?:number[];verification:'matched'|'partial'}
@@ -25,6 +27,7 @@ export function mainSetupHint(source:string,language:Language,entry:string,argum
   const detected=javaMain?'java':cMain&&!/\b(?:class|static)\b/.test(code)?'c':undefined
   if(!detected||(language!=='auto'&&language!==detected))return
   const current=entry.trim()
+  if(detected==='java'&&/^[A-Za-z_]\w*\.[A-Za-z_]\w*$/.test(current)&&current.length<=60)return
   if(current&&current!=='main'){
     // Keep a valid explicit helper entry, even when the same source has main.
     if(/^[A-Za-z_]\w{0,59}$/.test(current)&&new RegExp('\\b(?:void|int|long|short|float|double|boolean|bool|char|String)\\s*(?:\\[\\s*\\]\\s*)*\\s+'+current+'\\s*\\([^{};]*\\)\\s*\\{').test(code))return
@@ -61,7 +64,19 @@ export const samples:Record<Exclude<Language,'auto'>,{source:string;entry:string
     }
     return 0;
 }`},
-  java:{entry:'sort',args:'[[5, 2, 8, 1]]',source:`static int[] sort(int[] a) {
+  java:{entry:'main',args:'[]',source:`public class main {
+    public static void main(String[] args) {
+        int[] a = {5, 2, 8, 1};
+        Sorter sorter = new Sorter();
+        sorter.sort(a);
+        for (int i = 0; i < a.length; i++) {
+            System.out.println(a[i]);
+        }
+    }
+}
+
+class Sorter {
+  int[] sort(int[] a) {
     int n = a.length;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n - i - 1; j++) {
@@ -73,6 +88,7 @@ export const samples:Record<Exclude<Language,'auto'>,{source:string;entry:string
         }
     }
     return a;
+  }
 }`},
   javascript:{entry:'sort',args:'[[5, 2, 8, 1]]',source:`function sort(a) {
     const n = a.length;
@@ -89,7 +105,12 @@ export const samples:Record<Exclude<Language,'auto'>,{source:string;entry:string
 }`}
 }
 export function occurrences(trace:Trace,line:number){return trace.steps.flatMap((step,index)=>step.line===line?[index]:[])}
-export function valueText(value:Value|undefined){return value===undefined?'—':JSON.stringify(value)}
+export function valueText(value:Value|undefined):string{
+  if(value===undefined)return '—'
+  if(isObjectValue(value))return `${value.$ref?'↪ ':''}${value.$class} #${value.$id??value.$ref}`
+  if(Array.isArray(value))return '['+value.map(valueText).join(',')+']'
+  return JSON.stringify(value)
+}
 export function arrayScale(values:Value[]){return Math.max(1,...values.map(v=>typeof v==='number'?Math.abs(v):0))}
 export function escapeXml(value:unknown){return String(value).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]!))}
 export function formulaValue(coefficients:number[],n:number){
@@ -127,7 +148,11 @@ export function traceSvg(trace:Trace,stepIndex:number){
           const x=48+(i%16)*55,top=y+Math.floor(i/16)*112,h=typeof v==='number'?Math.max(4,Math.abs(v)/scale*55):4
           body.push(`<rect x="${x}" y="${top}" width="48" height="102" rx="5" fill="#edf4f1" stroke="#cbdcd6"/><rect x="${x+14}" y="${top+60-h}" width="20" height="${h}" rx="2" fill="#48776e"/><text x="${x+24}" y="${top+78}" text-anchor="middle" font-size="11">${escapeXml(valueText(v).slice(0,6))}</text><text x="${x+24}" y="${top+94}" text-anchor="middle" fill="#82948e" font-size="9">${i}</text>`)
         });y+=Math.max(1,Math.ceil(value.length/16))*112
-      }else{body.push(`<text x="48" y="${y+20}">${escapeXml(name)} = ${escapeXml(valueText(value).slice(0,90))}</text>`);y+=32}
+      }else{body.push(`<text x="48" y="${y+20}">${escapeXml(name)} = ${escapeXml(valueText(value).slice(0,90))}</text>`);y+=32
+        if(isObjectValue(value)&&value.fields)for(const [key,member] of Object.entries(value.fields)){
+          body.push(`<text x="68" y="${y+20}" font-size="12">${escapeXml(key)} = ${escapeXml(valueText(member).slice(0,90))}</text>`);y+=28
+        }
+      }
     }
     y+=10;parts.push(`<rect x="30" y="${start}" width="940" height="${y-start}" rx="10" fill="#fff" stroke="#cbdcd6"/>`,...body);y+=20
   }

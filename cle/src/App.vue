@@ -2,6 +2,7 @@
 import { RouterView, useRoute } from 'vue-router'
 import LanguageToggle from '@/components/LanguageToggle.vue'
 import ToastStack from '@/components/ToastStack.vue'
+import AppUpdateNotice from '@/components/AppUpdateNotice.vue'
 import { useMotionPreferences } from '@/lib/motion'
 import { useSurfaceRipples } from '@/lib/useSurfaceRipples'
 import { useSurfaceInteraction } from '@/lib/useSurfaceInteraction'
@@ -15,6 +16,7 @@ const route = useRoute()
   <RouterView />
   <div v-if="!['/', '/docs', '/models', '/updates', '/vocabulary-test'].includes(route.path) && !route.path.startsWith('/app')" class="public-language"><LanguageToggle /></div>
   <ToastStack />
+  <AppUpdateNotice />
 </template>
 
 <style>

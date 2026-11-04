@@ -5,7 +5,13 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   publicDir: 'static',
-  plugins: [vue()],
+  plugins: [vue(), {
+    name: 'public-build-info',
+    generateBundle(_options, bundle) {
+      const entry = Object.values(bundle).find(item => item.type === 'chunk' && item.isEntry)
+      if (entry) this.emitFile({ type: 'asset', fileName: 'build-info.json', source: JSON.stringify({ entry: '/' + entry.fileName }) })
+    },
+  }],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

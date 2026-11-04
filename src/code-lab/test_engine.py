@@ -2,6 +2,106 @@ import unittest
 from engine import execute,Engine
 
 
+class JavaClassTests(unittest.TestCase):
+    def run_java(self, code, entry='', arguments=None):
+        return execute(dict(source=code, language='java', entry=entry, arguments=arguments or []))
+
+    def complete(self, code, entry='', arguments=None):
+        result = self.run_java(code, entry, arguments)
+        self.assertEqual(result['status'], 'completed', result.get('error'))
+        return result
+
+    def test_public_main_with_package_private_instances_and_static_helper(self):
+        code = '''public class main { public static void main(String[] args) {
+            Counter c=new Counter(2); c.add(3); System.out.println(c.get());
+            System.out.println(Helper.twice(c.get())); System.out.println(Counter.count);
+        }}
+        class Counter { private int value=1; static int count;
+            Counter(int value){this.value=value;count++;}
+            void add(int n){value+=n;} int get(){return this.value;}
+        }
+        class Helper { static int twice(int n){return n*2;} }'''
+        r = self.complete(code)
+        self.assertEqual(r['output'], '5\n10\n1\n')
+        self.assertEqual(r['entry'], 'main.main')
+        self.assertEqual(r['callCounts']['Counter.<init>/1'], 1)
+        self.assertEqual(r['analysis']['status'], 'unavailable')
+        self.assertEqual(self.complete(code)['output'], r['output'])
+
+    def test_class_method_names_and_qualified_entry(self):
+        code = '''class A {static int value(){return 2;} static int twice(){return value()*2;}}
+        public class Main {public static void main(String[] args){System.out.println(A.twice()+B.value());}}
+        class B {static int value(){return 7;}}'''
+        self.assertEqual(self.complete(code)['output'], '11\n')
+        self.assertEqual(self.complete(code, 'B.value')['result'], 7)
+        self.assertEqual(self.run_java(code, 'value')['error']['code'], 'ENTRY_REQUIRED')
+
+    def test_field_defaults_aliases_cycles_and_immutable_snapshots(self):
+        r = self.complete('''public class main { public static void main(String[] args){
+            Node a=new Node(); Node b=new Node(); Node same=a;
+            a.next=a; same.value=4; b.value=9;
+            System.out.println(a.value); System.out.println(a==same); System.out.println(a==b);
+            System.out.println(a.empty==null); System.out.println(a.flag);
+        }} class Node { int value; Node next; String empty; boolean flag; }''')
+        self.assertEqual(r['output'], '4\ntrue\nfalse\ntrue\nfalse\n')
+        snapshots = [s['frames'][-1]['variables']['a'] for s in r['steps'] if 'a' in s['frames'][-1]['variables']]
+        self.assertEqual(snapshots[0]['fields']['value'], 0)
+        self.assertEqual(snapshots[-1]['fields']['value'], 4)
+        self.assertEqual(snapshots[-1]['fields']['next']['$ref'], snapshots[-1]['$id'])
+
+    def test_array_fields_object_arguments_and_return(self):
+        r = self.complete('''class Box { int[] values=new int[2]; Box set(int n){values[1]=n;return this;} }
+        public class main { static int read(Box box){return box.values[1];}
+            public static void main(String[] args){Box b=new Box(); System.out.println(read(b.set(6)));}
+        }''')
+        self.assertEqual(r['output'], '6\n')
+
+    def test_static_initializer_and_constructor_arities(self):
+        r = self.complete('''class Item {static int total=3; int n=2;
+            Item(){total++;} Item(int n){this.n=n;total++;}
+        } public class main {public static void main(String[] args){
+            Item a=new Item(); Item b=new Item(8); System.out.println(a.n+b.n+Item.total);
+        }}''')
+        self.assertEqual(r['output'], '15\n')
+
+    def test_invalid_access_and_host_escape_are_rejected(self):
+        cases = [
+            ('class A {private int n;}','A a=new A(); System.out.println(a.n);'),
+            ('class A {private int n;}','A a=new A(); a.n=3;'),
+            ('class A {private int get(){return 1;}}','A a=new A(); a.get();'),
+            ('class A {private A(){}}','A a=new A();'),
+            ('class A {int n;}','System.out.println(A.n);'),
+            ('class A {int get(){return 1;}}','A.get();'),
+            ('class A {int n;}','A a=null; System.out.println(a.n);'),
+            ('class A {}','A a=new A(); a.unknown=1;'),
+            ('class A {}','A a=new A(); a.getClass();'),
+            ('','System.exit(0);'), ('','Runtime.getRuntime();'),
+            ('','File f=new File("/etc/passwd");'),
+            ('class A {} class B {}','A a=new B();'),
+        ]
+        for helper, body in cases:
+            with self.subTest(body=body):
+                r=self.run_java('public class main {public static void main(String[] args){'+body+'}}'+helper)
+                self.assertEqual(r['status'],'error',r)
+
+    def test_object_allocation_and_recursive_constructors_are_bounded(self):
+        for code in [
+            'public class main {public static void main(String[] args){for(int i=0;i<200;i++){A a=new A();}}} class A {}',
+            'public class main {public static void main(String[] args){A a=new A();}} class A {A a=new A();}',
+        ]:
+            r=self.run_java(code)
+            self.assertEqual(r['status'],'limited',r.get('error'))
+            self.assertEqual(r['error']['code'],'LIMIT')
+
+    def test_duplicate_public_classes_and_ambiguous_main_are_rejected(self):
+        for code in [
+            'public class main {static void main(){}} public class A {}',
+            'class main {static void main(){}} class main {}',
+            'class A {static void main(){}} class B {static void main(){}}',
+        ]:
+            self.assertEqual(self.run_java(code)['status'],'error')
+
+
 class ExecutionTests(unittest.TestCase):
     def run_code(self,source,language='auto',entry='',arguments=None):
         return execute(dict(source=source,language=language,entry=entry,arguments=arguments or []))

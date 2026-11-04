@@ -20,7 +20,7 @@ import java.util.concurrent.Semaphore;
 public class CodeLabService {
     public record Input(@NotBlank @Size(max=16000) String source,
                         @NotNull @Pattern(regexp="auto|c|python|java|javascript") String language,
-                        @NotNull @Pattern(regexp="(?:[A-Za-z_]\\w{0,59})?") String entry,
+                        @NotNull @Size(max=60) @Pattern(regexp="(?:[A-Za-z_]\\w{0,59}(?:\\.[A-Za-z_]\\w{0,59})?)?") String entry,
                         @NotNull JsonNode arguments) {}
     public record ArchiveInput(@NotNull Boolean archived, @NotBlank @Size(max=120) String title,
                                @NotNull @Size(max=2000) String memo) {}

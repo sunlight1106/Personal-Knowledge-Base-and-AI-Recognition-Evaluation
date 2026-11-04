@@ -310,10 +310,10 @@ class Analyzer:
     def check_effects(self, n, env, domains, conditional=False):
         protected = ({d[0] for d in domains} | {k for k,v in (env | self.lengths).items() if v is not None and v.degree() > 0}) if domains else set()
         for node in walk(n):
-            if node.type == 'array_creation_expression' or operator(node) == '**': raise Unknown('BULK_OPERATION')
+            if node.type in ('array_creation_expression','object_creation_expression') or operator(node) == '**': raise Unknown('BULK_OPERATION')
             if node.type in ('call','call_expression','method_invocation'):
                 name = text(field(node,'function','name'))
-                if name in self.engine.functions: raise Unknown('CALL_OR_RECURSION')
+                if name in self.engine.functions or any(m['name']==name for m in self.engine.java_methods.values()): raise Unknown('CALL_OR_RECURSION')
                 # Only constant-cost scalar output/length and index-independent
                 # helpers are admitted. List mutation and bulk operations vary.
                 if name not in ('len','print','printf','println','System.out.println','System.out.print','console.log','abs','min','max'):

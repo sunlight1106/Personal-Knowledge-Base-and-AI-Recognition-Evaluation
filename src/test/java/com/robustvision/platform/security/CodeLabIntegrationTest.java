@@ -53,6 +53,16 @@ class CodeLabIntegrationTest extends GroupCommunicationIntegrationTest {
         mvc.perform(post("/api/v1/code-lab/runs")).andExpect(status().isUnauthorized());
         verifyNoInteractions(runner);
     }
+    @Test void qualifiedJavaEntryIsAcceptedWithoutRelaxingLengthOrOwnership()throws Exception{
+        grant(owner.getId());success();
+        var input=Map.of("source","class Main { static int sum(){return 3;} }","language","java","entry","Main.sum","arguments",List.of());
+        String id=data(mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,input)).andExpect(status().isOk()).andReturn()).path("id").asText();
+        assertThat(db.queryForObject("SELECT entry_name FROM code_run WHERE id=?",String.class,id)).isEqualTo("Main.sum");
+        for(String entry:List.of("A."+"m".repeat(59),"A..sum","A.sum()","A.sum.other"))
+            mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,Map.of("source","class A {}","language","java","entry",entry,"arguments",List.of())))
+                .andExpect(status().isBadRequest());
+        verify(runner,times(1)).run(any());
+    }
     @Test void historyBoundedAndUnavailableExecutionDoesNotCreateFakeRun()throws Exception{
         grant(owner.getId());success();
         for(int i=0;i<22;i++)mvc.perform(json(post("/api/v1/code-lab/runs"),ownerToken,input())).andExpect(status().isOk());

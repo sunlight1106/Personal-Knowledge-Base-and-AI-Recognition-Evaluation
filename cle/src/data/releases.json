@@ -1,6 +1,43 @@
 {
-  "current": "0.13",
+  "current": "0.14",
   "releases": [
+    {
+      "version": "0.14",
+      "status": "ready",
+      "date": "2026-11-04",
+      "title": {
+        "zh": "Java 主类与辅助类支持、网页更新提醒",
+        "en": "Java main and helper classes, and browser update notices"
+      },
+      "added": [
+        {
+          "zh": "Java 可直接使用 public class main / Main，并在同一份代码中编写非 public 辅助类、构造方法、字段和实例方法。",
+          "en": "Use public class main / Main with package-private helpers, constructors, fields and instance methods in the same input."
+        },
+        {
+          "zh": "已打开的网页会检查是否有新版本并提醒刷新；不会自动刷新或清除未完成的编辑和答题。",
+          "en": "Open pages check for a new build and offer a refresh without automatically discarding unfinished edits or answers."
+        }
+      ],
+      "fixed": [
+        {
+          "zh": "Java 不同类的同名方法独立解析，支持 类名.方法名 静态入口，保留 private 访问检查与执行限额。",
+          "en": "Resolve same-named Java methods by class, accept Class.method static entries, and retain private-access checks and execution limits."
+        }
+      ],
+      "improved": [
+        {
+          "zh": "Java 默认示例采用主类与辅助类；回放显示对象编号、字段及循环引用，原有数组和调用栈可继续查看。",
+          "en": "The Java example uses main and helper classes; replay shows object identities, fields and circular references alongside arrays and call stacks."
+        }
+      ],
+      "notes": [
+        {
+          "zh": "词汇自测继续以单一近似词数呈现。升级前已经打开的旧网页需刷新一次；以后更新可在提示中刷新。Java 仍为受限教学子集，不支持继承、泛型或导入系统库。",
+          "en": "Vocabulary results remain a single approximate count. Pages opened before this upgrade need one refresh; later updates show a refresh notice. Java remains a bounded teaching subset without inheritance, generics or system-library imports."
+        }
+      ]
+    },
     {
       "version": "0.13",
       "status": "published",

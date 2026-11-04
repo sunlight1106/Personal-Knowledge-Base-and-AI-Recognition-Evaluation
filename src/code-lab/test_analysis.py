@@ -57,9 +57,20 @@ class AnalysisTests(unittest.TestCase):
         from pathlib import Path
         for lang,sample in json.loads(Path(__file__).with_name('samples.json').read_text()).items():
             with self.subTest(lang=lang):
+                if lang == 'java':
+                    r=self.run_code(sample['source'],lang,sample['entry'],[])
+                    self.assertEqual(r['status'],'completed',r.get('error'))
+                    self.assertEqual(r['analysis']['status'],'unavailable')
+                    continue
                 a=self.derived(sample['source'],lang,sample['entry'],json.loads(sample['args']))
                 self.assertEqual(a['degree'],2)
                 self.assertEqual([r for r in a['records'] if r['kind']=='loop'][-1]['predicted'],6)
+
+    def test_qualified_java_static_entry_preserves_mathematical_analysis(self):
+        code='class main {static void main(){}} class Helper {static int sum(int n){int s=0;for(int i=0;i<n;i++){s+=i;}return s;}}'
+        a=self.derived(code,'java','Helper.sum',[8])
+        self.assertEqual(a['degree'],1)
+        self.assertEqual(a['records'][0]['predicted'],8)
 
     def test_descending_and_inclusive(self):
         for code,lang in [('def f(n):\n for i in range(n,0,-1):\n  pass','python'),('int f(int n){for(int i=n;i>0;i--){}return 0;}','c')]:
