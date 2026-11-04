@@ -10,14 +10,17 @@ import AmbientWaves from './AmbientWaves.vue'
 const props = defineProps<{ books: VocabularyBook[]; selected: string; busy: boolean }>()
 const emit = defineEmits<{ choose: [id: string]; preview: [id: string]; import: [] }>()
 const query = ref(''), category = ref('全部'), sort = ref('recommended'), limit = ref(9)
-const categories = ['全部', '考研', '四六级', '留学考试', '中小学', '专业与通用', '我的导入']
-const aliases: Record<string, string> = { 四级: 'CET4 CET-4', 六级: 'CET6 CET-6', 考研: '英语一 英语二', 雅思: 'IELTS', 托福: 'TOEFL', GRE: '研究生入学考试' }
+const categories = ['全部', '通用分级', '考研', '四六级', '留学考试', '中小学', '生活与旅行', '阅读与学术', '专业与通用', '我的导入']
+const aliases: Record<string, string> = { 四级: 'CET4 CET-4', 六级: 'CET6 CET-6', 考研: '英语一 英语二', 雅思: 'IELTS', 托福: 'TOEFL', GRE: '研究生入学考试', 人工智能: 'AI machine learning 机器学习 深度学习 数据科学', 数学统计: 'math mathematics statistics 数据分析', 旅行出行: 'travel tourism 旅游', 通用分级: 'common general 基础 常用', 饮食烹饪: 'food cooking 餐饮', 学术写作: 'academic writing 论文', 自然科学: 'science 物理 化学 生物', 环境生态: 'environment ecology', 艺术文化: 'art culture' }
 function group(book: VocabularyBook) {
   if (book.owned) return '我的导入'
   if (book.level === '考研') return '考研'
   if (['四级', '六级'].includes(book.level)) return '四六级'
   if (['雅思', '托福', 'GRE'].includes(book.level)) return '留学考试'
   if (['小学衔接', '初中', '高中'].includes(book.level)) return '中小学'
+  if (book.level === '通用分级') return '通用分级'
+  if (['旅行出行', '日常生活', '饮食烹饪', '健康运动', '情绪人际'].includes(book.level)) return '生活与旅行'
+  if (['学术英语', '学术写作', '新闻社会', '自然科学', '环境生态', '艺术文化'].includes(book.level)) return '阅读与学术'
   return '专业与通用'
 }
 const publicBooks = computed(() => props.books.filter(book => !book.owned))
@@ -38,7 +41,7 @@ function clear() { query.value = ''; category.value = '全部' }
 
 <template>
   <div class="book-shelf">
-    <header class="shelf-heading"><div><p class="shelf-eyebrow">FIND YOUR NEXT WORDS</p><h3>{{ uiText('从你的目标，找到一本词书。') }}</h3><p>{{ publicBooks.length }} {{ uiText('本内置词书 ·') }} {{ totalEntries.toLocaleString(uiLocale()) }} {{ uiText('个词条收录 · 学习进度独立保存') }}</p></div><button class="button button--light" :disabled="busy" @click="emit('import')"><AppIcon name="plus" :size="16" />{{ uiText('导入自己的词书') }}</button></header>
+    <header class="shelf-heading"><div><p class="shelf-eyebrow">FIND YOUR NEXT WORDS</p><h3>{{ uiText('从你的目标，找到一本词书。') }}</h3><p>{{ publicBooks.length }} {{ uiText('本内置词书 ·') }} {{ totalEntries.toLocaleString(uiLocale()) }} {{ uiText('个词条收录 · 同词进度跨书接续') }}</p></div><button class="button button--light" :disabled="busy" @click="emit('import')"><AppIcon name="plus" :size="16" />{{ uiText('导入自己的词书') }}</button></header>
     <div class="shelf-tools"><label class="shelf-search"><AppIcon name="search" :size="17" /><input v-model="query" type="search" maxlength="80" :placeholder="uiText('搜索考研、雅思、高中、计算机…')" :aria-label="uiText('搜索词书')" /></label><label class="shelf-sort">{{ uiText('排序') }}<SelectField><select v-model="sort" :aria-label="uiText('词书排序')"><option value="recommended">{{ uiText('推荐顺序') }}</option><option value="words">{{ uiText('词量从少到多') }}</option><option value="progress">{{ uiText('学习进度') }}</option></select></SelectField></label></div>
     <nav class="shelf-categories" :aria-label="uiText('词书分类')"><button v-for="item in categories" :key="item" :aria-pressed="category === item" @click="category = item">{{ uiText(item) }}<small>{{ item === '全部' ? books.length : books.filter(book => group(book) === item).length }}</small></button></nav>
     <div class="shelf-result"><span role="status">{{ uiText(category) }} · {{ filtered.length }} {{ uiText('本词书') }}</span><span>{{ uiText('同一单词可能收录于不同词书') }}</span></div>

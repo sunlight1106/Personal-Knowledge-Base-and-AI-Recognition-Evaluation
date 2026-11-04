@@ -1,0 +1,119 @@
+{
+  "baseCatalogSha256": "eea34e73d6096d70b77d2a6af0b35bfab0fff25ddd6093a88ac06d95882cf7e7",
+  "catalogSha256": "bf16795d6465b6959cc0ef58ee87903ab8cfa7834881c20d1e998f207f956a97",
+  "totalEntries": 9866,
+  "uniqueWords": 5643,
+  "newHeadwords": 184,
+  "books": [
+    {
+      "id": "vocab-ec-common-1000",
+      "title": "通用英语 · 常用 1000",
+      "level": "通用分级",
+      "words": 1000
+    },
+    {
+      "id": "vocab-ec-common-3000",
+      "title": "通用英语 · 阅读 3000",
+      "level": "通用分级",
+      "words": 3000
+    },
+    {
+      "id": "vocab-ec-cet4-core",
+      "title": "四级英语 · 常用 1200",
+      "level": "四级",
+      "words": 1200
+    },
+    {
+      "id": "vocab-ec-cet6-bridge",
+      "title": "六级英语 · 进阶衔接",
+      "level": "六级",
+      "words": 1952
+    },
+    {
+      "id": "vocab-ec-travel",
+      "title": "旅行英语 · 从机场到城市",
+      "level": "旅行出行",
+      "words": 165
+    },
+    {
+      "id": "vocab-ec-everyday",
+      "title": "日常生活 · 家庭与城市",
+      "level": "日常生活",
+      "words": 230
+    },
+    {
+      "id": "vocab-ec-food",
+      "title": "饮食英语 · 点餐与烹饪",
+      "level": "饮食烹饪",
+      "words": 216
+    },
+    {
+      "id": "vocab-ec-health",
+      "title": "健康英语 · 身体与就医",
+      "level": "健康运动",
+      "words": 187
+    },
+    {
+      "id": "vocab-ec-feelings",
+      "title": "情绪与人际 · 理解和表达",
+      "level": "情绪人际",
+      "words": 218
+    },
+    {
+      "id": "vocab-ec-news",
+      "title": "新闻英语 · 社会与公共事务",
+      "level": "新闻社会",
+      "words": 216
+    },
+    {
+      "id": "vocab-ec-science",
+      "title": "自然科学 · 阅读基础",
+      "level": "自然科学",
+      "words": 207
+    },
+    {
+      "id": "vocab-ec-math",
+      "title": "数学与统计 · 读题和分析",
+      "level": "数学统计",
+      "words": 232
+    },
+    {
+      "id": "vocab-ec-environment",
+      "title": "环境与生态 · 阅读专题",
+      "level": "环境生态",
+      "words": 218
+    },
+    {
+      "id": "vocab-ec-culture",
+      "title": "艺术与文化 · 阅读表达",
+      "level": "艺术文化",
+      "words": 232
+    },
+    {
+      "id": "vocab-ec-writing",
+      "title": "学术写作 · 论证与衔接",
+      "level": "学术写作",
+      "words": 295
+    },
+    {
+      "id": "vocab-ec-ai-reading",
+      "title": "人工智能 · 论文与数据词汇",
+      "level": "人工智能",
+      "words": 298
+    }
+  ],
+  "omittedTerms": {
+    "travel": [],
+    "everyday": [],
+    "food": [],
+    "health": [],
+    "feelings": [],
+    "news": [],
+    "science": [],
+    "math": [],
+    "environment": [],
+    "culture": [],
+    "writing": [],
+    "ai-reading": []
+  }
+}

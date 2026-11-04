@@ -61,11 +61,13 @@ export function scoreAssessment(bank: AssessmentBank, mode: AssessmentMode, answ
     upper: Math.min(bank.population, Math.ceil(sum('high') / 100) * 100), bands }
 }
 
-export type LearningGoal = 'general' | 'school' | 'college' | 'graduate' | 'abroad' | 'academic'
+export type LearningGoal = 'general' | 'school' | 'college' | 'graduate' | 'abroad' | 'academic' | 'daily' | 'travel' | 'work' | 'science'
 const goalBooks: Record<LearningGoal, string[]> = {
-  general: ['primary', 'gk-core', 'zk', 'gk', 'cet4', 'cet6', 'academic'],
-  school: ['primary', 'gk-core', 'zk', 'gk'], college: ['gk-core', 'cet4', 'cet6'],
-  graduate: ['gk-core', 'ky-core', 'ky'], abroad: ['gk-core', 'ielts', 'toefl'], academic: ['cet4', 'academic', 'gre'],
+  general: ['primary', 'gk-core', 'zk', 'gk', 'common-1000', 'common-3000', 'cet4', 'cet6', 'academic'],
+  school: ['primary', 'gk-core', 'zk', 'gk'], college: ['gk-core', 'cet4-core', 'cet4', 'cet6-bridge', 'cet6'],
+  graduate: ['gk-core', 'ky-core', 'ky'], abroad: ['gk-core', 'ielts', 'toefl'], academic: ['cet4', 'academic', 'writing', 'news', 'gre'],
+  daily: ['everyday', 'common-1000', 'food', 'health', 'feelings'], travel: ['travel', 'everyday', 'food', 'common-1000'],
+  work: ['business', 'computing', 'ai-reading', 'writing'], science: ['science', 'math', 'environment', 'ai-reading', 'academic'],
 }
 export function recommendBooks(bank: AssessmentBank, result: AssessmentResult, goal: LearningGoal) {
   const coverage = (book: AssessmentBook) => book.bands.reduce((n, size, i) => n + size * result.bands[i]!.rate, 0) / Math.max(1, book.bands.reduce((a, b) => a + b, 0))
@@ -73,7 +75,7 @@ export function recommendBooks(bank: AssessmentBank, result: AssessmentResult, g
   const candidates = bank.books.filter(book => goalBooks[goal].includes(book.id.replace('vocab-ec-', '')))
   // If basic coverage is weak, lead with a foundation book regardless of exam goal.
   if (result.bands[0]!.rate < .5 && !candidates.includes(primary)) candidates.push(primary)
-  return candidates.map(book => ({ ...book, coverage: coverage(book) })).sort((a, b) => {
+  const ranked = candidates.map(book => ({ ...book, coverage: coverage(book) })).sort((a, b) => {
     if (result.bands[0]!.rate < .5) {
       if (a.id === primary.id) return -1
       if (b.id === primary.id) return 1
@@ -82,5 +84,12 @@ export function recommendBooks(bank: AssessmentBank, result: AssessmentResult, g
     return Math.abs(a.coverage - .7) - Math.abs(b.coverage - .7)
       || (a.coverage > .9 && b.coverage > .9 ? difficulty(b) - difficulty(a) : difficulty(a) - difficulty(b))
       || a.total - b.total
-  }).slice(0, 3)
+  })
+  const picks = ranked.slice(0, 3)
+  // Preserve foundational help while ensuring an explicitly chosen topic is represented.
+  if (['daily', 'travel', 'work', 'science'].includes(goal)) {
+    const anchor = ranked.find(book => book.id === 'vocab-ec-' + goalBooks[goal][0])
+    if (anchor && !picks.includes(anchor)) picks.splice(picks.length - 1, 1, anchor)
+  }
+  return picks
 }

@@ -74,15 +74,29 @@ test('recommendations include foundational help for weak scores and advancement 
   const items = selectQuestions(bank, 'recognition', [], random)
   const low = scoreAssessment(bank, 'recognition', answers(items, false))
   const high = scoreAssessment(bank, 'recognition', answers(items, true))
-  for (const goal of ['general', 'school', 'college', 'graduate', 'abroad', 'academic']) {
+  for (const goal of ['general', 'school', 'college', 'graduate', 'abroad', 'academic', 'daily', 'travel', 'work', 'science']) {
     const recommended = recommendBooks(bank, low, goal)
     assert.equal(recommended[0].id, 'vocab-ec-primary')
     assert.equal(new Set(recommended.map(b => b.id)).size, recommended.length)
     assert.ok(recommended.every(b => bank.books.some(book => b.id === book.id)))
   }
   assert.notEqual(recommendBooks(bank, high, 'general')[0].id, 'vocab-ec-primary')
-  assert.ok(recommendBooks(bank, low, 'general').every(book => ['vocab-ec-primary', 'vocab-ec-gk-core', 'vocab-ec-zk'].includes(book.id)), 'An all-unknown beginner result must not promote a short advanced book just because it has fewer words')
+  assert.ok(recommendBooks(bank, low, 'general').every(book => ['vocab-ec-primary', 'vocab-ec-gk-core', 'vocab-ec-zk', 'vocab-ec-common-1000'].includes(book.id)), 'An all-unknown beginner result must not promote a short advanced book just because it has fewer words')
   assert.ok(recommendBooks(bank, high, 'abroad').some(b => b.id === 'vocab-ec-toefl'))
+})
+
+test('expanded book goals recommend only matching public books without changing the assessment population', () => {
+  assert.equal(bank.books.length, 30)
+  assert.equal(new Set(bank.books.map(b => b.id)).size, 30)
+  assert.equal(bank.population, 12221)
+  const high = scoreAssessment(bank, 'recognition', bank.items.map(item => ({id:item.id,value:true})))
+  const groups = {daily:['common-1000','everyday','food','health','feelings'], travel:['travel','everyday','food','common-1000'], work:['business','computing','ai-reading','writing'], science:['science','math','environment','ai-reading','academic']}
+  for (const [goal, ids] of Object.entries(groups)) {
+    const picks = recommendBooks(bank, high, goal)
+    assert.equal(picks.length, 3)
+    assert.ok(picks.every(b => ids.includes(b.id.replace('vocab-ec-',''))))
+    assert.ok(picks.every(b => b.bands.reduce((sum,n)=>sum+n,0) <= b.total))
+  }
 })
 
 test('randomized answer patterns keep estimates and ranges finite and bounded', () => {

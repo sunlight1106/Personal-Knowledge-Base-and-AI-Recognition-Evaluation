@@ -48,13 +48,17 @@ def build(source):
                           'pos': e['pos'], 'ipa': e['ipa'],
                           'distractors': [clean(v) for v in e['distractors']]})
     band_by_term = {e['term']: next(b for b in range(5) if i < boundaries[b+1]) for i, e in enumerate(eligible)}
+    # Keep the tested population and questions stable; expand only book recommendations.
+    expansion = json.loads((ROOT / 'database/vocabulary/v49.json').read_text(encoding='utf-8'))
+    catalog['entries'].extend(expansion['entries'])
+    catalog['books'].extend(expansion['books'])
     books = []
     for book in catalog['books']:
         terms = [catalog['entries'][i]['term'] for i in book['words']]
         counts = [sum(band_by_term.get(t) == b for t in terms) for b in range(5)]
         books.append({'id': book['id'], 'title': book['title'], 'level': book['level'],
                       'total': len(terms), 'bands': counts})
-    result = {'version': 1, 'sourceSha256': SOURCE_SHA, 'population': len(eligible),
+    result = {'version': 2, 'sourceSha256': SOURCE_SHA, 'population': len(eligible),
               'bands': bands, 'books': books, 'items': items}
     target = ROOT / 'cle/src/lib/vocabulary-assessment-bank.json'
     target.write_text(json.dumps(result, ensure_ascii=False, separators=(',', ':'))+'\n', encoding='utf-8')

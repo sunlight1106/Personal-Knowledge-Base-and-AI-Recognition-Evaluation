@@ -2,3 +2,5 @@
 *.sh text eol=lf
 *.ps1 text eol=crlf
 *.sql text eol=lf
+/database/vocabulary/v49.json text eol=lf
+/database/vocabulary/expansion-v49-manifest.json text eol=lf

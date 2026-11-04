@@ -1,0 +1,23 @@
+{
+  "additionally":{"ipa":"/əˈdɪʃənəli/","pos":"adv.","meaning":"另外；此外"},
+  "annoyed":{"ipa":"/əˈnɔɪd/","pos":"adj.","meaning":"恼怒的；烦恼的"},
+  "benchmark":{"ipa":"/ˈbentʃmɑːrk/","pos":"n.","meaning":"基准；衡量标准"},
+  "biodiversity":{"ipa":"/ˌbaɪoʊdaɪˈvɜːrsəti/","pos":"n.","meaning":"生物多样性"},
+  "congratulations":{"ipa":"/kənˌɡrætʃəˈleɪʃənz/","pos":"n.","meaning":"祝贺；贺词"},
+  "counterargument":{"ipa":"/ˈkaʊntərˌɑːrɡjəmənt/","pos":"n.","meaning":"反驳论点；反对意见"},
+  "craftsmanship":{"ipa":"/ˈkræftsmənʃɪp/","pos":"n.","meaning":"工艺；手艺"},
+  "dataset":{"ipa":"/ˈdeɪtəˌset/","pos":"n.","meaning":"数据集"},
+  "deployment":{"ipa":"/dɪˈplɔɪmənt/","pos":"n.","meaning":"部署；调配"},
+  "explainability":{"ipa":"/ɪkˌspleɪnəˈbɪləti/","pos":"n.","meaning":"可解释性"},
+  "hyperparameter":{"ipa":"/ˌhaɪpərpəˈræmɪtər/","pos":"n.","meaning":"超参数"},
+  "multimodal":{"ipa":"/ˌmʌltiˈmoʊdəl/","pos":"adj.","meaning":"多模态的；涉及多种信息形式的"},
+  "optimizer":{"ipa":"/ˈɑːptɪmaɪzər/","pos":"n.","meaning":"优化器；优化程序"},
+  "overfit":{"ipa":"/ˌoʊvərˈfɪt/","pos":"v.","meaning":"过度拟合；过分适应训练数据"},
+  "recycling":{"ipa":"/ˌriːˈsaɪklɪŋ/","pos":"n.","meaning":"回收利用"},
+  "robustness":{"ipa":"/roʊˈbʌstnəs/","pos":"n.","meaning":"稳健性；鲁棒性"},
+  "stressed":{"ipa":"/strest/","pos":"adj.","meaning":"紧张的；承受压力的"},
+  "supervised":{"ipa":"/ˈsuːpərvaɪzd/","pos":"adj.","meaning":"受监督的；有监督的"},
+  "underfit":{"ipa":"/ˌʌndərˈfɪt/","pos":"v.","meaning":"欠拟合；未能充分学习数据规律"},
+  "unsupervised":{"ipa":"/ˌʌnsuːpərvaɪzd/","pos":"adj.","meaning":"无人监督的；无监督的"},
+  "weaving":{"ipa":"/ˈwiːvɪŋ/","pos":"n.","meaning":"编织；织造"}
+}

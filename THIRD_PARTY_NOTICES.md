@@ -19,3 +19,7 @@ Vue、Vue Router、Vite、Spring Boot 及其他依赖保留各自许可证。Doc
 复习调度使用 [java-fsrs 1.0.0](https://github.com/open-spaced-repetition/java-fsrs)，适用 MIT 许可；许可全文见 [java-fsrs MIT 许可](docs/licenses/JAVA-FSRS-LICENSE.txt)。PDF 正文提取使用 Apache PDFBox 3.0.8，适用 Apache License 2.0。
 
 本地关联搜索的矩阵分解使用 [Apache Commons Math 3.6.1](https://commons.apache.org/proper/commons-math/)，适用 Apache License 2.0；其 JAR 保留原 LICENSE 与 NOTICE。
+
+## Vocabulary expansion 0.13
+
+`database/vocabulary/v49.json` adds 16 book collections using the same pinned ECDICT MIT snapshot as V17. Existing entries retain their original definitions and pronunciation data. New entries identify ECDICT or original authorship in their `source` field. `topics-v49.json` contains the project-authored topic selections; `supplement-v49.json` contains original short definitions and broad American IPA, licensed under the repository MIT license. The original V17 corpus and its checksums remain unchanged.

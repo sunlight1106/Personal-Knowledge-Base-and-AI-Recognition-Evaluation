@@ -145,6 +145,30 @@ class MySqlSchemaMigrationTest {
         }
     }
 
+    @Test void thematicBookUpgradeFrom48PreservesPersonalBooksAndProgress() throws Exception {
+        try(TestDatabase database=new TestDatabase()) {
+            database.flyway("48").migrate();List<String> checksums;
+            try(Connection c=database.connect()) {
+                seedAllDomains(c);
+                execute(c,"INSERT INTO vocabulary_book(id,owner_id,title,description,attribution,level,created_at) VALUES ('fixture-private',101,'Keep my book','Private','Original','Custom',NOW())");
+                execute(c,"INSERT INTO vocabulary_word(id,book_id,term,term_key,ipa,pos,meaning,example_text,example_translation,distractors,sort_order) VALUES ('fixture-word','fixture-private','travel','travel','/test/','v.','My meaning','','','[]',0)");
+                execute(c,"INSERT INTO vocabulary_progress(id,owner_id,word_id,term_key,learning_correct,review_stage,wrong_count,mistake,starred,skipped) VALUES ('fixture-progress',101,'fixture-word','travel',4,2,1,FALSE,TRUE,FALSE)");
+                checksums=rows(c,"SELECT version,checksum FROM flyway_schema_history ORDER BY installed_rank");
+            }
+            var latest=database.flyway(null);assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);latest.validate();
+            assertThat(latest.migrate().migrationsExecuted).isZero();
+            try(Connection c=database.connect()) {
+                assertThat(scalar(c,"SELECT COUNT(*) FROM vocabulary_book WHERE owner_id IS NULL")).isEqualTo("34");
+                assertThat(scalar(c,"SELECT title FROM vocabulary_book WHERE id='fixture-private'")).isEqualTo("Keep my book");
+                assertThat(scalar(c,"SELECT meaning FROM vocabulary_word WHERE id='fixture-word'")).isEqualTo("My meaning");
+                assertThat(scalar(c,"SELECT learning_correct FROM vocabulary_progress WHERE id='fixture-progress'")).isEqualTo("4");
+                assertThat(scalar(c,"SELECT review_stage FROM vocabulary_progress WHERE id='fixture-progress'")).isEqualTo("2");
+                assertThat(scalar(c,"SELECT COUNT(*) FROM vocabulary_word WHERE book_id='vocab-ec-travel' AND term_key='travel'")).isEqualTo("1");
+                assertThat(rows(c,"SELECT version,checksum FROM flyway_schema_history WHERE CAST(version AS UNSIGNED)<=48 ORDER BY installed_rank")).isEqualTo(checksums);
+            }
+        }
+    }
+
     private static void assertDomainTables(Connection connection) throws SQLException {
         Set<String> tables = new TreeSet<>();
         try (ResultSet rs = connection.getMetaData().getTables(connection.getCatalog(), null, "%", new String[]{"TABLE"})) {

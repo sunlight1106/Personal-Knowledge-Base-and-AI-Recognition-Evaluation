@@ -9,6 +9,10 @@ const books = [
   { id: 'vocab-ec-ielts', title: '雅思 IELTS 词汇', level: '雅思', totalWords: 5026 },
   { id: 'vocab-ec-gk', title: '高中英语高考词汇', level: '高中', totalWords: 3666 },
   { id: 'private', title: '<script>我的词书</script>', level: '自定义', totalWords: 4, owned: true },
+  { id: 'vocab-ec-travel', title: '旅行英语 · 从机场到城市', level: '旅行出行', totalWords: 165 },
+  { id: 'vocab-ec-ai-reading', title: '人工智能 · 论文与数据词汇', level: '人工智能', totalWords: 298 },
+  { id: 'vocab-ec-writing', title: '学术写作 · 论证与衔接', level: '学术写作', totalWords: 295 },
+  { id: 'vocab-ec-common-1000', title: '通用英语 · 常用 1000', level: '通用分级', totalWords: 1000 },
   ...Array.from({ length: 9 }, (_, i) => ({ id: `extra-${i}`, title: `练习 ${i}`, level: '四级', totalWords: 100 + i })),
 ].map(item => ({ ...base, ...item }))
 const events = [], props = reactive({ books, selected: 'vocab-ec-ky', busy: false,
@@ -20,9 +24,9 @@ try {
   app = createApp(VocabularyBookShelf, props); app.mount(fixture); await nextTick()
   assert(fixture.querySelectorAll('.shelf-book').length === 9, 'Catalog initially renders a bounded nine books')
   assert(fixture.querySelector('.is-current h4').textContent.includes('考研'), 'Current study book is marked and pinned')
-  assert(fixture.querySelector('.shelf-heading').textContent.includes('12 本内置词书'), 'Public count excludes private imports')
+  assert(fixture.querySelector('.shelf-heading').textContent.includes('16 本内置词书'), 'Public count excludes private imports')
   await click(button('再看'))
-  assert(fixture.querySelectorAll('.shelf-book').length === 13 && !fixture.querySelector('.shelf-more'), 'Show more reveals remaining books without duplicates')
+  assert(fixture.querySelectorAll('.shelf-book').length === 17 && !fixture.querySelector('.shelf-more'), 'Show more reveals remaining books without duplicates')
   await click(button('留学考试'))
   assert(fixture.querySelectorAll('.shelf-book').length === 1 && fixture.querySelector('.shelf-book h4').textContent.includes('雅思'), 'Category filters IELTS independently of other exam books')
   const search = fixture.querySelector('input[type=search]')
@@ -44,6 +48,15 @@ try {
   await click(button('导入自己的词书'))
   assert(events.at(-1)?.[0] === 'import', 'Private book import remains reachable')
   assert(fixture.querySelectorAll('.shelf-categories [aria-pressed=true]').length === 1, 'Exactly one accessible category is selected')
+  await click(button('生活与旅行'))
+  assert(fixture.querySelectorAll('.shelf-book').length === 1 && fixture.querySelector('.shelf-book h4').textContent.includes('旅行'), 'Travel books have their own discoverable category')
+  await click(button('阅读与学术'))
+  assert(fixture.querySelector('.shelf-book h4').textContent.includes('学术写作'), 'Academic writing is grouped with reading')
+  await click(button('通用分级'))
+  assert(fixture.querySelector('.shelf-book h4').textContent.includes('1000'), 'Graded books can be found separately')
+  await click(button('全部'))
+  search.value = 'AI'; search.dispatchEvent(new window.Event('input', { bubbles: true })); await nextTick()
+  assert(fixture.querySelectorAll('.shelf-book').length === 1 && fixture.querySelector('.shelf-book h4').textContent.includes('人工智能'), 'English AI alias finds the Chinese-titled book')
   document.getElementById('results').textContent = `PASS ${passed.length}\n${passed.join('\n')}`
   document.documentElement.dataset.result = 'passed'
 } catch (error) {

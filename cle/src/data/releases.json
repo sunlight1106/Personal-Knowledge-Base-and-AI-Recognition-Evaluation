@@ -1,6 +1,38 @@
 {
-  "current": "0.12",
+  "current": "0.13",
   "releases": [
+    {
+      "version": "0.13",
+      "status": "ready",
+      "date": "2026-11-04",
+      "title": {
+        "zh": "词书扩充与主题选书",
+        "en": "More word books and topic-based discovery"
+      },
+      "added": [
+        {
+          "zh": "新增 16 本通用分级、考试衔接及主题词书，内置词书增至 34 本；补充 184 个新词。",
+          "en": "Add 16 graded, exam-bridge and thematic books, bringing the built-in shelf to 34 books with 184 additional headwords."
+        },
+        {
+          "zh": "新增生活旅行、阅读学术分类与主题搜索，词汇自测可按生活、旅行、职场和科学方向推荐词书。",
+          "en": "Add life/travel and reading/academic filters, topic search, and assessment recommendations for daily life, travel, work and science."
+        }
+      ],
+      "fixed": [],
+      "improved": [
+        {
+          "zh": "新旧词书中的同词进度接续，词书按需展开；升级只增加内容，不覆盖个人词书或学习记录。",
+          "en": "Share progress across new and existing books, reveal shelf cards in batches, and upgrade additively without replacing private books or study records."
+        }
+      ],
+      "notes": [
+        {
+          "zh": "主题词书是学习选编，不是出版社原版或完整官方考纲。更新包含 V49 词库迁移，更新前请备份。",
+          "en": "Thematic books are curated learning collections, not publisher editions or complete official syllabi. Back up before the additive V49 vocabulary migration."
+        }
+      ]
+    },
     {
       "version": "0.12",
       "status": "published",

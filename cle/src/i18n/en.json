@@ -3553,5 +3553,9 @@
   "模型拒绝了本次请求，请检查问题内容或供应商的使用要求；本次调用可能仍由供应商计费": "The model declined the request. Review the question and the provider requirements. The provider may still charge for this request.",
   "模型响应超过当前接收容量。请先查看使用记录，可要求更简短的回答后重新预览；本次调用可能仍由供应商计费": "The response exceeded the receiving capacity. Check usage; you can request a shorter answer in a new preview. The provider may still charge for this request.",
   "测试词汇量": "Test my vocabulary",
-  "这本推荐词书暂不可用，请从现有词书中选择。": "This recommended book is unavailable. Choose from the current catalog."
+  "这本推荐词书暂不可用，请从现有词书中选择。": "This recommended book is unavailable. Choose from the current catalog.",
+  "通用分级": "General English levels",
+  "生活与旅行": "Life and travel",
+  "阅读与学术": "Reading and academic",
+  "个词条收录 · 同词进度跨书接续": "book entries · Shared word progress across books"
 }
