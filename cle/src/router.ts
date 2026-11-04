@@ -1,8 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authStore } from '@/stores/auth'
 import HomeView from '@/views/HomeView.vue'
-import LoginView from '@/views/LoginView.vue'
-import AppShell from '@/components/AppShell.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,7 +9,7 @@ const router = createRouter({
     { path: '/offline', component: () => import('@/views/OfflineView.vue') },
     { path: '/', name: 'home', component: HomeView },
     { path: '/vocabulary-test', name: 'vocabulary-assessment', component: () => import('@/views/VocabularyAssessmentView.vue') },
-    { path: '/login', name: 'login', component: LoginView },
+    { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
     { path: '/forgot-password', component: () => import('@/views/AccountRecoveryView.vue') },
     { path: '/reset-password', component: () => import('@/views/AccountRecoveryView.vue') },
     { path: '/verify-email', component: () => import('@/views/AccountRecoveryView.vue') },
@@ -31,7 +29,7 @@ const router = createRouter({
     },
     {
       path: '/app',
-      component: AppShell,
+      component: () => import('@/components/AppShell.vue'),
       meta: { requiresAuth: true },
       children: [
         { path: 'learning', component: () => import('@/views/LearningView.vue') },

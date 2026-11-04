@@ -112,6 +112,10 @@ export function valueText(value:Value|undefined):string{
   return JSON.stringify(value)
 }
 export function arrayScale(values:Value[]){return Math.max(1,...values.map(v=>typeof v==='number'?Math.abs(v):0))}
+// Derive one scale per array/frame, not one full-array scan per rendered cell.
+export function arrayViews(variables:Record<string,Value>){
+  return Object.entries(variables).flatMap(([name,values])=>Array.isArray(values)?[{name,values,scale:arrayScale(values)}]:[])
+}
 export function escapeXml(value:unknown){return String(value).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]!))}
 export function formulaValue(coefficients:number[],n:number){
   if(!Number.isFinite(n)||n<0||n>1024||coefficients.length>5||coefficients.some(c=>!Number.isFinite(c)))return 0

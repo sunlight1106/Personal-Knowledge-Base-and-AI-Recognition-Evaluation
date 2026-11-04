@@ -1,6 +1,43 @@
 {
-  "current": "0.14",
+  "current": "0.15",
   "releases": [
+    {
+      "version": "0.15",
+      "status": "ready",
+      "date": "2026-11-04",
+      "title": {
+        "zh": "系统回归与代码回放性能优化",
+        "en": "System regression and code replay performance"
+      },
+      "added": [
+        {
+          "zh": "新增本地 HTTP 检查工具，核对入口资源、页面构建一致性和 51 个受保护接口的匿名访问边界。",
+          "en": "Add a read-only localhost HTTP check for entry assets, consistent page builds and anonymous access to 51 protected endpoints."
+        }
+      ],
+      "fixed": [
+        {
+          "zh": "执行记录刷新会取消过期请求，避免较晚返回的旧列表覆盖最新结果；断网重试保留已有记录。",
+          "en": "History refresh cancels superseded requests, prevents stale responses from replacing current results, and keeps existing records during offline retries."
+        }
+      ],
+      "improved": [
+        {
+          "zh": "首页按需加载登录页与工作空间；代码回放按数组计算比例并缓存执行分布峰值，减少逐步播放时的重复计算。",
+          "en": "Load login and workspace pages on demand; calculate one scale per array and cache line-count peaks to reduce repeated work during replay."
+        },
+        {
+          "zh": "补充代码可视化权限矩阵和刷新异常回归，覆盖匿名请求、逐项授予和撤销权限、重复刷新、迟到响应及退出页面。",
+          "en": "Extend the permission matrix and history regression to cover anonymous access, individual grants and denials, repeated refresh, late responses and page exit."
+        }
+      ],
+      "notes": [
+        {
+          "zh": "保留账号、笔记、词书与学习进度。本次不新增数据库迁移，旧页面可在保存后刷新使用新版。",
+          "en": "Accounts, notes, wordbooks and learning progress are preserved. No database migration is added; save edits before refreshing an older page."
+        }
+      ]
+    },
     {
       "version": "0.14",
       "status": "published",

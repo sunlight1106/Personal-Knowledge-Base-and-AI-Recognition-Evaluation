@@ -40,6 +40,7 @@ class PermissionMatrixIntegrationTest {
         endpoint("/knowledge/topics","knowledge:read"), endpoint("/knowledge/domains","knowledge:read"), endpoint("/knowledge/entries","knowledge:read"),
         endpoint("/notes","note:read"), endpoint("/notes/trash","note:read"), endpoint("/notes/reminders","note:read"),
         endpoint("/research/search","research:use"), endpoint("/research/documents","research:use"),
+        endpoint("/code-lab/runs","code-lab:use"),
         endpoint("/notifications"), endpoint("/learning/statistics"), endpoint("/learning/today"), endpoint("/workspace-jobs"),
         endpoint("/files","file:read,file:read:any"), endpoint("/inference/tasks","experiment:read,experiment:read:any"),
         endpoint("/models","model:read"), endpoint("/models/runtime","model:read"),

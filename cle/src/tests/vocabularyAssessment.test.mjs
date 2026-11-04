@@ -6,6 +6,26 @@ const bank = JSON.parse(fs.readFileSync(new URL('../lib/vocabulary-assessment-ba
 const random = () => .37
 const answers = (items, value) => items.map(item => ({ id: item.id, value: typeof value === 'function' ? value(item) : value }))
 
+test('all 33,614 translation band-score combinations remain bounded and monotonic', () => {
+  const sample=bank.bands.flatMap((_,band)=>bank.items.filter(item=>item.band===band).slice(0,6))
+  const size=7**bank.bands.length
+  for(const mode of ['meaning','spelling']){
+    const estimates=[]
+    for(let code=0;code<size;code++){
+      const counts=bank.bands.map((_,band)=>Math.floor(code/7**band)%7)
+      const input=sample.map((item,index)=>({id:item.id,value:index%6<counts[item.band]?(mode==='meaning'?item.meaning:item.id):''}))
+      const result=scoreAssessment(bank,mode,input)
+      assert.equal(result.total,30);assert.equal(result.correct,counts.reduce((a,b)=>a+b,0))
+      assert.ok(Number.isFinite(result.estimate)&&result.estimate>=0&&result.estimate<=bank.population)
+      assert.ok(result.lower<=result.estimate&&result.estimate<=result.upper)
+      for(let band=0;band<counts.length;band++)if(counts[band])assert.ok(result.estimate>=estimates[code-7**band])
+      estimates.push(result.estimate)
+    }
+    assert.equal(estimates[0],0)
+    assert.ok(estimates.at(-1)>=bank.population-100)
+  }
+})
+
 test('licensed bank has five complete unique pools and valid disjoint choice sets', () => {
   assert.equal(bank.items.length, 500)
   assert.equal(new Set(bank.items.map(item => item.id)).size, 500)

@@ -7,6 +7,17 @@ const lib=await import('data:text/javascript;base64,'+Buffer.from(js).toString('
 assert.deepEqual(lib.occurrences({steps:[{line:2},{line:3},{line:2}]},2),[0,2])
 assert.equal(lib.arrayScale([-5,2,0]),5)
 assert.equal(lib.arrayScale([]),1)
+// Same pixels as the original per-cell calculation, with a linear scan budget.
+for(const values of [[],[-5,2,0],['hello',null,true],Array.from({length:128},(_,i)=>i-64)]){
+ let reads=0
+ const measured=new Proxy(values,{get(target,key,receiver){if(/^\d+$/.test(String(key)))reads++;return Reflect.get(target,key,receiver)}})
+ const [view]=lib.arrayViews({a:measured,n:4})
+ assert.equal(view.values,measured)
+ assert.equal(view.scale,lib.arrayScale(values))
+ assert.equal(reads,values.length)
+ const height=(v,scale)=>typeof v==='number'?Math.max(6,Math.abs(v)/scale*85):10
+ assert.deepEqual(values.map(v=>height(v,view.scale)),values.map(v=>height(v,lib.arrayScale(values))))
+}
 assert.equal(lib.valueText([3,2]),'[3,2]')
 assert.equal(lib.valueText({$class:'Counter',$id:1,fields:{n:3}}),'Counter #1')
 assert.equal(lib.valueText({$class:'Counter',$ref:1}),'↪ Counter #1')
