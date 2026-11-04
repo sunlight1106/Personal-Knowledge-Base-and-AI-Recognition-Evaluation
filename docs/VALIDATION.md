@@ -1,5 +1,14 @@
 # 验证记录
 
+## 0.12 词汇量自测与发布（2026-11-04）
+
+- [GitHub 0.12 测试版](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.12) 已公开，安装包对应源码 `cc19b1f06d40a42249f1cd96e3e268ac09df71f5`。历史版本资产未覆盖，后续发布状态与下载链接的提交不改变这批安装文件。
+- 前端单元测试 22 项通过；完整界面回归 50 个套件通过，其中新增自测界面 24 项断言覆盖三种完整流程、返回修改、跳过、空选择、离开确认、切换账号、双语和词书权限。生产构建通过，题库按路由延迟加载。
+- 实际浏览器检查桌面和 390px 窄屏布局、两轮勾选、结果、重置、推荐入口与摘要下载。空白/低水平答案优先推荐基础词书的回归通过。没有把随机抽样结果写入学习掌握记录。
+- 本地后端报告 828 项，572 项执行通过、256 项按环境跳过，零失败和错误；之后打包因 Maven 依赖下载超时中断，复用已通过的测试结果重试打包成功。[同一源码的 Verify 11 项作业](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/actions/runs/41762502859)（含实际 MySQL、Redis 检查）及[恢复演练](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/actions/runs/41762502856)均通过。
+- 13 个发布附件的远端大小与 SHA-256 全部匹配；匿名下载 EXE 和运行包后再次核对哈希。桌面固定入口使用相同公开文件，EXE 与运行包自检、实际启动、运行镜像 ID、首页/测试页/API 均通过；原配置哈希保持不变，更新前加密备份已校验。
+- 本次未调用真实 AI、短信服务，也没有新增数据库迁移。测试结果是尚未标定的词库范围内教学参考；上述检查不等于穷举全部操作或验证了词汇量估算的测量效度。[方法与限制](VOCABULARY-ASSESSMENT.md)
+
 ## 0.11 已发布（2026-10-31）
 
 - [GitHub 0.11 测试版](https://github.com/sunlight1106/Personal-Knowledge-Base-and-AI-Recognition-Evaluation/releases/tag/v0.11) 已公开，构建源码为 `e29feba1ce0f0093418e1c5004b12224cde689f7`，历史 0.1 资产未覆盖。
