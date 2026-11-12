@@ -57,8 +57,10 @@ class PersonalWorkflowIntegrationTest {
   call(post("/api/v1/auth/register"),null,Map.of("username","PKB-"+"A".repeat(32),"email","reserved@example.invalid","password",PASSWORD)).andExpect(status().isBadRequest());
  }
  @Test void privatePurgeDeletesOnlyOwnerDataAndCannotBeRecovered()throws Exception{
+  db.update("INSERT INTO release_read_receipt(owner_id,release_version,read_at) VALUES (?,?,CURRENT_TIMESTAMP)",user.getId(),"0.1");
   note(token,"Private one","Secret personal content");var keep=note(otherToken,"Private two","Other content");var ticket=prepare("PURGE");advance();call(post("/api/v1/account/closure/confirm"),token,confirm(ticket)).andExpect(status().isOk());
   assertThat(db.queryForObject("SELECT COUNT(*) FROM note WHERE owner_id=?",Long.class,user.getId())).isZero();call(get("/api/v1/notes/"+keep.path("id").asText()),otherToken,null).andExpect(status().isOk());
+  assertThat(db.queryForObject("SELECT COUNT(*) FROM release_read_receipt WHERE owner_id=?",Long.class,user.getId())).isZero();
   assertThat(users.findById(user.getId()).orElseThrow().getDisplayName()).isEqualTo("已注销用户");assertThat(db.queryForObject("SELECT COUNT(*) FROM account_cleanup WHERE owner_id=? AND kind='TRAINING'",Long.class,user.getId())).isEqualTo(1);
   call(post("/api/v1/auth/reactivate"),null,Map.of("username",user.getUsername(),"password",PASSWORD)).andExpect(status().isUnauthorized());
  }
@@ -74,9 +76,51 @@ class PersonalWorkflowIntegrationTest {
  @Test void preferencesAndReviewRemindersStayPrivateAndRespectMute()throws Exception{
   var n=note(token,"Review me","Private lesson");String id=n.path("id").asText();call(put("/api/v1/notes/"+id+"/reminder"),token,Map.of("date",LocalDate.now(ZoneOffset.UTC).minusDays(1).toString(),"repeatDays",7)).andExpect(status().isOk());call(get("/api/v1/notes/reminders"),otherToken,null).andExpect(jsonPath("$.data").isEmpty());call(get("/api/v1/notifications"),token,null).andExpect(jsonPath("$.data[?(@.id=='note-reviews')]").isNotEmpty());
   var prefs=Map.of("groups",false,"contacts",false,"mail",false,"study",false,"weeklyTarget",80,"studyDays",List.of(1,3,5),"zoneId","Asia/Shanghai","revision",0);
-  call(put("/api/v1/account/preferences"),token,prefs).andExpect(status().isOk());call(put("/api/v1/account/preferences"),token,prefs).andExpect(status().isConflict());call(get("/api/v1/notifications"),token,null).andExpect(jsonPath("$.data").isEmpty());call(get("/api/v1/account/preferences"),otherToken,null).andExpect(jsonPath("$.data.weeklyTarget").value(70));
+  call(put("/api/v1/account/preferences"),token,prefs).andExpect(status().isOk());call(put("/api/v1/account/preferences"),token,prefs).andExpect(status().isConflict());call(get("/api/v1/notifications"),token,null).andExpect(jsonPath("$.data[?(@.kind!='RELEASE')]").isEmpty());call(get("/api/v1/account/preferences"),otherToken,null).andExpect(jsonPath("$.data.weeklyTarget").value(70));
   call(post("/api/v1/notes/"+id+"/reminder/complete"),token,null).andExpect(status().isOk());call(get("/api/v1/notes/reminders"),token,null).andExpect(jsonPath("$.data").isEmpty());
  }
  @Test void identityLoginAndActivityNeverExposeSecrets()throws Exception{String identitySession=login(user.getIdentityCode());call(post("/api/v1/auth/login"),null,Map.of("username",user.getIdentityCode(),"password","IncorrectPassword123!")).andExpect(status().isUnauthorized());var logs=data(call(get("/api/v1/account/activity"),identitySession,null).andExpect(status().isOk()).andReturn());assertThat(logs.toString()).doesNotContain(PASSWORD,user.getUsername(),identitySession);assertThat(logs.toString()).contains("SUCCESS","LOGIN_FAILED");}
  @Test void groupResourcesAndSearchRejectOutsidersAndFilterRecalledMessages()throws Exception{var g=data(call(post("/api/v1/workspaces"),token,Map.of("name","Research","color","#57788d")).andExpect(status().isOk()).andReturn());long id=g.path("id").asLong();call(get("/api/v1/workspaces/"+id+"/resources"),otherToken,null).andExpect(status().isForbidden());call(get("/api/v1/workspaces/"+id+"/search").param("q",""),otherToken,null).andExpect(status().isForbidden());call(get("/api/v1/workspaces/"+id+"/resources"),token,null).andExpect(status().isOk());call(get("/api/v1/workspaces/"+id+"/search").param("senderId",user.getId().toString()).param("after","2020-01-01T00:00:00Z"),token,null).andExpect(status().isOk());call(post("/api/v1/account/closure/prepare"),token,Map.of("mode","SUSPEND","currentPassword",PASSWORD)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("GROUP_OWNER_ACTIVE"));}
+ @Test void releaseReceiptRequiresLoginAndBelongsOnlyToTheCurrentAccount() throws Exception {
+  call(get("/api/v1/notifications/release"),null,null).andExpect(status().isUnauthorized());
+  var notice=data(call(get("/api/v1/notifications/release"),token,null).andExpect(status().isOk()).andReturn());
+  String version=notice.path("release").path("version").asText();
+  assertThat(notice.path("read").asBoolean()).isFalse();
+  assertThat(notice.path("release").path("title").path("en").asText()).isNotBlank();
+  assertThat(notice.path("release").path("notes").size()).isPositive();
+  String endpoint="/api/v1/notifications/releases/"+version+"/read";
+  call(put(endpoint),null,null).andExpect(status().isUnauthorized());
+  call(put("/api/v1/notifications/releases/9999.9999/read"),token,null).andExpect(status().isConflict());
+  assertThat(db.queryForObject("SELECT COUNT(*) FROM release_read_receipt WHERE owner_id=?",Long.class,user.getId())).isZero();
+  call(get("/api/v1/notifications"),token,null).andExpect(jsonPath("$.data[?(@.kind=='RELEASE')]").isNotEmpty());
+  call(put(endpoint).param("ownerId",other.getId().toString()),token,Map.of("ownerId",other.getId())).andExpect(status().isOk());
+  call(put(endpoint),token,null).andExpect(status().isOk());
+  call(get("/api/v1/notifications/release"),token,null).andExpect(jsonPath("$.data.read").value(true));
+  call(get("/api/v1/notifications"),token,null).andExpect(jsonPath("$.data[?(@.kind=='RELEASE')]").isEmpty());
+  call(get("/api/v1/notifications/release"),otherToken,null).andExpect(jsonPath("$.data.read").value(false));
+  assertThat(db.queryForObject("SELECT COUNT(*) FROM release_read_receipt WHERE owner_id=?",Long.class,user.getId())).isEqualTo(1);
+  String freshSession=login(user.getUsername());
+  call(get("/api/v1/notifications/release"),freshSession,null).andExpect(jsonPath("$.data.read").value(true));
+ }
+ @Test void oldReleaseDoesNotSuppressNewAnnouncementAndNoFeaturePermissionIsRequired() throws Exception {
+  var role=roles.save(new RoleEntity("EMPTY_"+UUID.randomUUID().toString().substring(0,8),"Empty","Synthetic",Set.of()));
+  user.setRole(role);users.saveAndFlush(user);
+  db.update("INSERT INTO release_read_receipt(owner_id,release_version,read_at) VALUES (?,?,CURRENT_TIMESTAMP)",user.getId(),"0.1");
+  var notice=data(call(get("/api/v1/notifications/release"),token,null).andExpect(status().isOk()).andReturn());
+  assertThat(notice.path("read").asBoolean()).isFalse();
+  String version=notice.path("release").path("version").asText();
+  call(put("/api/v1/notifications/releases/"+version+"/read"),token,null).andExpect(status().isOk());
+  assertThat(db.queryForObject("SELECT COUNT(*) FROM release_read_receipt WHERE owner_id=?",Long.class,user.getId())).isEqualTo(2);
+ }
+ @Test void concurrentReleaseReceiptsAreIdempotent() throws Exception {
+  String version=data(call(get("/api/v1/notifications/release"),token,null).andReturn()).path("release").path("version").asText();
+  var pool=java.util.concurrent.Executors.newFixedThreadPool(4);
+  try {
+   var futures=new ArrayList<java.util.concurrent.Future<Integer>>();
+   for(int i=0;i<8;i++)futures.add(pool.submit(()->call(put("/api/v1/notifications/releases/"+version+"/read"),token,null).andReturn().getResponse().getStatus()));
+   for(var future:futures)assertThat(future.get(15,java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(200);
+  } finally {pool.shutdownNow();}
+  assertThat(db.queryForObject("SELECT COUNT(*) FROM release_read_receipt WHERE owner_id=?",Long.class,user.getId())).isEqualTo(1);
+ }
+
 }

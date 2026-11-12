@@ -155,7 +155,7 @@ class MySqlSchemaMigrationTest {
                 execute(c,"INSERT INTO vocabulary_progress(id,owner_id,word_id,term_key,learning_correct,review_stage,wrong_count,mistake,starred,skipped) VALUES ('fixture-progress',101,'fixture-word','travel',4,2,1,FALSE,TRUE,FALSE)");
                 checksums=rows(c,"SELECT version,checksum FROM flyway_schema_history ORDER BY installed_rank");
             }
-            var latest=database.flyway(null);assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);latest.validate();
+            var latest=database.flyway(null);assertThat(latest.migrate().migrationsExecuted).isEqualTo(2);latest.validate();
             assertThat(latest.migrate().migrationsExecuted).isZero();
             try(Connection c=database.connect()) {
                 assertThat(scalar(c,"SELECT COUNT(*) FROM vocabulary_book WHERE owner_id IS NULL")).isEqualTo("34");

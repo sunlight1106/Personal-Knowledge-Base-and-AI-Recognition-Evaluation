@@ -48,6 +48,7 @@ public class AccountExportService {
         data.put("rechargeOrders", rows("SELECT id, method, amount, status, expires_at, created_at, paid_at FROM recharge_order WHERE user_id = ? ORDER BY created_at, id", id));
         data.put("ownedWorkspaces", rows("SELECT id, name, slug, color, created_at, updated_at FROM workspace WHERE owner_id = ? ORDER BY id", id));
         data.put("workspaceMemberships", rows("SELECT workspace_id, member_role, created_at FROM workspace_member WHERE user_id = ? ORDER BY workspace_id", id));
+        data.put("releaseReadReceipts", rows("SELECT release_version, read_at FROM release_read_receipt WHERE owner_id=? ORDER BY read_at", id));
         data.put("groupPreferences", rows("SELECT p.workspace_id, p.pinned, p.muted, p.read_through FROM workspace_preference p JOIN workspace_member m ON m.workspace_id=p.workspace_id AND m.user_id=p.owner_id WHERE p.owner_id=? ORDER BY p.workspace_id", id));
         data.put("sentMessages", rows("SELECT id, subject, body, created_at FROM internal_message WHERE sender_id = ? ORDER BY created_at, id", id));
         data.put("personalRecognition", rows("SELECT r.id, r.file_id, r.file_name, r.provider, r.model, r.task_type, r.result_text, r.input_tokens, r.output_tokens, r.created_at FROM personal_recognition_result r JOIN file_asset f ON f.id = r.file_id WHERE r.owner_id = ? AND f.owner_id = r.owner_id ORDER BY r.created_at, r.id", id));

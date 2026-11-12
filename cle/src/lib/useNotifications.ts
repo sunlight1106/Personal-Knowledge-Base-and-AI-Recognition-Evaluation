@@ -109,6 +109,11 @@ export function useNotifications() {
     } catch { /* Polling remains available when the stream is temporarily unavailable. */ }
     finally { if (!stopped && generation === epoch && session === tokenStorage.generation()) retry = setTimeout(connect, 2500) }
   }
+  function acknowledge(id: string) {
+    // Only call after a successful server receipt. In-flight pre-read lists are invalidated by refresh.
+    reconcile(items.value.filter(item => item.id !== id))
+    void refresh()
+  }
   function reset() {
     epoch++; transport?.abort(); stream?.abort(); clearTimeout(retry)
     running = false; pending = false
@@ -137,5 +142,5 @@ export function useNotifications() {
     window.removeEventListener('personal-platform:notifications-changed', refresh)
     document.removeEventListener('visibilitychange', visibility)
   })
-  return { items, unreadItems, actions, actionTotal, popups, total, dismiss, pause, resume, refresh }
+  return { items, unreadItems, actions, actionTotal, popups, total, dismiss, pause, resume, refresh, acknowledge }
 }

@@ -4,12 +4,16 @@
     {
       "version": "0.15",
       "status": "ready",
-      "date": "2026-11-04",
+      "date": "2026-11-12",
       "title": {
-        "zh": "系统回归与代码回放性能优化",
-        "en": "System regression and code replay performance"
+        "zh": "更新公告、系统回归与代码回放优化",
+        "en": "Release announcements, system regression and code replay improvements"
       },
       "added": [
+        {
+          "zh": "每次升级后显示当前版本公告，提供「查看详情」和「已读」。详情分新增功能、体验优化、问题修复和更新说明，支持中英切换。",
+          "en": "Show an announcement after each upgrade, with View details and Mark as read. Details group new features, improvements, fixes and update notes in Chinese and English."
+        },
         {
           "zh": "新增本地 HTTP 检查工具，核对入口资源、页面构建一致性和 51 个受保护接口的匿名访问边界。",
           "en": "Add a read-only localhost HTTP check for entry assets, consistent page builds and anonymous access to 51 protected endpoints."
@@ -23,6 +27,10 @@
       ],
       "improved": [
         {
+          "zh": "公告已读状态按账号和版本保存，跨浏览器同步；查看详情不自动标记已读，点击已读后立即移除提醒。弹出卡片约五秒收起，鼠标悬停或键盘聚焦时暂停，未读公告仍可从通知中心打开。",
+          "en": "Save read receipts per account and version across browsers. Viewing details does not mark the announcement read; a confirmed receipt clears its badge immediately. Cards collapse after about five seconds, pause on hover or focus, and remain in the notification center until read."
+        },
+        {
           "zh": "首页按需加载登录页与工作空间；代码回放按数组计算比例并缓存执行分布峰值，减少逐步播放时的重复计算。",
           "en": "Load login and workspace pages on demand; calculate one scale per array and cache line-count peaks to reduce repeated work during replay."
         },
@@ -33,8 +41,8 @@
       ],
       "notes": [
         {
-          "zh": "保留账号、笔记、词书与学习进度。本次不新增数据库迁移，旧页面可在保存后刷新使用新版。",
-          "en": "Accounts, notes, wordbooks and learning progress are preserved. No database migration is added; save edits before refreshing an older page."
+          "zh": "升级会自动新增公告已读记录表，保留账号、笔记、词书和学习进度。首次使用这项功能会显示当前版本公告；更新前保存编辑并保留备份，旧标签页刷新后使用新版。",
+          "en": "The upgrade adds a release receipt table while preserving accounts, notes, wordbooks and progress. On first use, the current release is announced. Save edits and keep a backup before updating; refresh older tabs to use the new version."
         }
       ]
     },

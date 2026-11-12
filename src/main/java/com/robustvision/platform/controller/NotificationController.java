@@ -11,16 +11,21 @@ import java.util.*;
 public class NotificationController {
     @org.springframework.beans.factory.annotation.Autowired private RuntimeHealthService runtimeHealth;
     @org.springframework.beans.factory.annotation.Autowired private PersonalWorkflowService workflows;
+    @org.springframework.beans.factory.annotation.Autowired private ReleaseAnnouncementService releases;
     private final CurrentUserService current;private final LiveUpdateService live;private final SocialService social;private final JdbcTemplate jdbc;private final GroupConversationService groups;
     public NotificationController(CurrentUserService current,LiveUpdateService live,SocialService social,JdbcTemplate jdbc,GroupConversationService groups){this.current=current;this.live=live;this.social=social;this.jdbc=jdbc;this.groups=groups;}
     @GetMapping(value="/events",produces="text/event-stream") public SseEmitter events(){return live.connect(current.requireCurrent().getId());}
-    public enum Kind { MESSAGE, ACTION }
+    public enum Kind { MESSAGE, ACTION, RELEASE }
+    @GetMapping("/release") public Object release(){return ApiResponse.ok(releases.get());}
+    @PutMapping("/releases/{version}/read") public Object readRelease(@PathVariable String version){releases.read(version);return ApiResponse.ok(null);}
     public record Item(String id,String title,String url,long count,String version,boolean popup,Kind kind) {
         public Item(String id,String title,String url,long count,String version,boolean popup){this(id,title,url,count,version,popup,Kind.MESSAGE);}
         public Item(String id,String title,String url,long count){this(id,title,url,count,id,true);}
     }
     @GetMapping public Object list(){
         var user=current.requireCurrent();long owner=user.getId();List<Item> items=new ArrayList<>();
+        var announcement=releases.get(owner);
+        if(!announcement.read())items.add(new Item("release-"+announcement.release().version(),announcement.release().title().zh(),"/updates",1,announcement.release().version(),true,Kind.RELEASE));
         var preferences=workflows.get(owner);
         if(preferences.groups()&&current.hasPermission(user,"group:use")&&current.hasPermission(user,"message:read")) {
             var overview=groups.overview();Map<Long,String> names=new HashMap<>();overview.groups().forEach(g->names.put(g.id(),g.name()));

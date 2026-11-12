@@ -16,6 +16,7 @@ class NotificationControllerTest {
     private final CurrentUserService current = mock(CurrentUserService.class);
     private final RuntimeHealthService health = mock(RuntimeHealthService.class);
     private final PersonalWorkflowService workflows = mock(PersonalWorkflowService.class);
+    private final ReleaseAnnouncementService releases = mock(ReleaseAnnouncementService.class);
     private final UserEntity user = mock(UserEntity.class);
     private final NotificationController controller = new NotificationController(current,
             mock(LiveUpdateService.class), mock(SocialService.class), mock(JdbcTemplate.class), mock(GroupConversationService.class));
@@ -23,6 +24,8 @@ class NotificationControllerTest {
     @BeforeEach void setUp() {
         ReflectionTestUtils.setField(controller, "runtimeHealth", health);
         ReflectionTestUtils.setField(controller, "workflows", workflows);
+        ReflectionTestUtils.setField(controller, "releases", releases);
+        when(releases.get(7L)).thenReturn(new ReleaseAnnouncementService.Notice(null, true));
         when(current.requireCurrent()).thenReturn(user);
         when(user.getId()).thenReturn(7L);
         when(workflows.get(7L)).thenReturn(new PersonalWorkflowService.Preferences(false, false, false, true, 70, List.of(1), "UTC", 0));

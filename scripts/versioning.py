@@ -63,6 +63,9 @@ def generated(root, data):
     version = data['current']
     semver = version + '.0'
     files = {Path('VERSION'): version + '\n'}
+    # The notification API and the public history use the same authored release notes.
+    announcement = {key: data['releases'][0][key] for key in ('version', 'date', 'title', *KINDS)}
+    files[Path('src/main/resources/release-announcement.json')] = json.dumps(announcement, ensure_ascii=False, indent=2) + '\n'
     for name in ('cle/package.json', 'cle/package-lock.json'):
         package = json.loads((root / name).read_text(encoding='utf-8'))
         package['version'] = semver
@@ -86,6 +89,7 @@ def sync(root=ROOT, check=False):
         if not target.exists() or target.read_text(encoding='utf-8') != content:
             mismatches.append(str(path))
             if not check:
+                target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(content, encoding='utf-8', newline='\n')
     if check and mismatches:
         raise ValueError('Version files are out of sync: ' + ', '.join(mismatches) + '. Run python scripts/versioning.py sync')

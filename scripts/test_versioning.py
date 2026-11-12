@@ -59,7 +59,14 @@ class VersioningTest(unittest.TestCase):
             self.assertEqual(json.loads((root/'cle/package-lock.json').read_text())['packages']['']['version'], next_version+'.0')
             self.assertIn('<version>'+next_version+'.0</version>', (root/'pom.xml').read_text(encoding='utf-8'))
             self.assertIn('## v'+next_version, (root/'CHANGELOG.md').read_text(encoding='utf-8'))
+            announcement = json.loads((root/'src/main/resources/release-announcement.json').read_text(encoding='utf-8'))
+            self.assertEqual(announcement['version'], next_version)
+            for field in ('title', 'added', 'fixed', 'improved', 'notes'):
+                self.assertEqual(announcement[field], data['releases'][0][field])
             versions.sync(root, check=True)
+            (root/'src/main/resources/release-announcement.json').write_text('{}')
+            with self.assertRaises(ValueError): versions.sync(root, check=True)
+            versions.sync(root)
             (root/'VERSION').write_text('0.1')
             with self.assertRaises(ValueError): versions.sync(root, check=True)
 
