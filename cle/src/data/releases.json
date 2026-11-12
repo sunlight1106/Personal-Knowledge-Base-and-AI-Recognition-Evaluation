@@ -3,7 +3,7 @@
   "releases": [
     {
       "version": "0.15",
-      "status": "ready",
+      "status": "published",
       "date": "2026-11-12",
       "title": {
         "zh": "更新公告、系统回归与代码回放优化",
