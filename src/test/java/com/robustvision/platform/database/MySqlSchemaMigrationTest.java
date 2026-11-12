@@ -45,7 +45,7 @@ class MySqlSchemaMigrationTest {
     private static final Set<String> DOMAIN_TABLES = java.util.stream.Stream.concat(
             LEGACY_DOMAIN_TABLES.stream(), java.util.stream.Stream.of("personal_ai_setting", "personal_ai_usage", "user_session",
                     "vocabulary_book", "vocabulary_word", "vocabulary_profile", "vocabulary_progress", "vocabulary_question", "personal_recognition_result", "contact_link", "chat_message", "personal_ai_memory", "note_version", "learning_record", "user_permission_override", "admin_audit", "workspace_shortcut", "workspace_notice", "workspace_preference", "account_security", "account_challenge", "group_invitation", "group_report", "note_link", "vocabulary_skill", "personal_preference", "note_reminder", "account_activity", "account_closure", "account_cleanup", "moderation_report", "moderation_penalty", "moderation_event",
-                    "learning_event", "learning_day", "learning_clock", "study_document", "document_passage", "ai_diagnostic", "offline_study_pack", "study_plan", "practice_followup", "workspace_job", "reading_clip", "mailbox_preference", "runtime_operation_lock", "code_run", "phone_binding", "account_login_throttle"))
+                    "learning_event", "learning_day", "learning_clock", "study_document", "document_passage", "ai_diagnostic", "offline_study_pack", "study_plan", "practice_followup", "workspace_job", "reading_clip", "mailbox_preference", "runtime_operation_lock", "code_run", "phone_binding", "account_login_throttle", "release_read_receipt"))
             .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     @Test
@@ -266,7 +266,7 @@ class MySqlSchemaMigrationTest {
         assertThat(scalar(c, "SELECT balance_cny FROM user_wallet WHERE user_id = 101")).isEqualTo("12.3456");
         assertThat(scalar(c, "SELECT cost_cny FROM inference_task WHERE id = 'task-1'")).isEqualTo("0.123456");
         assertThat(scalar(c, "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE()"))
-                .isEqualTo("100"); // V47/V48 add phone-binding and login-throttle owner foreign keys.
+                .isEqualTo("101"); // V50 adds the account-owned release receipt foreign key.
         assertThat(scalar(c, "SELECT search_by_number AND NOT search_by_email AND NOT search_by_phone FROM app_user WHERE id=101")).isEqualTo("1");
         assertThat(rows(c, "SELECT constraint_name, referenced_table_name FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE() AND table_name IN ('phone_binding','account_login_throttle') ORDER BY constraint_name"))
                 .containsExactly("23:fk_login_throttle_owner|8:app_user", "14:fk_phone_owner|8:app_user");

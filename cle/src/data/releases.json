@@ -23,6 +23,10 @@
         {
           "zh": "执行记录刷新会取消过期请求，避免较晚返回的旧列表覆盖最新结果；断网重试保留已有记录。",
           "en": "History refresh cancels superseded requests, prevents stale responses from replacing current results, and keeps existing records during offline retries."
+        },
+        {
+          "zh": "多页面同时点击公告已读时合并为同一条记录，避免重复写入报错。",
+          "en": "Concurrent acknowledgements from multiple pages share one read receipt instead of failing on duplicate writes."
         }
       ],
       "improved": [

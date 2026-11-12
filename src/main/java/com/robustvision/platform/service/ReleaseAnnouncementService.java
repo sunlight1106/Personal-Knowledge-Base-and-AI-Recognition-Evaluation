@@ -46,7 +46,10 @@ public class ReleaseAnnouncementService {
         long owner = current.requireCurrent().getId();
         // Serialize concurrent receipts using the existing account row, on H2 and MySQL alike.
         db.queryForObject("SELECT id FROM app_user WHERE id=? FOR UPDATE", Long.class, owner);
-        if (!get(owner).read()) {
+        // A locking read is essential: MySQL REPEATABLE READ may retain a pre-lock
+        // snapshot established during authentication, even after the account lock is acquired.
+        if (db.queryForList("SELECT release_version FROM release_read_receipt WHERE owner_id=? AND release_version=? FOR UPDATE",
+                String.class, owner, version).isEmpty()) {
             db.update("INSERT INTO release_read_receipt(owner_id,release_version,read_at) VALUES (?,?,CURRENT_TIMESTAMP)", owner, version);
             live.changed(List.of(owner));
         }
